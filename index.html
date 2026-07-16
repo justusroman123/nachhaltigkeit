@@ -2,786 +2,648 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>U-Bahn Berlin — Jump'n'Run</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8fd0f2">
+<title>Berlin 3D — Ein Kiez zum Rumlaufen</title>
 <style>
-  :root{
-    --bvg-yellow:#f0d722;
-    --bvg-purple:#7d2489;
-    --u-blue:#0a4a8f;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{
-    background:#12121a;
-    color:#eee;
-    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    min-height:100vh;
-    gap:12px;
-    padding:12px;
-    overflow-x:hidden;
-  }
-  h1{
-    font-size:clamp(18px,4vw,30px);
-    letter-spacing:1px;
-    color:var(--bvg-yellow);
-    text-shadow:2px 2px 0 var(--bvg-purple);
-  }
-  #wrap{position:relative;width:min(960px,100%);}
-  canvas{
-    display:block;width:100%;height:auto;
-    background:#87c7e8;
-    border:4px solid var(--bvg-yellow);
-    border-radius:10px;
-    image-rendering:pixelated;
-    touch-action:none;
-  }
-  .bar{
-    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
-    font-size:14px;color:#bbb;
-  }
-  .bar b{color:#fff}
-  kbd{
-    background:#2a2a38;border:1px solid #444;border-bottom-width:3px;
-    border-radius:5px;padding:2px 7px;font-family:monospace;color:#fff;
-  }
-  button{
-    background:var(--bvg-yellow);color:#111;border:none;
-    padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;
-    font-size:15px;
-  }
-  button:active{transform:translateY(1px)}
-  .muted{background:#333;color:#ccc}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;width:100%;overflow:hidden;background:#8fd0f2;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+    overscroll-behavior:none;touch-action:none;}
+  #c{display:block;width:100%;height:100%;touch-action:none}
+
+  /* HUD */
+  #hud{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;
+    display:flex;gap:8px;align-items:flex-start;justify-content:space-between;
+    pointer-events:none;z-index:5;font-weight:700;}
+  .chip{background:rgba(15,17,26,.62);color:#fff;border-radius:999px;
+    padding:7px 12px;font-size:15px;display:flex;gap:6px;align-items:center;backdrop-filter:blur(4px)}
+  #objective{position:fixed;left:50%;transform:translateX(-50%);
+    top:calc(env(safe-area-inset-top) + 52px);
+    background:rgba(125,36,137,.82);color:#fff;padding:7px 14px;border-radius:999px;
+    font-size:14px;font-weight:600;z-index:5;pointer-events:none;max-width:92vw;text-align:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  /* Sprechblase / Toast */
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 130px);
+    transform:translateX(-50%) translateY(12px);opacity:0;transition:.25s;
+    background:rgba(15,17,26,.85);color:#fff;padding:10px 16px;border-radius:14px;
+    font-size:15px;font-weight:600;z-index:6;pointer-events:none;max-width:90vw;text-align:center;
+    border:2px solid #f0d722}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Steuerung */
+  #stick{position:fixed;width:120px;height:120px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);
+    z-index:7;display:none;pointer-events:none}
+  #knob{position:absolute;width:56px;height:56px;border-radius:50%;
+    background:rgba(255,255,255,.75);left:29px;top:29px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  #jump{position:fixed;right:calc(env(safe-area-inset-right) + 22px);
+    bottom:calc(env(safe-area-inset-bottom) + 34px);width:86px;height:86px;border-radius:50%;
+    background:rgba(240,215,34,.92);color:#111;border:none;font-size:15px;font-weight:800;
+    z-index:7;box-shadow:0 4px 12px rgba(0,0,0,.3);touch-action:none}
+  #jump:active{transform:scale(.94)}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom) + 12px);color:#fff;font-size:12px;
+    background:rgba(15,17,26,.5);padding:5px 12px;border-radius:999px;z-index:6;pointer-events:none}
+
   /* Overlay */
-  #overlay{
-    position:absolute;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;text-align:center;gap:14px;
-    background:rgba(10,10,20,.82);border-radius:8px;padding:20px;
-  }
-  #overlay h2{color:var(--bvg-yellow);font-size:clamp(20px,4vw,30px)}
-  #overlay p{max-width:560px;line-height:1.5;color:#ddd}
-  #overlay .big{font-size:22px;color:#fff}
-  a.restart{
-    color:var(--bvg-yellow);text-decoration:underline;cursor:pointer;
-    font-size:18px;font-weight:700;
-  }
-  a.restart:hover{color:#fff}
+  #ov{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;gap:16px;padding:24px;
+    background:linear-gradient(160deg,rgba(10,74,143,.94),rgba(125,36,137,.94));color:#fff}
+  #ov h1{font-size:clamp(26px,7vw,44px);letter-spacing:.5px;line-height:1.05}
+  #ov h1 .y{color:#f0d722}
+  #ov p{max-width:520px;line-height:1.55;font-size:16px;opacity:.95}
+  #ov .keys{font-size:14px;opacity:.85}
+  #ov button{background:#f0d722;color:#111;border:none;padding:15px 30px;border-radius:14px;
+    font-size:19px;font-weight:800;cursor:pointer;box-shadow:0 6px 0 #b89f0f}
+  #ov button:active{transform:translateY(3px);box-shadow:0 3px 0 #b89f0f}
+  #ov .small{font-size:13px;opacity:.8}
   .hidden{display:none!important}
-  .credit{font-size:12px;color:#666}
-  .touch-only{display:none}
-  @media (hover:none) and (pointer:coarse){ .touch-only{display:flex} }
+  #mute{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);
+    display:none}
 </style>
 </head>
 <body>
-  <h1>🚇 U-BAHN BERLIN — Jump'n'Run</h1>
+  <canvas id="c"></canvas>
 
-  <div id="wrap">
-    <canvas id="game" width="960" height="420"></canvas>
+  <!-- HUD -->
+  <div id="hud">
+    <div class="chip" id="cScore">🥙 <span>0</span></div>
+    <div class="chip" id="cPfand">🍾 <span>0</span></div>
+    <div class="chip" id="cMeet">🧑 <span>0</span></div>
+  </div>
+  <div id="objective">Erkunde den Kiez!</div>
+  <div id="toast"></div>
 
-    <!-- Start / Game Over Overlay -->
-    <div id="overlay">
-      <h2 id="ovTitle">U-Bahn Berlin</h2>
-      <p id="ovText">
-        Spring durch Berlin, sammel <b>Döner 🥙</b>, gib brave Menschen ihr <b>Pfand 🍾</b>,
-        triff bekannte Gesichter und weich den <b>Ratten 🐀</b> aus.
-        Erreiche den <b>Alexanderplatz</b>!
-      </p>
-      <p class="big">
-        <kbd>←</kbd> <kbd>→</kbd> laufen &nbsp;·&nbsp; <kbd>Leertaste</kbd> / <kbd>↑</kbd> springen
-      </p>
-      <button id="startBtn">▶ Spiel starten</button>
-      <a class="restart hidden" id="restartLink">↻ Auf diesen Link klicken zum Neustart</a>
-      <p class="credit">Ein kleines Berlin-Erlebnis · BVG-Style</p>
-    </div>
+  <!-- Controls -->
+  <div id="stick"><div id="knob"></div></div>
+  <button id="jump">SPRUNG</button>
+  <div id="hint">Links wischen = laufen · rechts wischen = umschauen</div>
+
+  <!-- Overlay -->
+  <div id="ov">
+    <h1>BERLIN <span class="y">3D</span><br>Alexanderplatz</h1>
+    <p>Lauf durch den Kiez, sammel <b>Döner 🥙</b>, gib dem Pfandsammler seine <b>Flaschen 🍾</b>,
+       triff echte Berliner Typen — und dann rauf zum <b>Fernsehturm 🗼</b>.</p>
+    <button id="startBtn">▶ Los geht's</button>
+    <div class="keys">📱 Handy: links wischen zum Laufen, rechts zum Umschauen, gelber Knopf springt<br>
+       💻 PC: WASD / Pfeiltasten, Maus ziehen zum Umschauen, Leertaste springt</div>
+    <div class="small">Ein kleines Berlin zum Verlaufen 💛💜</div>
   </div>
 
-  <div class="bar">
-    <span>Steuerung: <kbd>←</kbd> <kbd>→</kbd> laufen · <kbd>Space</kbd>/<kbd>↑</kbd> springen</span>
-    <button id="muteBtn" class="muted">🔊 Musik an</button>
-  </div>
-
-  <div class="bar touch-only" style="gap:16px">
-    <button id="btnLeft">◀</button>
-    <button id="btnJump">⤒ SPRUNG</button>
-    <button id="btnRight">▶</button>
-  </div>
-
-<script>
-(() => {
+  <script src="three.min.js"></script>
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
   "use strict";
-  const cv = document.getElementById('game');
-  const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
+  if(!window.THREE){ document.getElementById('ov').innerHTML='<h1>Fehler</h1><p>3D-Bibliothek konnte nicht geladen werden.</p>'; return; }
+  const T = window.THREE;
 
-  const overlay   = document.getElementById('overlay');
-  const ovTitle   = document.getElementById('ovTitle');
-  const ovText    = document.getElementById('ovText');
-  const startBtn  = document.getElementById('startBtn');
-  const restartLink = document.getElementById('restartLink');
-  const muteBtn   = document.getElementById('muteBtn');
+  // ---------- DOM ----------
+  const canvas = document.getElementById('c');
+  const ov = document.getElementById('ov');
+  const startBtn = document.getElementById('startBtn');
+  const objEl = document.getElementById('objective');
+  const toastEl = document.getElementById('toast');
+  const stickEl = document.getElementById('stick');
+  const knobEl = document.getElementById('knob');
+  const jumpBtn = document.getElementById('jump');
+  const scoreEl = document.querySelector('#cScore span');
+  const pfandEl = document.querySelector('#cPfand span');
+  const meetEl  = document.querySelector('#cMeet span');
 
-  // ------------------------------------------------------------------
-  // AUDIO — kleine Chiptune-Melodie im "Alexanderplatz"-Gefühl
-  // ------------------------------------------------------------------
-  const Audio = (() => {
-    let actx = null, master = null, musicTimer = null, step = 0, muted = false;
-    // Eine fröhliche, ohrwurmige Loop-Melodie (Frequenzen in Hz, 0 = Pause)
-    const melody = [
-      330,392,440,392, 330,392,440,523, 494,440,392,440, 330,0,330,0,
-      349,440,523,440, 392,494,587,494, 440,392,349,392, 330,0,262,0
-    ];
-    const bass = [
-      110,0,110,0, 98,0,98,0, 82,0,82,0, 110,0,110,0,
-      117,0,117,0, 98,0,98,0, 110,0,110,0, 131,0,131,0
-    ];
-    function ensure(){
-      if(actx) return;
-      actx = new (window.AudioContext||window.webkitAudioContext)();
-      master = actx.createGain();
-      master.gain.value = 0.18;
-      master.connect(actx.destination);
+  // ---------- Renderer / Scene / Camera ----------
+  const renderer = new T.WebGLRenderer({canvas, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  const scene = new T.Scene();
+  const SKY = 0x8fd0f2;
+  scene.background = new T.Color(SKY);
+  scene.fog = new T.Fog(SKY, 60, 155);
+
+  const camera = new T.PerspectiveCamera(60, 1, 0.1, 400);
+
+  function resize(){
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', ()=>setTimeout(resize,150));
+  resize();
+
+  // ---------- Lights ----------
+  scene.add(new T.HemisphereLight(0xdff0ff, 0x6a6a55, 0.95));
+  const sun = new T.DirectionalLight(0xfff2d6, 1.15);
+  sun.position.set(30, 60, 20);
+  scene.add(sun);
+
+  // ---------- Material-Helfer ----------
+  const mat = (c) => new T.MeshLambertMaterial({color:c});
+  const boxMesh = (w,h,d,c) => new T.Mesh(new T.BoxGeometry(w,h,d), mat(c));
+  const cyl = (rt,rb,h,c,seg=16) => new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg), mat(c));
+
+  // Canvas-Textur -> Schild (immer "beleuchtet")
+  function signMesh(text, w, h, bg, fg, font){
+    const cv = document.createElement('canvas'); cv.width=256; cv.height=128;
+    const g = cv.getContext('2d');
+    g.fillStyle=bg; g.fillRect(0,0,256,128);
+    g.fillStyle=fg; g.font='bold '+(font||58)+'px "Segoe UI",Arial,sans-serif';
+    g.textAlign='center'; g.textBaseline='middle';
+    g.fillText(text,128,68);
+    const tex = new T.CanvasTexture(cv); tex.anisotropy=4;
+    const m = new T.Mesh(new T.PlaneGeometry(w,h), new T.MeshBasicMaterial({map:tex,transparent:true}));
+    return m;
+  }
+  // Emoji / Text als Billboard-Sprite
+  function emojiSprite(txt, scale, isEmoji){
+    const cv = document.createElement('canvas'); cv.width=cv.height=128;
+    const g = cv.getContext('2d');
+    g.textAlign='center'; g.textBaseline='middle';
+    if(isEmoji){ g.font='96px serif'; g.fillText(txt,64,72); }
+    else {
+      // Font so wählen, dass der Name in die Blase passt
+      let fs=30; g.font='bold '+fs+'px "Segoe UI",Arial';
+      while(g.measureText(txt).width>116 && fs>14){ fs-=2; g.font='bold '+fs+'px "Segoe UI",Arial'; }
+      const tw=g.measureText(txt).width;
+      g.fillStyle='rgba(15,17,26,.82)';
+      roundRect(g,64-tw/2-8,44,tw+16,40,10); g.fill();
+      g.fillStyle='#fff'; g.fillText(txt,64,65);
     }
-    function note(freq, dur, type, gain){
-      if(!actx || !freq) return;
-      const o = actx.createOscillator();
-      const g = actx.createGain();
-      o.type = type; o.frequency.value = freq;
-      g.gain.setValueAtTime(0, actx.currentTime);
-      g.gain.linearRampToValueAtTime(gain, actx.currentTime+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
-      o.connect(g); g.connect(master);
-      o.start(); o.stop(actx.currentTime+dur);
+    const tex = new T.CanvasTexture(cv); tex.anisotropy=4;
+    const sp = new T.Sprite(new T.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+    sp.scale.set(scale, scale, 1);
+    return sp;
+  }
+  function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);
+    g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+
+  // ---------- Welt bauen ----------
+  const WORLD = new T.Group(); scene.add(WORLD);
+  const BOUND = 60;
+
+  // Boden: Plaza + Grün
+  const ground = new T.Mesh(new T.PlaneGeometry(400,400), mat(0x7fa86b));
+  ground.rotation.x = -Math.PI/2; ground.position.y = 0; WORLD.add(ground);
+  // Alexanderplatz-Pflaster (heller Kreis)
+  const plaza = new T.Mesh(new T.CircleGeometry(34, 40), mat(0xbdb6a6));
+  plaza.rotation.x = -Math.PI/2; plaza.position.y = 0.02; WORLD.add(plaza);
+  // Straßen (Kreuz)
+  const road = mat(0x53565e);
+  [[0,0,140,14],[0,0,14,140]].forEach(([x,z,w,d])=>{
+    const r = new T.Mesh(new T.PlaneGeometry(w,d), road);
+    r.rotation.x=-Math.PI/2; r.position.set(x,0.01,z); WORLD.add(r);
+  });
+
+  // ---- Fernsehturm (Wahrzeichen, Mitte hinten) ----
+  function buildFernsehturm(){
+    const g = new T.Group();
+    g.add(place(cyl(6,7,6,0xbfc4cc),0,3,0));                 // Sockel
+    const shaft = cyl(1.4,2.2,40,0xd7dbe0); shaft.position.y=26; g.add(shaft);
+    const ball = new T.Mesh(new T.SphereGeometry(5,24,18), mat(0xc2c7cf)); ball.position.y=42; g.add(ball);
+    const band = cyl(5.05,5.05,2.2,0x7d2489,24); band.position.y=42; g.add(band); // lila Fensterband
+    const cone = cyl(0.35,1.4,7,0xd7dbe0); cone.position.y=50; g.add(cone);
+    const ant = cyl(0.18,0.35,16,0xb0b4bb); ant.position.y=61; g.add(ant);
+    const tip = new T.Mesh(new T.SphereGeometry(0.5,10,8), mat(0xe4402e)); tip.position.y=69; g.add(tip);
+    g.position.set(0,0,-40);
+    g.userData.landmark = true;
+    return g;
+  }
+  function place(m,x,y,z){ m.position.set(x,y,z); return m; }
+
+  // ---- Brandenburger Tor ----
+  function buildTor(){
+    const g = new T.Group();
+    const stone = 0xd8c9a8;
+    g.add(place(boxMesh(20,1,5,stone),0,0.5,0));
+    for(let i=0;i<6;i++){ const col=cyl(0.9,0.9,9,stone); col.position.set(-8+i*3.2,5,0); g.add(col); }
+    g.add(place(boxMesh(21,2.4,5.4,stone),0,10.5,0));           // Gebälk
+    g.add(place(boxMesh(6,2.2,3,0x9a7b3a),0,13.5,0));           // Quadriga-Andeutung
+    for(let i=0;i<4;i++) g.add(place(boxMesh(0.5,1.6,0.5,0x6b5427),-2.2+i*1.4,13.6,1.6));
+    g.position.set(-46,0,26); g.rotation.y=0.5;
+    return g;
+  }
+
+  // ---- Gelbe U-Bahn auf Gleis ----
+  const ubahn = new T.Group();
+  function buildUbahn(){
+    const g = ubahn;
+    // Gleise
+    const rail = mat(0x3a3d44);
+    [-1.2,1.2].forEach(dx=>{ const r=new T.Mesh(new T.BoxGeometry(0.25,0.2,120),rail); r.position.set(dx,0.15,0); g.add(r);});
+    // 2 Wagen
+    const train = new T.Group();
+    for(let c=0;c<2;c++){
+      const car = new T.Group();
+      const body = boxMesh(3.2,2.6,11,0xf0d722); body.position.y=1.8; car.add(body);
+      const strip = boxMesh(3.25,1.1,9.4,0x2b3440); strip.position.y=2.1; car.add(strip); // Fensterband
+      const front = boxMesh(3.2,2.6,0.4,0xe8402e); front.position.set(0,1.8,c===0?-5.6:5.6); car.add(front);
+      // U-Logo
+      const u = signMesh('U',1.4,1.4,'#0a4a8f','#ffffff',90); u.position.set(1.63,2.2,0); u.rotation.y=Math.PI/2; car.add(u);
+      car.position.z = c*11.4 - 5.7;
+      train.add(car);
     }
-    function tick(){
-      const m = melody[step % melody.length];
-      const b = bass[step % bass.length];
-      note(m, 0.22, 'square', 0.5);
-      note(b, 0.30, 'triangle', 0.6);
+    g.add(train); g.userData.train = train;
+    g.position.set(44,0,-6);
+    return g;
+  }
+
+  // ---- Späti ----
+  function buildSpaeti(x,z,rot){
+    const g = new T.Group();
+    g.add(place(boxMesh(6,4,5,0xb85c3c),0,2,0));
+    const awn = boxMesh(6.6,0.4,2,0xe8402e); awn.position.set(0,4.2,2.4); g.add(awn);
+    g.add(place(signMesh('SPÄTI',4.2,1.6,'#111','#f0d722',70),0,3.1,2.55));
+    // Kästen mit Flaschen
+    for(let i=0;i<3;i++){ g.add(place(boxMesh(1.2,0.8,1.2,0x1c6b3a),-2+i*1.6,0.4,3.4)); }
+    g.position.set(x,0,z); if(rot)g.rotation.y=rot;
+    return g;
+  }
+  // ---- Döner-Imbiss ----
+  const donerShops=[];
+  function buildDoner(x,z,rot){
+    const g = new T.Group();
+    g.add(place(boxMesh(6,4.5,5,0xefe7d2),0,2.25,0));
+    g.add(place(signMesh('DÖNER',4.6,1.7,'#e8402e','#fff',72),0,3.4,2.55));
+    const spit = cyl(0.7,0.55,3.2,0x8a5a2b); spit.position.set(0,2.1,2.9); g.add(spit);
+    g.userData.spit = spit;
+    g.position.set(x,0,z); if(rot)g.rotation.y=rot;
+    donerShops.push(g);
+    return g;
+  }
+  // ---- Currywurst-Bude ----
+  function buildCurry(x,z,rot){
+    const g = new T.Group();
+    g.add(place(boxMesh(5,3.2,4,0xd23b2f),0,1.6,0));
+    g.add(place(boxMesh(5.4,0.4,1.6,0xffffff),0,3.4,2.1));
+    g.add(place(signMesh('CURRYWURST',4.6,1.2,'#111','#ffd54a',40),0,2.4,2.05));
+    g.position.set(x,0,z); if(rot)g.rotation.y=rot;
+    return g;
+  }
+  // ---- Ampelmann ----
+  function buildAmpel(x,z){
+    const g=new T.Group();
+    g.add(place(cyl(0.15,0.15,5,0x333333),0,2.5,0));
+    const box=boxMesh(1,2,0.6,0x222222); box.position.y=5.5; g.add(box);
+    const face=signMesh('🚶',1,1.9,'#0aa34a','#111',60); face.position.set(0,5.5,0.33); g.add(face);
+    g.position.set(x,0,z); return g;
+  }
+  // ---- Baum / Laterne / Bank / Haus ----
+  function tree(x,z){const g=new T.Group();g.add(place(cyl(0.4,0.5,3,0x6b4a2b),0,1.5,0));
+    const f=new T.Mesh(new T.SphereGeometry(2.2,10,8),mat(0x3f8f43));f.position.y=4.2;g.add(f);
+    const f2=new T.Mesh(new T.SphereGeometry(1.6,10,8),mat(0x4fa053));f2.position.set(0.8,3.4,0.4);g.add(f2);
+    g.position.set(x,0,z);return g;}
+  function lamp(x,z){const g=new T.Group();g.add(place(cyl(0.12,0.15,5.5,0x30343c),0,2.75,0));
+    const b=new T.Mesh(new T.SphereGeometry(0.35,8,8),new T.MeshBasicMaterial({color:0xffe6a0}));b.position.y=5.5;g.add(b);
+    g.position.set(x,0,z);return g;}
+  function bench(x,z,rot){const g=new T.Group();g.add(place(boxMesh(3,0.3,1,0x8a5a2b),0,0.8,0));
+    g.add(place(boxMesh(3,1,0.25,0x8a5a2b),0,1.4,-0.4));g.position.set(x,0,z);if(rot)g.rotation.y=rot;return g;}
+  const windowTex = (()=>{const cv=document.createElement('canvas');cv.width=cv.height=128;const g=cv.getContext('2d');
+    g.fillStyle='#c8bda6';g.fillRect(0,0,128,128);g.fillStyle='#3a4a5a';
+    for(let y=12;y<128;y+=26)for(let x=12;x<128;x+=26)g.fillRect(x,y,16,18);
+    const t=new T.CanvasTexture(cv);t.wrapS=t.wrapT=T.RepeatWrapping;return t;})();
+  function house(x,z,w,d,h,c){
+    const tex=windowTex.clone();tex.needsUpdate=true;tex.repeat.set(Math.round(w/6),Math.round(h/6));
+    const m=new T.MeshLambertMaterial({color:c,map:tex});
+    const b=new T.Mesh(new T.BoxGeometry(w,h,d),m);b.position.set(x,h/2,z);
+    const roof=boxMesh(w+0.6,0.6,d+0.6,0x6b3a2b);roof.position.set(x,h+0.3,z);
+    WORLD.add(b);WORLD.add(roof);
+  }
+
+  // Landmarks platzieren
+  WORLD.add(buildFernsehturm());
+  WORLD.add(buildTor());
+  WORLD.add(buildUbahn());
+  WORLD.add(buildSpaeti(-24,10,0.4));
+  WORLD.add(buildSpaeti(20,-18,-0.6));
+  WORLD.add(buildDoner(24,14,-0.5));
+  WORLD.add(buildDoner(-18,-22,0.3));
+  WORLD.add(buildCurry(10,26,Math.PI));
+  WORLD.add(buildAmpel(9,9)); WORLD.add(buildAmpel(-9,-9));
+  // Häuserzeile am Rand
+  const cols=[0xd8c9a8,0xc9a98a,0xb9c2cf,0xd0b0a0,0xc4c9b0];
+  for(let i=0;i<6;i++){ house(-52, -40+i*16, 8, 12, 12+ (i%3)*4, cols[i%cols.length]); }
+  for(let i=0;i<6;i++){ house(52, -40+i*16, 8, 12, 10+ (i%3)*5, cols[(i+2)%cols.length]); }
+  for(let i=0;i<5;i++){ house(-38+i*19, 50, 12, 8, 11+(i%2)*5, cols[(i+1)%cols.length]); }
+  // Bäume & Laternen & Bänke rund um die Plaza
+  const ring=[[18,18],[-18,18],[18,-6],[-14,-14],[26,-2],[-26,-2],[6,30],[-8,26],[30,20],[-30,16]];
+  ring.forEach(([x,z],i)=> WORLD.add(i%2?lamp(x,z):tree(x,z)));
+  WORLD.add(bench(12,6,0)); WORLD.add(bench(-12,6,0)); WORLD.add(bench(0,20,Math.PI));
+
+  // ---------- Spieler ----------
+  const player = new T.Group();
+  (function buildPlayer(){
+    const legs = boxMesh(1.1,1.2,0.7,0x27324a); legs.position.y=0.6; player.add(legs);
+    const body = boxMesh(1.3,1.5,0.8,0xd1462f); body.position.y=1.85; player.add(body);
+    const head = boxMesh(0.9,0.9,0.9,0xf2c48d); head.position.y=3.0; player.add(head);
+    const beanie = boxMesh(1.0,0.5,1.0,0x7d2489); beanie.position.y=3.5; player.add(beanie);
+    const stripe = boxMesh(1.02,0.16,1.02,0xf0d722); stripe.position.y=3.28; player.add(stripe);
+    // Nase/Blickrichtung (+z)
+    const nose = boxMesh(0.25,0.25,0.3,0xe0a878); nose.position.set(0,3.0,0.5); player.add(nose);
+  })();
+  player.position.set(0,0,22);
+  WORLD.add(player);
+  // Blob-Schatten
+  const shadowTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=64;const g=cv.getContext('2d');
+    const gr=g.createRadialGradient(32,32,4,32,32,30);gr.addColorStop(0,'rgba(0,0,0,.5)');gr.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=gr;g.fillRect(0,0,64,64);return new T.CanvasTexture(cv);})();
+  const pshadow=new T.Mesh(new T.PlaneGeometry(2.6,2.6),new T.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));
+  pshadow.rotation.x=-Math.PI/2; WORLD.add(pshadow);
+
+  // ---------- Sammelbares & NPCs ----------
+  const doners=[]; const bottles=[];
+  const donerPos=[[10,10],[-10,12],[16,-2],[-16,-4],[4,-14],[-4,22],[22,6],[-22,8],[0,-24],[14,20]];
+  donerPos.forEach(([x,z])=>{ const s=emojiSprite('🥙',2.2,true); s.position.set(x,1.6,z);
+    WORLD.add(s); doners.push({sp:s,x,z,taken:false,base:1.6}); });
+  const bottlePos=[[8,-8],[-8,-8],[20,-10],[-20,-8],[12,16],[-14,18],[28,4]];
+  bottlePos.forEach(([x,z])=>{ const s=emojiSprite('🍾',1.7,true); s.position.set(x,1.2,z);
+    WORLD.add(s); bottles.push({sp:s,x,z,taken:false,base:1.2}); });
+
+  const berliner=[
+    {e:'🧑‍🎤',n:'Techno-Sven',l:'"Na, noch wach seit gestern?"'},
+    {e:'👵',n:'Oma Helga',l:'"Junge, zieh dir wat Warmet an!"'},
+    {e:'🧔',n:'Currywurst-Uwe',l:'"Mit oder ohne Darm?"'},
+    {e:'🚴',n:'Öko-Lisa',l:'"Nimm doch det Rad, wa!"'},
+    {e:'🕺',n:'Der Türsteher',l:'"Heute nich."'},
+    {e:'🎸',n:'Straßenmusiker',l:'"Ick spiel für Kleingeld, wa."'},
+  ];
+  const npcs=[];
+  const npcPos=[[14,4],[-14,2],[6,14],[-6,16],[22,-6],[-24,-2]];
+  npcPos.forEach(([x,z],i)=>{
+    const b=berliner[i%berliner.length];
+    const g=new T.Group();
+    const body=boxMesh(1.2,1.5,0.7, [0x3a6ea5,0x8a3a6e,0x4a8a4a,0xb5852a,0x444,0x9a5a2a][i%6]); body.position.y=1.5; g.add(body);
+    const legs=boxMesh(1.0,1.0,0.6,0x2a2a33); legs.position.y=0.5; g.add(legs);
+    const face=emojiSprite(b.e,1.7,true); face.position.y=3.0; g.add(face);
+    const label=emojiSprite(b.n,0); label.scale.set(3.2,1.2,1); label.position.y=4.1; g.add(label);
+    g.position.set(x,0,z);
+    WORLD.add(g);
+    npcs.push({g,x,z,met:false,...b, wander:Math.random()*6.28, home:[x,z]});
+  });
+  // Pfandsammler
+  const pfandGuy={met:false,done:false};
+  (function(){
+    const g=new T.Group();
+    const body=boxMesh(1.2,1.5,0.7,0x556b2f); body.position.y=1.5; g.add(body);
+    const legs=boxMesh(1.0,1.0,0.6,0x333); legs.position.y=0.5; g.add(legs);
+    const face=emojiSprite('🧉',1.7,true); face.position.y=3.0; g.add(face);
+    const cart=boxMesh(1.6,1.2,1.0,0x777); cart.position.set(1.4,0.9,0); g.add(cart);
+    const label=emojiSprite('Pfand-Achim',0); label.scale.set(3.6,1.2,1); label.position.y=4.1; g.add(label);
+    g.position.set(-6,0,-6); WORLD.add(g);
+    pfandGuy.g=g; pfandGuy.x=-6; pfandGuy.z=-6; pfandGuy.face=face;
+  })();
+
+  // ---------- Zustand ----------
+  const HS_KEY='berlin3d_high';
+  const getHS=()=>{try{return +localStorage.getItem(HS_KEY)||0}catch(e){return 0}};
+  const setHS=v=>{try{localStorage.setItem(HS_KEY,v)}catch(e){}};
+  let S;
+  function reset(){
+    S={running:false,score:0,pfand:0,met:0,donersLeft:doners.length,
+       vy:0,onGround:true,facing:0,camYaw:0,camOff:0,won:false};
+    doners.forEach(d=>{d.taken=false;d.sp.visible=true;});
+    bottles.forEach(b=>{b.taken=false;b.sp.visible=true;});
+    npcs.forEach(n=>{n.met=false;n.g.position.set(n.home[0],0,n.home[1]);});
+    pfandGuy.done=false;
+    player.position.set(0,0,22); player.rotation.y=Math.PI;
+    S.facing=Math.PI; S.camYaw=Math.PI;
+    // Kamera direkt hinter den Spieler setzen (kein Ruckler beim Start)
+    camera.position.set(0, 8, 22+13);
+    camera.lookAt(0,2.2,22);
+    updateHUD(); setObjective('Sammel Döner 🥙 und lauf durch den Kiez!');
+  }
+  function updateHUD(){ scoreEl.textContent=S.score; pfandEl.textContent=S.pfand; meetEl.textContent=S.met+'/'+npcs.length; }
+  function setObjective(t){ objEl.textContent=t; }
+  let toastT=0;
+  function toast(t){ toastEl.textContent=t; toastEl.classList.add('show'); toastT=140; }
+
+  // ---------- Eingabe ----------
+  const input={mx:0,my:0}; // Bewegungsvektor (-1..1)
+  const keys={};
+  let stickId=null, lookId=null, lookLastX=0, stickCX=0, stickCY=0;
+
+  window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;
+    if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase()))e.preventDefault();
+    if(e.key===' ') doJump();});
+  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+  function doJump(){ if(S&&S.running&&S.onGround){S.vy=13.5;S.onGround=false;} }
+  jumpBtn.addEventListener('touchstart',e=>{e.preventDefault();doJump();},{passive:false});
+  jumpBtn.addEventListener('mousedown',e=>{e.preventDefault();doJump();});
+
+  // Touch: linke Hälfte = Stick, rechte Hälfte = Umschauen
+  canvas.addEventListener('touchstart',e=>{
+    for(const t of e.changedTouches){
+      if(t.clientX < window.innerWidth*0.5 && stickId===null){
+        stickId=t.identifier; stickCX=t.clientX; stickCY=t.clientY;
+        stickEl.style.display='block'; stickEl.style.left=(stickCX-60)+'px'; stickEl.style.top=(stickCY-60)+'px';
+        knobEl.style.left='29px'; knobEl.style.top='29px';
+      } else if(lookId===null){ lookId=t.identifier; lookLastX=t.clientX; }
+    }
+  },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      if(t.identifier===stickId){
+        let dx=t.clientX-stickCX, dy=t.clientY-stickCY;
+        const r=Math.hypot(dx,dy), max=50;
+        if(r>max){dx*=max/r;dy*=max/r;}
+        knobEl.style.left=(29+dx)+'px'; knobEl.style.top=(29+dy)+'px';
+        input.mx=dx/max; input.my=-dy/max;
+      } else if(t.identifier===lookId){
+        S.camOff -= (t.clientX-lookLastX)*0.006; lookLastX=t.clientX;
+      }
+    }
+  },{passive:false});
+  function endTouch(e){
+    for(const t of e.changedTouches){
+      if(t.identifier===stickId){ stickId=null; input.mx=input.my=0; stickEl.style.display='none'; }
+      if(t.identifier===lookId){ lookId=null; }
+    }
+  }
+  canvas.addEventListener('touchend',endTouch); canvas.addEventListener('touchcancel',endTouch);
+
+  // Maus (Desktop) zum Umschauen
+  let mouseDown=false, mouseLastX=0;
+  canvas.addEventListener('mousedown',e=>{mouseDown=true;mouseLastX=e.clientX;});
+  window.addEventListener('mouseup',()=>mouseDown=false);
+  window.addEventListener('mousemove',e=>{ if(mouseDown&&S){ S.camOff-=(e.clientX-mouseLastX)*0.005; mouseLastX=e.clientX; }});
+
+  // ---------- Audio: kleiner Berlin-Techno-Loop ----------
+  const Audio=(()=>{
+    let a=null,master=null,timer=null,step=0,on=false;
+    const bass=[55,55,82,55, 55,55,73,82];
+    function ens(){ if(a)return; a=new (window.AudioContext||window.webkitAudioContext)();
+      master=a.createGain(); master.gain.value=0.16; master.connect(a.destination); }
+    function n(f,d,type,g,t0){ if(!f)return; const o=a.createOscillator(),gg=a.createGain();
+      o.type=type;o.frequency.value=f; gg.gain.setValueAtTime(0,t0);
+      gg.gain.linearRampToValueAtTime(g,t0+0.01); gg.gain.exponentialRampToValueAtTime(0.001,t0+d);
+      o.connect(gg);gg.connect(master);o.start(t0);o.stop(t0+d); }
+    function kick(t0){ const o=a.createOscillator(),g=a.createGain(); o.frequency.setValueAtTime(150,t0);
+      o.frequency.exponentialRampToValueAtTime(45,t0+0.12); g.gain.setValueAtTime(0.9,t0);
+      g.gain.exponentialRampToValueAtTime(0.001,t0+0.16); o.connect(g);g.connect(master);o.start(t0);o.stop(t0+0.18); }
+    function tick(){ const t0=a.currentTime+0.02;
+      kick(t0);                                  // four-on-the-floor
+      if(step%2===1) n(9000,0.03,'square',0.06,t0); // hi-hat offbeat (approx via high sq)
+      n(bass[step%bass.length],0.18,'sawtooth',0.28,t0);
+      if(step%8===0||step%8===3) n(440*[1,1.2,1.5][step%3],0.12,'square',0.12,t0+0.1); // arp
       step++;
     }
     return {
-      startMusic(){
-        ensure();
-        if(actx.state==='suspended') actx.resume();
-        if(musicTimer) return;
-        step = 0;
-        musicTimer = setInterval(tick, 165);
+      start(){ ens(); if(a.state==='suspended')a.resume(); if(!timer){step=0;timer=setInterval(tick,300);} on=true; },
+      stop(){ if(timer){clearInterval(timer);timer=null;} on=false; },
+      sfx(k){ ens(); if(a.state==='suspended')a.resume(); const t0=a.currentTime+0.01;
+        if(k==='doner'){n(660,0.08,'square',0.4,t0);n(880,0.1,'square',0.4,t0+0.06);}
+        if(k==='pfand'){n(440,0.08,'triangle',0.5,t0);n(587,0.09,'triangle',0.5,t0+0.07);n(784,0.12,'triangle',0.5,t0+0.15);}
+        if(k==='meet'){n(392,0.08,'sine',0.5,t0);n(494,0.1,'sine',0.5,t0+0.08);}
+        if(k==='win'){[523,659,784,1046].forEach((f,i)=>n(f,0.2,'square',0.4,t0+i*0.13));}
+        if(k==='jump'){n(520,0.1,'square',0.35,t0);}
       },
-      stopMusic(){ if(musicTimer){clearInterval(musicTimer); musicTimer=null;} },
-      sfx(kind){
-        ensure();
-        if(muted) return;
-        if(actx.state==='suspended') actx.resume();
-        if(kind==='jump')  note(520,0.14,'square',0.5);
-        if(kind==='doner') { note(660,0.09,'square',0.5); setTimeout(()=>note(880,0.12,'square',0.5),70); }
-        if(kind==='pfand') { note(440,0.09,'triangle',0.6); setTimeout(()=>note(587,0.10,'triangle',0.6),70); setTimeout(()=>note(784,0.14,'triangle',0.6),150); }
-        if(kind==='hit')   { note(160,0.25,'sawtooth',0.5); }
-        if(kind==='win')   { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>note(f,0.2,'square',0.5),i*130)); }
-        if(kind==='meet')  { note(392,0.10,'sine',0.5); setTimeout(()=>note(494,0.12,'sine',0.5),90); }
-      },
-      toggleMute(){
-        ensure();
-        muted = !muted;
-        master.gain.value = muted ? 0 : 0.18;
-        return muted;
-      },
-      isMuted(){ return muted; }
+      isOn(){return on;}
     };
   })();
 
-  // ------------------------------------------------------------------
-  // SPIEL-DATEN
-  // ------------------------------------------------------------------
-  const GROUND = H - 60;      // Boden-Y
-  const GRAV = 0.7;
-  const LEVEL_END = 6400;     // Ziel: Alexanderplatz
+  // ---------- Spiellogik ----------
+  const tmpF=new T.Vector3(), tmpR=new T.Vector3();
+  const dist2=(ax,az,bx,bz)=>{const dx=ax-bx,dz=az-bz;return dx*dx+dz*dz;};
 
-  // Berliner Sprüche für die Personen, die man trifft
-  const berliner = [
-    {emoji:'🧑‍🎤', name:'Techno-Sven',   line:'"Wa, hältste durch bis heute früh?"'},
-    {emoji:'👵',   name:'Oma Helga',     line:'"Junge, iss ma wat Anständiges!"'},
-    {emoji:'🚴',   name:'Öko-Lisa',      line:'"Nimm doch det Rad, ne!"'},
-    {emoji:'🧔',   name:'Currywurst-Uwe', line:'"Mit oder ohne Darm?"'},
-    {emoji:'👮',   name:'BVG-Kontrolle', line:'"Fahrscheine bitte!"'},
-    {emoji:'🎸',   name:'Straßenmusiker', line:'"Ick spiel für Kleingeld, wa."'},
-    {emoji:'🧉',   name:'Späti-Achim',    line:'"Wegbier? Klar, geht klar!"'},
-    {emoji:'🕺',   name:'Berghain-Türsteher', line:'"Heute nich."'},
-  ];
+  let last=0;
+  function frame(now){
+    requestAnimationFrame(frame);
+    const dt=Math.min(0.05,(now-last)/1000||0); last=now;
 
-  let game;
-  const HS_KEY = 'ubahn_berlin_highscore';
-  function getHighscore(){ try{ return parseInt(localStorage.getItem(HS_KEY)||'0',10)||0; }catch(e){ return 0; } }
-  function setHighscore(v){ try{ localStorage.setItem(HS_KEY, String(v)); }catch(e){} }
+    // Deko-Animation läuft immer
+    donerShops.forEach(s=>{ if(s.userData.spit) s.userData.spit.rotation.y+=dt*1.5; });
+    const tr=ubahn.userData.train; if(tr){ tr.position.z+=dt*14; if(tr.position.z>70)tr.position.z=-70; }
+    doners.forEach(d=>{ if(!d.taken){ d.sp.position.y=d.base+Math.sin(now/400+d.x)*0.25; }});
+    bottles.forEach(b=>{ if(!b.taken){ b.sp.position.y=b.base+Math.sin(now/400+b.z)*0.2; }});
 
-  function newGame(){
-    return {
-      state:'play',          // play | dead | win
-      camX:0,
-      score:0,
-      pfand:0,
-      lives:3,
-      combo:0, comboT:0,
-      popups:[],             // schwebende +Punkte
-      trainX:-400,           // U-Bahn im Hintergrund
-      msg:null, msgT:0,
-      player:{ x:80, y:GROUND-46, w:30, h:46, vx:0, vy:0, onGround:true, face:1, coyote:0 },
-      keys:{left:false,right:false},
-      platforms:  buildPlatforms(),
-      doners:     buildDoners(),
-      bottles:    buildBottles(),
-      rats:       buildRats(),
-      people:     buildPeople(),
-      pfandGuy:   {x:2600, y:GROUND-52, w:34, h:52, done:false},
-      clouds:     buildClouds(),
-      t:0,
-    };
-  }
-
-  function buildPlatforms(){
-    // {x,y,w} — Bahnsteigkanten & Kisten
-    const p = [];
-    const spots = [700, 1150, 1600, 2050, 3100, 3550, 4200, 4700, 5300, 5750];
-    spots.forEach((x,i)=> p.push({x, y: GROUND-90-(i%3)*24, w:120}) );
-    p.push({x:1900,y:GROUND-150,w:90});
-    p.push({x:4400,y:GROUND-160,w:90});
-    return p;
-  }
-  function buildDoners(){
-    const d = [];
-    for(let x=420; x<LEVEL_END-200; x+=Math.random()*260+180){
-      const onAir = Math.random()<0.4;
-      d.push({x, y: onAir ? GROUND-120-Math.random()*80 : GROUND-30, taken:false});
-    }
-    return d;
-  }
-  function buildBottles(){
-    const b = [];
-    const spots = [520, 980, 1720, 2200, 3300, 3900, 4550, 5100, 5900];
-    spots.forEach(x=> b.push({x, y:GROUND-26, taken:false}));
-    return b;
-  }
-  function buildRats(){
-    const r = [];
-    const spots = [900,1400,1850,2400,2900,3400,3800,4300,4850,5400,5850,6150];
-    spots.forEach((x,i)=> r.push({x, y:GROUND-24, w:34,h:20, dir: i%2?1:-1, home:x, range:70}));
-    return r;
-  }
-  function buildPeople(){
-    const ppl = [];
-    const spots = [1250, 2150, 3250, 4100, 4900, 5350, 5750, 6050];
-    spots.forEach((x,i)=>{
-      const b = berliner[i % berliner.length];
-      ppl.push({x, y:GROUND-52, w:30,h:52, met:false, ...b});
-    });
-    return ppl;
-  }
-  function buildClouds(){
-    const c=[];
-    for(let i=0;i<14;i++) c.push({x:Math.random()*LEVEL_END, y:30+Math.random()*140, s:0.4+Math.random()*0.5});
-    return c;
-  }
-
-  // ------------------------------------------------------------------
-  // INPUT
-  // ------------------------------------------------------------------
-  const keyState = {left:false,right:false,jump:false};
-  function jump(){
-    if(!game || game.state!=='play') return;
-    const p = game.player;
-    if(p.onGround || p.coyote>0){
-      p.vy = -13.2; p.onGround=false; p.coyote=0;
-      Audio.sfx('jump');
-    }
-  }
-  window.addEventListener('keydown', e=>{
-    if(['ArrowLeft','ArrowRight','ArrowUp',' ','Spacebar'].includes(e.key)) e.preventDefault();
-    if(e.key==='ArrowLeft')  keyState.left=true;
-    if(e.key==='ArrowRight') keyState.right=true;
-    if(e.key==='ArrowUp'||e.key===' '||e.key==='Spacebar') jump();
-  });
-  window.addEventListener('keyup', e=>{
-    if(e.key==='ArrowLeft')  keyState.left=false;
-    if(e.key==='ArrowRight') keyState.right=false;
-  });
-
-  // Touch-Buttons
-  const bind = (id, on, off) => {
-    const el = document.getElementById(id);
-    const s=e=>{e.preventDefault();on();};
-    const en=e=>{e.preventDefault();off&&off();};
-    el.addEventListener('touchstart',s,{passive:false});
-    el.addEventListener('touchend',en,{passive:false});
-    el.addEventListener('mousedown',s);
-    el.addEventListener('mouseup',en);
-    el.addEventListener('mouseleave',en);
-  };
-  bind('btnLeft', ()=>keyState.left=true,  ()=>keyState.left=false);
-  bind('btnRight',()=>keyState.right=true, ()=>keyState.right=false);
-  bind('btnJump', ()=>jump());
-
-  // ------------------------------------------------------------------
-  // UPDATE
-  // ------------------------------------------------------------------
-  function rectsHit(a,b){
-    return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
-  }
-  function setMsg(text, col='#fff'){ game.msg={text,col}; game.msgT=110; }
-  function popup(worldX, worldY, text, col='#ffd54a'){
-    game.popups.push({x:worldX, y:worldY, text, col, life:60});
-  }
-  function addScore(base, worldX, worldY, label){
-    game.comboT = 90;
-    game.combo = Math.min(9, game.combo+1);
-    const mult = 1 + (game.combo-1)*0.5;      // Combo-Bonus fürs schnelle Sammeln
-    const pts = Math.round(base*mult);
-    game.score += pts;
-    const tag = game.combo>1 ? ('+'+pts+'  x'+game.combo+'🔥') : ('+'+pts);
-    popup(worldX, worldY, (label?label+' ':'')+tag, col_for(game.combo));
-    return pts;
-  }
-  function col_for(c){ return c>=5?'#ff7a3d':c>=3?'#ffb03d':'#ffd54a'; }
-
-  function update(){
-    if(!game || game.state!=='play') return;
-    game.t++;
-    const p = game.player;
-
-    // horizontal
-    const SPEED=4.4;
-    p.vx = 0;
-    if(keyState.left){ p.vx=-SPEED; p.face=-1; }
-    if(keyState.right){ p.vx= SPEED; p.face= 1; }
-    p.x += p.vx;
-    if(p.x<0) p.x=0;
-    if(p.x>LEVEL_END) p.x=LEVEL_END;
-
-    // gravity
-    p.vy += GRAV;
-    p.y += p.vy;
-    if(p.coyote>0) p.coyote--;
-
-    // ground
-    let landed=false;
-    if(p.y+p.h >= GROUND){ p.y=GROUND-p.h; p.vy=0; if(!p.onGround)landed=true; p.onGround=true; p.coyote=6; }
-    else p.onGround=false;
-
-    // platforms (nur von oben landbar)
-    for(const pl of game.platforms){
-      const within = p.x+p.w>pl.x && p.x<pl.x+pl.w;
-      if(within && p.vy>=0){
-        const feetPrev = p.y+p.h - p.vy;
-        if(feetPrev <= pl.y+8 && p.y+p.h >= pl.y && p.y+p.h <= pl.y+26){
-          p.y = pl.y-p.h; p.vy=0; p.onGround=true; p.coyote=6;
-        }
-      }
-    }
-
-    // Döner sammeln
-    for(const d of game.doners){
-      if(d.taken) continue;
-      if(rectsHit(p,{x:d.x-14,y:d.y-14,w:28,h:28})){
-        d.taken=true; Audio.sfx('doner'); addScore(10, d.x, d.y-16, '🥙');
-      }
-    }
-    // Pfandflaschen sammeln
-    for(const b of game.bottles){
-      if(b.taken) continue;
-      if(rectsHit(p,{x:b.x-10,y:b.y-22,w:22,h:30})){
-        b.taken=true; game.pfand++; Audio.sfx('doner'); popup(b.x, b.y-24,'🍾 Pfand','#8fe3a0');
-      }
-    }
-
-    // Pfand-Sammler-Typ ("Haste ma ne Flasche für Pfand?")
-    const pg = game.pfandGuy;
-    if(!pg.done && rectsHit(p,{x:pg.x-6,y:pg.y,w:pg.w+12,h:pg.h})){
-      if(game.pfand>0){
-        pg.done=true;
-        const bonus = game.pfand*15;
-        game.score += bonus;
-        Audio.sfx('pfand');
-        setMsg('"Danke dir, Meister!" 🍾 +'+bonus,'#8fe3a0');
-        popup(pg.x+pg.w/2, pg.y-10, '+'+bonus, '#8fe3a0');
-        game.pfand=0;
-      } else {
-        if(game.t%40===0) setMsg('"Haste ma ne Flasche für Pfand?" 🍾','#ffd54a');
-      }
-    }
-
-    // Personen treffen
-    for(const person of game.people){
-      if(person.met) continue;
-      if(rectsHit(p,{x:person.x,y:person.y,w:person.w,h:person.h})){
-        person.met=true; game.score+=25; Audio.sfx('meet');
-        setMsg(person.emoji+' '+person.name+': '+person.line,'#9bd0ff');
-        popup(person.x+person.w/2, person.y-12, '+25', '#9bd0ff');
-      }
-    }
-
-    // Ratten bewegen + Kollision
-    for(const r of game.rats){
-      r.x += r.dir*1.3;
-      if(r.x < r.home-r.range || r.x > r.home+r.range) r.dir*=-1;
-      if(rectsHit(p,{x:r.x,y:r.y,w:r.w,h:r.h})){
-        // von oben draufspringen = Ratte weg
-        if(p.vy>0 && (p.y+p.h - r.y) < 22){
-          r.dead=true; p.vy=-9; Audio.sfx('doner'); addScore(15, r.x+8, r.y-6, '🐀');
-        } else if(!r.dead && !p.hurtCd){
-          hurt();
-        }
-      }
-    }
-    game.rats = game.rats.filter(r=>!r.dead);
-    if(p.hurtCd) p.hurtCd--;
-
-    // In Grube / rausgefallen? (hier kein Loch, aber Sicherheit)
-    if(p.y>H+200) hurt(true);
-
-    // Ziel erreicht
-    if(p.x >= LEVEL_END-40){ win(); }
+    if(S&&S.running) step(dt,now);
 
     // Kamera
-    game.camX = Math.max(0, Math.min(p.x - W*0.35, LEVEL_END - W + 40));
+    const F=Math.min(1,dt*6);
+    // gewünschter Yaw
+    let targetYaw=S?S.facing+S.camOff:0;
+    if(S){ S.camYaw += angleDiff(targetYaw,S.camYaw)*0.12; }
+    const yaw=S?S.camYaw:0;
+    const camDist=13, camH=8;
+    const px=player.position.x, pz=player.position.z, py=player.position.y;
+    camera.position.x += ((px - Math.sin(yaw)*camDist) - camera.position.x)*0.15;
+    camera.position.z += ((pz - Math.cos(yaw)*camDist) - camera.position.z)*0.15;
+    camera.position.y += ((py + camH) - camera.position.y)*0.15;
+    camera.lookAt(px, py+2.2, pz);
 
-    // Combo verfällt
-    if(game.comboT>0){ game.comboT--; if(game.comboT===0) game.combo=0; }
-
-    // U-Bahn im Hintergrund (fährt gemütlich durchs Bild)
-    game.trainX += 2.4;
-    if(game.trainX > game.camX + W + 500) game.trainX = game.camX - 500;
-
-    // Popups animieren
-    for(const pu of game.popups){ pu.y -= 0.7; pu.life--; }
-    game.popups = game.popups.filter(pu=>pu.life>0);
-
-    if(game.msgT>0) game.msgT--;
+    if(toastT>0){toastT--; if(toastT===0)toastEl.classList.remove('show');}
+    renderer.render(scene,camera);
   }
+  function angleDiff(a,b){ let d=(a-b)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return d; }
 
-  function hurt(reset){
-    const p=game.player;
-    game.lives--;
-    Audio.sfx('hit');
-    p.hurtCd = 70;
-    if(game.lives<=0){ dead(); return; }
-    setMsg('Autsch! ❤️ '+game.lives+' Leben übrig','#ff9a9a');
-    // zurücksetzen an sichere Stelle
-    p.x = Math.max(60, p.x-90); p.y=GROUND-p.h; p.vy=0;
-  }
+  function step(dt,now){
+    // Eingabe zusammenführen (Tastatur + Stick)
+    let ix=input.mx, iy=input.my;
+    if(keys['a']||keys['arrowleft'])ix-=1;
+    if(keys['d']||keys['arrowright'])ix+=1;
+    if(keys['w']||keys['arrowup'])iy+=1;
+    if(keys['s']||keys['arrowdown'])iy-=1;
+    const mag=Math.hypot(ix,iy);
+    if(mag>1){ix/=mag;iy/=mag;}
 
-  function scoreLine(){
-    const hs = getHighscore();
-    let best = hs;
-    let rec = '';
-    if(game.score > hs){ best = game.score; setHighscore(best); rec = ' 🏆 <b>Neuer Rekord!</b>'; }
-    return 'Punkte: <b>'+game.score+'</b>'+rec+'<br>Bester Lauf: <b>'+best+'</b>'
-         + '<br><span style="color:#9bd0ff">Teil den Link mit deinen Leuten und knackt den Highscore! 🥙</span>';
-  }
-  function dead(){
-    game.state='dead';
-    Audio.stopMusic();
-    showOverlay('💥 Game Over',
-      'Die Ratten waren schneller — nix Alex heute.<br>'+scoreLine(),
-      true);
-  }
-  function win(){
-    game.state='win';
-    Audio.sfx('win');
-    Audio.stopMusic();
-    showOverlay('🎉 Alexanderplatz erreicht!',
-      'Willkommen am Alex! Der Fernsehturm grüßt. 📺<br>'+scoreLine(),
-      true);
-  }
-
-  // ------------------------------------------------------------------
-  // RENDER
-  // ------------------------------------------------------------------
-  function draw(){
-    const cam = game ? game.camX : 0;
-    // Himmel (Farbverlauf)
-    const sky = ctx.createLinearGradient(0,0,0,H);
-    sky.addColorStop(0,'#8fd0f2'); sky.addColorStop(1,'#cdeafc');
-    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-
-    if(!game){ return; }
-
-    // Wolken (Parallax)
-    ctx.fillStyle='rgba(255,255,255,.85)';
-    for(const c of game.clouds){
-      const cx = c.x - cam*c.s;
-      if(cx<-120||cx>W+120) continue;
-      cloud(cx, c.y, 30);
+    // Kamera-relative Bewegung
+    const cy=S.camYaw;
+    tmpF.set(Math.sin(cy),0,Math.cos(cy));   // vorwärts (in die Szene)
+    tmpR.set(Math.cos(cy),0,-Math.sin(cy));  // rechts
+    let mvx=tmpF.x*iy+tmpR.x*ix, mvz=tmpF.z*iy+tmpR.z*ix;
+    const moving=Math.hypot(mvx,mvz)>0.05;
+    if(moving){
+      const speed=14;
+      player.position.x+=mvx*speed*dt;
+      player.position.z+=mvz*speed*dt;
+      S.facing=Math.atan2(mvx,mvz);
+      player.rotation.y=S.facing;
     }
+    // Grenzen
+    player.position.x=Math.max(-BOUND,Math.min(BOUND,player.position.x));
+    player.position.z=Math.max(-BOUND,Math.min(BOUND,player.position.z));
 
-    // Fernsehturm am Ziel (Parallax mittel)
-    drawFernsehturm(LEVEL_END - cam - 40);
+    // Sprung / Schwerkraft
+    S.vy-=38*dt; player.position.y+=S.vy*dt;
+    if(player.position.y<=0){player.position.y=0;S.vy=0;if(!S.onGround)S.onGround=true;}
+    else S.onGround=false;
+    // Lauf-Wackeln
+    if(moving&&S.onGround) player.position.y=Math.abs(Math.sin(now/90))*0.18;
 
-    // Häuser-Silhouette (Parallax)
-    drawSkyline(cam);
+    // Schatten
+    pshadow.position.set(player.position.x,0.03,player.position.z);
+    const sh=1-Math.min(0.6,player.position.y*0.15); pshadow.scale.set(sh,sh,sh);
 
-    // U-Bahn fährt im Hintergrund vorbei
-    drawTrain(game.trainX - cam);
+    const px=player.position.x, pz=player.position.z;
 
-    // Boden
-    ctx.fillStyle='#5b5b6b'; ctx.fillRect(0,GROUND,W,H-GROUND);
-    ctx.fillStyle='#42424f'; ctx.fillRect(0,GROUND,W,6);
-    // Bahnsteig-Fliesen
-    ctx.fillStyle='#6d6d7d';
-    for(let x=-(cam%40); x<W; x+=40){ ctx.fillRect(x,GROUND+10,36,3); }
-    // gelbe Bahnsteig-Warnlinie
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bvg-yellow')||'#f0d722';
-    ctx.fillRect(0,GROUND+2,W,5);
-
-    // Plattformen
-    for(const pl of game.platforms){
-      const x = pl.x-cam;
-      if(x<-140||x>W) continue;
-      ctx.fillStyle='#8a5a2b'; ctx.fillRect(x,pl.y,pl.w,16);
-      ctx.fillStyle='#b3803f'; ctx.fillRect(x,pl.y,pl.w,4);
+    // Döner sammeln
+    for(const d of doners){ if(d.taken)continue;
+      if(dist2(px,pz,d.x,d.z)<3.2){ d.taken=true; d.sp.visible=false; S.score+=10; S.donersLeft--;
+        Audio.sfx('doner'); toast('Döner! 🥙 +10'); updateHUD();
+        if(S.donersLeft===0){ setObjective('Alle Döner! Jetzt rauf zum Fernsehturm 🗼'); }
+      }
     }
-
-    // Pfandflaschen
-    for(const b of game.bottles){ if(b.taken)continue; const x=b.x-cam; if(x<-30||x>W)continue; drawBottle(x,b.y); }
-
-    // Döner
-    for(const d of game.doners){ if(d.taken)continue; const x=d.x-cam; if(x<-30||x>W)continue; drawDoner(x,d.y); }
-
-    // Pfand-Typ
-    const pg=game.pfandGuy;
-    { const x=pg.x-cam; if(x>-60&&x<W){ drawPerson(x,pg.y,'🧉',pg.done?'':'Flasche?'); if(!pg.done){ ctx.fillStyle='#333'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText('Pfand?',x+pg.w/2,pg.y-8);} } }
-
-    // Personen
-    for(const person of game.people){
-      const x=person.x-cam; if(x<-60||x>W)continue;
-      drawPerson(x,person.y,person.emoji);
-      if(!person.met){ ctx.fillStyle='#222'; ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('❔',x+person.w/2,person.y-10); }
+    // Flaschen sammeln
+    for(const b of bottles){ if(b.taken)continue;
+      if(dist2(px,pz,b.x,b.z)<3.0){ b.taken=true; b.sp.visible=false; S.pfand++;
+        Audio.sfx('doner'); toast('Pfandflasche 🍾'); updateHUD(); }
     }
-
-    // Ratten
-    for(const r of game.rats){ const x=r.x-cam; if(x<-40||x>W)continue; drawRat(x,r.y,r.dir); }
-
-    // Ziel-Schild
-    { const x=LEVEL_END-cam-10;
-      if(x>-40 && x<W+40){
-        ctx.fillStyle='#0a4a8f'; ctx.fillRect(x-30,GROUND-140,60,30);
-        ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
-        ctx.fillText('U Alexanderpl.',x,GROUND-120);
-        ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif';
-        ctx.fillText('🏁',x,GROUND-100);
+    // Pfandsammler
+    if(!pfandGuy.done && dist2(px,pz,pfandGuy.x,pfandGuy.z)<6){
+      if(S.pfand>0){ const bonus=S.pfand*20; S.score+=bonus; pfandGuy.done=true;
+        pfandGuy.face.material.map.image; // noop
+        Audio.sfx('pfand'); toast('Pfand-Achim: "Danke dir!" +'+bonus); S.pfand=0; updateHUD();
+      } else if(!pfandGuy.hintT){ toast('Pfand-Achim: "Haste ma ne Flasche für Pfand?" 🍾'); pfandGuy.hintT=1;
+        setTimeout(()=>pfandGuy.hintT=0,3000); }
+    }
+    // Personen treffen + leichtes Umherlaufen
+    for(const n of npcs){
+      n.wander+=dt*0.4;
+      n.g.position.x=n.home[0]+Math.sin(n.wander)*1.2;
+      n.g.position.z=n.home[1]+Math.cos(n.wander*0.7)*1.2;
+      n.g.rotation.y=Math.atan2(px-n.g.position.x,pz-n.g.position.z);
+      if(!n.met && dist2(px,pz,n.g.position.x,n.g.position.z)<6){
+        n.met=true; S.met++; S.score+=25; Audio.sfx('meet'); toast(n.e+' '+n.n+': '+n.l); updateHUD();
       }
     }
 
-    // Spieler
-    drawPlayer();
-
-    // Punkte-Popups
-    ctx.textAlign='center'; ctx.font='bold 15px "Segoe UI",sans-serif';
-    for(const pu of game.popups){
-      const x = pu.x-cam, a = Math.min(1, pu.life/24);
-      if(x<-40||x>W+40) continue;
-      ctx.globalAlpha=a;
-      ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillText(pu.text, x+1, pu.y+1);
-      ctx.fillStyle=pu.col; ctx.fillText(pu.text, x, pu.y);
-      ctx.globalAlpha=1;
-    }
-
-    // HUD
-    drawHUD();
-
-    // Nachricht
-    if(game.msg && game.msgT>0){
-      const a = Math.min(1, game.msgT/40);
-      ctx.globalAlpha=a;
-      ctx.fillStyle='rgba(0,0,0,.65)';
-      ctx.font='bold 18px "Segoe UI",sans-serif'; ctx.textAlign='center';
-      const tw = ctx.measureText(game.msg.text).width;
-      ctx.fillRect(W/2-tw/2-14, 54, tw+28, 30);
-      ctx.fillStyle=game.msg.col;
-      ctx.fillText(game.msg.text, W/2, 74);
-      ctx.globalAlpha=1;
+    // Gewinn: alle Döner weg UND am Fernsehturm (z=-40)
+    if(!S.won && S.donersLeft===0 && dist2(px,pz,0,-34)<40){
+      win();
     }
   }
 
-  function cloud(x,y,r){
-    ctx.beginPath();
-    ctx.arc(x,y,r,0,7); ctx.arc(x+r,y+6,r*0.8,0,7); ctx.arc(x-r,y+8,r*0.7,0,7);
-    ctx.arc(x+r*0.4,y-r*0.5,r*0.7,0,7);
-    ctx.fill();
+  function win(){
+    S.won=true; S.running=false; Audio.sfx('win'); Audio.stop();
+    const hs=getHS(); let rec='';
+    if(S.score>hs){ setHS(S.score); rec=' 🏆 Neuer Rekord!'; }
+    showOverlay('🎉 Am <span class="y">Fernsehturm</span>!',
+      'Willkommen am Alex! Endpunktzahl: <b>'+S.score+'</b>'+rec+
+      '<br>Bester Lauf: <b>'+Math.max(hs,S.score)+'</b>'+
+      '<br><span style="opacity:.85">Teil den Link mit deinen Leuten und knackt den Highscore! 💛</span>',
+      '↻ Nochmal laufen');
   }
 
-  function drawSkyline(cam){
-    const off = cam*0.5 % 260;
-    ctx.fillStyle='#9fb0c9';
-    for(let x=-off-260; x<W+260; x+=260){
-      ctx.fillRect(x+20,GROUND-120,60,120);
-      ctx.fillRect(x+95,GROUND-170,50,170);
-      ctx.fillRect(x+160,GROUND-90,70,90);
-      // Fenster
-      ctx.fillStyle='#c7d3e6';
-      for(let wy=GROUND-160; wy<GROUND-20; wy+=22)
-        for(let wx=x+100; wx<x+140; wx+=16) ctx.fillRect(wx,wy,8,10);
-      ctx.fillStyle='#9fb0c9';
-    }
+  function showOverlay(titleHtml, bodyHtml, btnText){
+    ov.innerHTML='<h1>'+titleHtml+'</h1><p>'+bodyHtml+'</p>'+
+      '<button id="againBtn">'+btnText+'</button>'+
+      '<div class="small">Berlin 3D · 💛💜</div>';
+    ov.classList.remove('hidden');
+    document.getElementById('againBtn').addEventListener('click',startGame);
   }
 
-  function drawTrain(x){
-    if(x<-260||x>W+40) return;
-    const y = GROUND-96;
-    // BVG-gelber U-Bahn-Wagen
-    ctx.save();
-    ctx.fillStyle='#f0d722';
-    ctx.fillRect(x, y, 220, 46);
-    ctx.fillStyle='#c9b41c';
-    ctx.fillRect(x, y+40, 220, 6);
-    // Fenster
-    ctx.fillStyle='#2a3a4a';
-    for(let i=0;i<5;i++) ctx.fillRect(x+14+i*42, y+8, 30, 20);
-    // Front
-    ctx.fillStyle='#e8402e';
-    ctx.fillRect(x, y, 6, 46);
-    // U-Logo
-    ctx.fillStyle='#0a4a8f';
-    ctx.fillRect(x+96, y-18, 26, 26);
-    ctx.fillStyle='#fff'; ctx.font='bold 18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('U', x+109, y-4);
-    ctx.textBaseline='alphabetic';
-    ctx.restore();
+  // ---------- Start ----------
+  function startGame(){
+    ov.classList.add('hidden');
+    reset(); S.running=true;
+    Audio.start();
   }
+  startBtn.addEventListener('click',startGame);
 
-  function drawFernsehturm(x){
-    if(x<-80||x>W+80) return;
-    ctx.save();
-    ctx.fillStyle='#c3ccd8';
-    // Schaft
-    ctx.fillRect(x-8,GROUND-330,16,330);
-    // Kugel
-    ctx.beginPath(); ctx.arc(x,GROUND-300,26,0,7); ctx.fill();
-    ctx.fillStyle='#7d2489';
-    ctx.beginPath(); ctx.arc(x,GROUND-300,26,0,7); ctx.fill();
-    ctx.fillStyle='#c3ccd8';
-    // Spitze
-    ctx.fillRect(x-2,GROUND-400,4,72);
-    ctx.fillStyle='#e33';
-    ctx.beginPath(); ctx.arc(x,GROUND-402,4,0,7); ctx.fill();
-    ctx.restore();
-  }
-
-  function drawDoner(x,y){
-    ctx.font='26px serif'; ctx.textAlign='center';
-    const bob = Math.sin((game.t+x)/18)*3;
-    ctx.fillText('🥙', x, y+bob);
-  }
-  function drawBottle(x,y){
-    ctx.font='24px serif'; ctx.textAlign='center';
-    ctx.fillText('🍾', x, y);
-  }
-  function drawRat(x,y,dir){
-    ctx.save(); ctx.translate(x+17,y+10); ctx.scale(dir<0?-1:1,1);
-    ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🐀',0,0);
-    ctx.restore(); ctx.textBaseline='alphabetic';
-  }
-  function drawPerson(x,y,emoji){
-    ctx.font='40px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
-    ctx.fillText(emoji, x+15, y+52);
-    ctx.textBaseline='alphabetic';
-  }
-
-  function drawPlayer(){
-    const p=game.player;
-    const x=p.x-game.camX, y=p.y;
-    if(p.hurtCd && Math.floor(game.t/4)%2) return; // Blink bei Treffer
-    // Körper (kleiner Berliner mit Beanie)
-    ctx.save();
-    // Beine (Lauf-Animation)
-    const walk = (keyState.left||keyState.right) && p.onGround ? Math.sin(game.t/4)*4 : 0;
-    ctx.fillStyle='#26324a';
-    ctx.fillRect(x+5, y+30, 8, 16+ (walk>0?walk:0));
-    ctx.fillRect(x+17,y+30, 8, 16- (walk>0?walk:0));
-    // Jacke
-    ctx.fillStyle='#d1462f';
-    ctx.fillRect(x+3, y+14, 24, 20);
-    // Kopf
-    ctx.fillStyle='#f2c48d';
-    ctx.fillRect(x+7, y, 16, 16);
-    // Beanie (Berlin-Mütze)
-    ctx.fillStyle='#7d2489';
-    ctx.fillRect(x+5, y-2, 20, 8);
-    ctx.fillStyle='#f0d722';
-    ctx.fillRect(x+5, y+4, 20, 3);
-    // Gesicht (Blickrichtung)
-    ctx.fillStyle='#222';
-    ctx.fillRect(x+ (p.face>0?17:9), y+7, 3,3);
-    ctx.restore();
-  }
-
-  function drawHUD(){
-    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(10,10,270,34);
-    ctx.font='bold 16px "Segoe UI",sans-serif';
-    ctx.fillStyle='#ffd54a'; ctx.fillText('🥙 '+game.score, 22, 33);
-    ctx.fillStyle='#8fe3a0'; ctx.fillText('🍾 '+game.pfand, 120, 33);
-    ctx.fillStyle='#ff9a9a'; ctx.fillText('❤️'.repeat(Math.max(0,game.lives)), 190, 33);
-    // Combo-Anzeige
-    if(game.combo>1){
-      const a = Math.min(1, game.comboT/30);
-      ctx.globalAlpha=a;
-      ctx.fillStyle=col_for(game.combo);
-      ctx.font='bold 20px "Segoe UI",sans-serif';
-      ctx.fillText('COMBO x'+game.combo+' 🔥', 22, 62);
-      ctx.globalAlpha=1;
-    }
-    // Fortschritt bis Alex
-    const pw=200, px=W-pw-16, py=20;
-    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(px-6,10,pw+12,24);
-    ctx.fillStyle='#333'; ctx.fillRect(px,py,pw,8);
-    ctx.fillStyle='#f0d722';
-    ctx.fillRect(px,py, pw*Math.min(1, game.player.x/LEVEL_END), 8);
-    ctx.fillStyle='#fff'; ctx.font='11px sans-serif'; ctx.textAlign='right';
-    ctx.fillText('→ Alexanderplatz', px+pw, py-2);
-    ctx.textAlign='left';
-  }
-
-  // ------------------------------------------------------------------
-  // LOOP
-  // ------------------------------------------------------------------
-  function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
-
-  // ------------------------------------------------------------------
-  // OVERLAY / START / RESTART
-  // ------------------------------------------------------------------
-  function showOverlay(title, html, showRestart){
-    ovTitle.textContent = title;
-    ovText.innerHTML = html;
-    overlay.classList.remove('hidden');
-    startBtn.classList.add('hidden');
-    restartLink.classList.toggle('hidden', !showRestart);
-  }
-  function hideOverlay(){ overlay.classList.add('hidden'); }
-
-  function start(){
-    game = newGame();
-    hideOverlay();
-    if(!Audio.isMuted()) Audio.startMusic();
-  }
-
-  startBtn.addEventListener('click', start);
-  // Neustart per Link-Klick (wie gewünscht)
-  restartLink.addEventListener('click', (e)=>{ e.preventDefault(); start(); });
-
-  muteBtn.addEventListener('click', ()=>{
-    const m = Audio.toggleMute();
-    muteBtn.textContent = m ? '🔇 Musik aus' : '🔊 Musik an';
-    if(!m && game && game.state==='play') Audio.startMusic();
-    if(m) Audio.stopMusic();
+  reset();               // Welt initialisieren (nicht laufend)
+  requestAnimationFrame(frame);
   });
-
-  // erste Zeichnung + Loop
-  loop();
-})();
-</script>
+  </script>
 </body>
 </html>
