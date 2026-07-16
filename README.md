@@ -11,13 +11,14 @@ ab **Treptower Park** in Berlin, entlang der Spree — mit **4 Flaschen Wein**,
 - **Fakten & Trinksprüche** pro Station, Fortschritts-Anzeige, Konfetti-Finale
 - **Tag-/Nacht-Modus**, funktioniert auf dem Handy, keine Installation nötig
 
-## Route
+## Route (für Tobi 🎂 · 01.02.1996)
 1. 🥂 **Treptower Park** – Start · Flasche 1 (Sekt/Prosecco)
 2. 🗿 **Sowjetisches Ehrenmal** – Fakten-Stopp
 3. 🔭 **Archenhold-Sternwarte** – Flasche 2 (Weißwein) · Einstein!
-4. 🌹 **Insel der Jugend / Abteibrücke** – Flasche 3 (Rosé)
-5. 🎡 **Spreepark-Riesenrad** – Flasche 4 (Rotwein)
-6. 🥚 **Eierhäuschen** – Finale 🎉
+4. 🍽️ **Zenner** – Essens-Stopp (historischer Biergarten an der Spree)
+5. 🌹 **Insel der Jugend / Abteibrücke** – Flasche 3 (Rosé)
+6. 🎡 **Spreepark-Riesenrad** – Flasche 4 (Rotwein)
+7. 🥚 **Eierhäuschen** – Finale 🎉 mit Fun-Facts zum Geburtstag & Konfetti
 
 ## Technik
 Alles steckt in einer einzigen Datei `index.html` — kein Build, keine externen
