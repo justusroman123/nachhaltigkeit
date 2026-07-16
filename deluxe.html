@@ -295,8 +295,9 @@
   <div class="topbar">
     <div class="brand">
       <span class="eyebrow">Berlin · Treptow · ca. 5 km</span>
-      <h1>Weinwanderung <span class="amp">&amp;</span> Fakten</h1>
+      <h1>Weinwanderung<span class="amp"> 🍷</span></h1>
     </div>
+    <button class="iconbtn" id="musicBtn" title="Wein-Musik an / aus" aria-label="Wein-Musik an oder aus">🎵</button>
     <button class="iconbtn" id="routeBtn" title="Ganze Route in Google Maps" aria-label="Ganze Route in Google Maps öffnen">🗺️</button>
     <button class="iconbtn" id="themeBtn" title="Tag / Nacht" aria-label="Zwischen Tag und Nacht wechseln">🌙</button>
   </div>
@@ -325,12 +326,12 @@
     <div class="floaties" id="floaties"></div>
     <div class="ov-inner">
       <div class="photoframe spin"><img id="svenjaStart" alt="Svenja" /></div>
-      <p class="fromline">Ein Geschenk von <b>Svenja, Jenny &amp; Co.</b> 🍷</p>
+      <p class="fromline">Ein Geschenk von <b>Sascha, Lisa &amp; Svenja</b> 🍷</p>
       <div class="ov-kicker">Für Tobi · Happy Birthday 🎂</div>
       <h2 class="ov-title">Weinwanderung<br>durch Treptow</h2>
-      <p class="ov-sub">Alles Gute, Tobi! Fünf Kilometer an der Spree, vier Flaschen Wein, ein Essens-Stopp bei Zenner und sieben Orte mit guten Geschichten. Heute mal ganz ohne Antrag in dreifacher Ausfertigung. 😉</p>
+      <p class="ov-sub">Alles Gute, Tobi! Fünf Kilometer an der Spree, vier Flaschen Wein, ein Essens-Stopp im Zenner und sieben Orte mit guten Geschichten. Heute mal ganz ohne Antrag in dreifacher Ausfertigung. 😉</p>
       <div class="ov-facts">
-        <span><b>5</b> km</span><span><b>4</b> Flaschen</span><span><b>7</b> Stopps</span><span>🍽️ Essen bei Zenner</span>
+        <span><b>5</b> km</span><span><b>4</b> Flaschen</span><span><b>7</b> Stopps</span><span>🍽️ Essen im Zenner</span>
       </div>
       <div class="datefact">💎 Fun Fact: Dein Februar-Geburtsstein Amethyst galt früher als Schutz gegen Trunkenheit. Ausgerechnet heute. 🍷</div>
       <button class="ov-cta" id="startBtn">Vorgang eröffnen →</button>
@@ -342,7 +343,7 @@
   <div class="overlay hidden" id="finaleOverlay">
     <div class="ov-inner">
       <div class="photoframe spin"><img id="svenjaFinale" alt="Svenja" /></div>
-      <p class="fromline">Alles Liebe von <b>Svenja, Jenny &amp; Co.</b> 🥂</p>
+      <p class="fromline">Alles Liebe von <b>Sascha, Lisa &amp; Svenja</b> 🥂</p>
       <div class="ov-kicker">Antrag bewilligt · Ziel erreicht</div>
       <h2 class="ov-title">Alles Gute,<br>Tobi!</h2>
       <p class="ov-sub">Fünf Kilometer, vier Flaschen, sieben Geschichten — und alles geschafft, ganz ohne Wartezeit von fünf Jahren. Zeit für den letzten Schluck am Eierhäuschen. 🥂</p>
@@ -673,6 +674,7 @@
     confetti(48);
     if(state.active < STATIONS.length-1) state.active++;
     selected=state.active; save();
+    if(STATIONS[state.active] && STATIONS[state.active].bottle){ setTimeout(function(){ AUDIO.sfx("pop"); }, 320); }
     renderSheet();
     var sheet=document.getElementById("sheet"); sheet.scrollTop=0;
   }
@@ -691,6 +693,7 @@
     mark.textContent = STAMP_TEXTS[i % STAMP_TEXTS.length];
     stamp.classList.remove("show"); void stamp.offsetWidth; // restart animation
     stamp.classList.add("show");
+    AUDIO.sfx("stamp"); setTimeout(function(){ AUDIO.sfx("clink"); }, 180);
     setTimeout(function(){ stamp.classList.remove("show"); }, 1100);
   }
 
@@ -786,6 +789,77 @@
     else { _cf.raf=null; ctx.clearRect(0,0,cv.width,cv.height); cv.style.display="none"; }
   }
 
+  /* ---------- Wein-Musik & Sound (Web Audio, komplett im Browser erzeugt) ---------- */
+  var AUDIO=(function(){
+    var ac=null, master=null, playing=false, muted=false;
+    var beatLen=0.4, loopBeats=24, nextTime=0, curBeat=0, timer=null;
+    try{ muted = localStorage.getItem(LS_KEY+"_muted")==="1"; }catch(e){}
+    // fröhlicher Wein-Walzer (3/4) — Melodie [freq, Dauer in Beats] oder null (Halten)
+    var MEL=[
+      [392,1],[494,1],[587,1],[523,2],null,[494,1], [440,1],[523,1],[659,1],[587,3],null,null,
+      [659,1],[587,1],[523,1],[494,2],null,[392,1], [440,1],[494,1],[440,1],[392,3],null,null
+    ];
+    var BASS=[98,98,131,98,131,98,147,98];               // Wurzelton je Takt
+    var PAH =[[247,294],[247,294],[262,330],[247,294],[262,330],[247,294],[294,370],[247,294]];
+    function ensure(){
+      if(ac) return true;
+      try{
+        var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false;
+        ac=new AC(); master=ac.createGain();
+        master.gain.value = muted?0:0.16; master.connect(ac.destination);
+        return true;
+      }catch(e){ return false; }
+    }
+    function tone(freq,t,dur,type,vol){
+      if(!ac) return;
+      var o=ac.createOscillator(), g=ac.createGain();
+      o.type=type||"triangle"; o.frequency.value=freq; o.connect(g); g.connect(master);
+      var atk=0.012, rel=Math.min(0.14,dur*0.45);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.linearRampToValueAtTime(vol,t+atk);
+      g.gain.setValueAtTime(vol,t+Math.max(atk,dur-rel));
+      g.gain.linearRampToValueAtTime(0.0001,t+dur);
+      o.start(t); o.stop(t+dur+0.03);
+    }
+    function beat(i,t){
+      var m=MEL[i]; if(m) tone(m[0],t,m[1]*beatLen*0.92,"triangle",0.12);
+      var bar=Math.floor(i/3), pos=i%3;
+      if(pos===0) tone(BASS[bar],t,beatLen*0.9,"sine",0.17);
+      else { var p=PAH[bar]; tone(p[0],t,beatLen*0.55,"triangle",0.055); tone(p[1],t,beatLen*0.55,"triangle",0.055); }
+    }
+    function pump(){
+      if(!ac) return;
+      while(nextTime < ac.currentTime + 0.25){ beat(curBeat%loopBeats, nextTime); nextTime+=beatLen; curBeat++; }
+    }
+    function start(){
+      if(!ensure()) return;
+      if(ac.state==="suspended"){ try{ac.resume();}catch(e){} }
+      if(playing) return; playing=true;
+      nextTime=ac.currentTime+0.1; curBeat=0;
+      timer=setInterval(pump,60); pump();
+    }
+    function setMuted(m){
+      muted=m; try{ localStorage.setItem(LS_KEY+"_muted", m?"1":"0"); }catch(e){}
+      if(master) try{ master.gain.linearRampToValueAtTime(m?0.0001:0.16, ac.currentTime+0.06); }catch(e){}
+    }
+    function sfx(name){
+      if(!ac || muted) return; var t=ac.currentTime;
+      if(name==="pop"){
+        var o=ac.createOscillator(), g=ac.createGain(); o.type="sine";
+        o.frequency.setValueAtTime(720,t); o.frequency.exponentialRampToValueAtTime(150,t+0.12);
+        g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.32,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+0.17);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t+0.2);
+      } else if(name==="clink"){ tone(2100,t,0.12,"sine",0.13); tone(2640,t+0.05,0.12,"sine",0.11); }
+      else if(name==="stamp"){
+        var o2=ac.createOscillator(), g2=ac.createGain(); o2.type="triangle";
+        o2.frequency.setValueAtTime(160,t); o2.frequency.exponentialRampToValueAtTime(55,t+0.13);
+        g2.gain.setValueAtTime(0.4,t); g2.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+        o2.connect(g2); g2.connect(master); o2.start(t); o2.stop(t+0.24);
+      } else if(name==="fanfare"){ [523,659,784,1047].forEach(function(f,i){ tone(f,t+i*0.13,0.32,"triangle",0.14); }); }
+    }
+    return { start:start, setMuted:setMuted, isMuted:function(){return muted;}, sfx:sfx };
+  })();
+
   /* ---------------- overlays ---------------- */
   function showFinale(){
     var rec=document.getElementById("recap");
@@ -798,12 +872,20 @@
         + DATEFACTS.map(function(f){ return '<div class="df">'+f+'</div>'; }).join("");
     }
     document.getElementById("finaleOverlay").classList.remove("hidden");
-    confetti();
+    confetti(); AUDIO.sfx("fanfare");
   }
   document.getElementById("startBtn").addEventListener("click",function(){
     state.started=true; save();
+    AUDIO.start();
     document.getElementById("startOverlay").classList.add("hidden");
     startGeo();
+  });
+  document.getElementById("musicBtn").addEventListener("click",function(){
+    var willMute=!AUDIO.isMuted();
+    AUDIO.setMuted(willMute);
+    if(!willMute) AUDIO.start();
+    this.textContent = willMute ? "🔇" : "🎵";
+    this.title = willMute ? "Wein-Musik ist aus" : "Wein-Musik läuft";
   });
   document.getElementById("restartBtn").addEventListener("click",function(){
     state={active:0,done:[],started:true}; selected=0; save();
@@ -869,6 +951,7 @@
   (function init(){
     try{ var th=localStorage.getItem(LS_KEY+"_theme"); if(th) document.documentElement.setAttribute("data-theme",th); }catch(e){}
     applyTheme();
+    (function(){ var mb=document.getElementById("musicBtn"); if(mb){ mb.textContent=AUDIO.isMuted()?"🔇":"🎵"; mb.title=AUDIO.isMuted()?"Wein-Musik ist aus":"Wein-Musik an / aus"; } })();
     initPhotos();
     buildFloaties();
     startTicker();
