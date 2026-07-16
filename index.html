@@ -205,9 +205,14 @@
     {emoji:'🧔',   name:'Currywurst-Uwe', line:'"Mit oder ohne Darm?"'},
     {emoji:'👮',   name:'BVG-Kontrolle', line:'"Fahrscheine bitte!"'},
     {emoji:'🎸',   name:'Straßenmusiker', line:'"Ick spiel für Kleingeld, wa."'},
+    {emoji:'🧉',   name:'Späti-Achim',    line:'"Wegbier? Klar, geht klar!"'},
+    {emoji:'🕺',   name:'Berghain-Türsteher', line:'"Heute nich."'},
   ];
 
   let game;
+  const HS_KEY = 'ubahn_berlin_highscore';
+  function getHighscore(){ try{ return parseInt(localStorage.getItem(HS_KEY)||'0',10)||0; }catch(e){ return 0; } }
+  function setHighscore(v){ try{ localStorage.setItem(HS_KEY, String(v)); }catch(e){} }
 
   function newGame(){
     return {
@@ -216,6 +221,9 @@
       score:0,
       pfand:0,
       lives:3,
+      combo:0, comboT:0,
+      popups:[],             // schwebende +Punkte
+      trainX:-400,           // U-Bahn im Hintergrund
       msg:null, msgT:0,
       player:{ x:80, y:GROUND-46, w:30, h:46, vx:0, vy:0, onGround:true, face:1, coyote:0 },
       keys:{left:false,right:false},
@@ -261,7 +269,7 @@
   }
   function buildPeople(){
     const ppl = [];
-    const spots = [1250, 2150, 3250, 4100, 5000, 5700];
+    const spots = [1250, 2150, 3250, 4100, 4900, 5350, 5750, 6050];
     spots.forEach((x,i)=>{
       const b = berliner[i % berliner.length];
       ppl.push({x, y:GROUND-52, w:30,h:52, met:false, ...b});
@@ -319,6 +327,20 @@
     return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
   }
   function setMsg(text, col='#fff'){ game.msg={text,col}; game.msgT=110; }
+  function popup(worldX, worldY, text, col='#ffd54a'){
+    game.popups.push({x:worldX, y:worldY, text, col, life:60});
+  }
+  function addScore(base, worldX, worldY, label){
+    game.comboT = 90;
+    game.combo = Math.min(9, game.combo+1);
+    const mult = 1 + (game.combo-1)*0.5;      // Combo-Bonus fürs schnelle Sammeln
+    const pts = Math.round(base*mult);
+    game.score += pts;
+    const tag = game.combo>1 ? ('+'+pts+'  x'+game.combo+'🔥') : ('+'+pts);
+    popup(worldX, worldY, (label?label+' ':'')+tag, col_for(game.combo));
+    return pts;
+  }
+  function col_for(c){ return c>=5?'#ff7a3d':c>=3?'#ffb03d':'#ffd54a'; }
 
   function update(){
     if(!game || game.state!=='play') return;
@@ -359,14 +381,14 @@
     for(const d of game.doners){
       if(d.taken) continue;
       if(rectsHit(p,{x:d.x-14,y:d.y-14,w:28,h:28})){
-        d.taken=true; game.score+=10; Audio.sfx('doner'); setMsg('Döner! 🥙 +10','#ffd54a');
+        d.taken=true; Audio.sfx('doner'); addScore(10, d.x, d.y-16, '🥙');
       }
     }
     // Pfandflaschen sammeln
     for(const b of game.bottles){
       if(b.taken) continue;
       if(rectsHit(p,{x:b.x-10,y:b.y-22,w:22,h:30})){
-        b.taken=true; game.pfand++; Audio.sfx('doner'); setMsg('Pfandflasche eingesammelt 🍾','#8fe3a0');
+        b.taken=true; game.pfand++; Audio.sfx('doner'); popup(b.x, b.y-24,'🍾 Pfand','#8fe3a0');
       }
     }
 
@@ -375,9 +397,11 @@
     if(!pg.done && rectsHit(p,{x:pg.x-6,y:pg.y,w:pg.w+12,h:pg.h})){
       if(game.pfand>0){
         pg.done=true;
-        game.score += game.pfand*15;
+        const bonus = game.pfand*15;
+        game.score += bonus;
         Audio.sfx('pfand');
-        setMsg('"Danke dir, Meister!" 🍾 +'+(game.pfand*15),'#8fe3a0');
+        setMsg('"Danke dir, Meister!" 🍾 +'+bonus,'#8fe3a0');
+        popup(pg.x+pg.w/2, pg.y-10, '+'+bonus, '#8fe3a0');
         game.pfand=0;
       } else {
         if(game.t%40===0) setMsg('"Haste ma ne Flasche für Pfand?" 🍾','#ffd54a');
@@ -390,6 +414,7 @@
       if(rectsHit(p,{x:person.x,y:person.y,w:person.w,h:person.h})){
         person.met=true; game.score+=25; Audio.sfx('meet');
         setMsg(person.emoji+' '+person.name+': '+person.line,'#9bd0ff');
+        popup(person.x+person.w/2, person.y-12, '+25', '#9bd0ff');
       }
     }
 
@@ -400,7 +425,7 @@
       if(rectsHit(p,{x:r.x,y:r.y,w:r.w,h:r.h})){
         // von oben draufspringen = Ratte weg
         if(p.vy>0 && (p.y+p.h - r.y) < 22){
-          r.dead=true; p.vy=-9; game.score+=15; Audio.sfx('doner'); setMsg('Ratte verscheucht! 🐀 +15','#ffd54a');
+          r.dead=true; p.vy=-9; Audio.sfx('doner'); addScore(15, r.x+8, r.y-6, '🐀');
         } else if(!r.dead && !p.hurtCd){
           hurt();
         }
@@ -418,6 +443,17 @@
     // Kamera
     game.camX = Math.max(0, Math.min(p.x - W*0.35, LEVEL_END - W + 40));
 
+    // Combo verfällt
+    if(game.comboT>0){ game.comboT--; if(game.comboT===0) game.combo=0; }
+
+    // U-Bahn im Hintergrund (fährt gemütlich durchs Bild)
+    game.trainX += 2.4;
+    if(game.trainX > game.camX + W + 500) game.trainX = game.camX - 500;
+
+    // Popups animieren
+    for(const pu of game.popups){ pu.y -= 0.7; pu.life--; }
+    game.popups = game.popups.filter(pu=>pu.life>0);
+
     if(game.msgT>0) game.msgT--;
   }
 
@@ -432,11 +468,19 @@
     p.x = Math.max(60, p.x-90); p.y=GROUND-p.h; p.vy=0;
   }
 
+  function scoreLine(){
+    const hs = getHighscore();
+    let best = hs;
+    let rec = '';
+    if(game.score > hs){ best = game.score; setHighscore(best); rec = ' 🏆 <b>Neuer Rekord!</b>'; }
+    return 'Punkte: <b>'+game.score+'</b>'+rec+'<br>Bester Lauf: <b>'+best+'</b>'
+         + '<br><span style="color:#9bd0ff">Teil den Link mit deinen Leuten und knackt den Highscore! 🥙</span>';
+  }
   function dead(){
     game.state='dead';
     Audio.stopMusic();
     showOverlay('💥 Game Over',
-      'Du hast es nicht bis zum Alex geschafft.<br>Punkte: <b>'+game.score+'</b>',
+      'Die Ratten waren schneller — nix Alex heute.<br>'+scoreLine(),
       true);
   }
   function win(){
@@ -444,7 +488,7 @@
     Audio.sfx('win');
     Audio.stopMusic();
     showOverlay('🎉 Alexanderplatz erreicht!',
-      'Willkommen am Alex! Der Fernsehturm grüßt. 📺<br>Endpunktzahl: <b>'+game.score+'</b>',
+      'Willkommen am Alex! Der Fernsehturm grüßt. 📺<br>'+scoreLine(),
       true);
   }
 
@@ -473,6 +517,9 @@
 
     // Häuser-Silhouette (Parallax)
     drawSkyline(cam);
+
+    // U-Bahn fährt im Hintergrund vorbei
+    drawTrain(game.trainX - cam);
 
     // Boden
     ctx.fillStyle='#5b5b6b'; ctx.fillRect(0,GROUND,W,H-GROUND);
@@ -526,6 +573,17 @@
     // Spieler
     drawPlayer();
 
+    // Punkte-Popups
+    ctx.textAlign='center'; ctx.font='bold 15px "Segoe UI",sans-serif';
+    for(const pu of game.popups){
+      const x = pu.x-cam, a = Math.min(1, pu.life/24);
+      if(x<-40||x>W+40) continue;
+      ctx.globalAlpha=a;
+      ctx.fillStyle='rgba(0,0,0,.5)'; ctx.fillText(pu.text, x+1, pu.y+1);
+      ctx.fillStyle=pu.col; ctx.fillText(pu.text, x, pu.y);
+      ctx.globalAlpha=1;
+    }
+
     // HUD
     drawHUD();
 
@@ -563,6 +621,30 @@
         for(let wx=x+100; wx<x+140; wx+=16) ctx.fillRect(wx,wy,8,10);
       ctx.fillStyle='#9fb0c9';
     }
+  }
+
+  function drawTrain(x){
+    if(x<-260||x>W+40) return;
+    const y = GROUND-96;
+    // BVG-gelber U-Bahn-Wagen
+    ctx.save();
+    ctx.fillStyle='#f0d722';
+    ctx.fillRect(x, y, 220, 46);
+    ctx.fillStyle='#c9b41c';
+    ctx.fillRect(x, y+40, 220, 6);
+    // Fenster
+    ctx.fillStyle='#2a3a4a';
+    for(let i=0;i<5;i++) ctx.fillRect(x+14+i*42, y+8, 30, 20);
+    // Front
+    ctx.fillStyle='#e8402e';
+    ctx.fillRect(x, y, 6, 46);
+    // U-Logo
+    ctx.fillStyle='#0a4a8f';
+    ctx.fillRect(x+96, y-18, 26, 26);
+    ctx.fillStyle='#fff'; ctx.font='bold 18px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('U', x+109, y-4);
+    ctx.textBaseline='alphabetic';
+    ctx.restore();
   }
 
   function drawFernsehturm(x){
@@ -639,6 +721,15 @@
     ctx.fillStyle='#ffd54a'; ctx.fillText('🥙 '+game.score, 22, 33);
     ctx.fillStyle='#8fe3a0'; ctx.fillText('🍾 '+game.pfand, 120, 33);
     ctx.fillStyle='#ff9a9a'; ctx.fillText('❤️'.repeat(Math.max(0,game.lives)), 190, 33);
+    // Combo-Anzeige
+    if(game.combo>1){
+      const a = Math.min(1, game.comboT/30);
+      ctx.globalAlpha=a;
+      ctx.fillStyle=col_for(game.combo);
+      ctx.font='bold 20px "Segoe UI",sans-serif';
+      ctx.fillText('COMBO x'+game.combo+' 🔥', 22, 62);
+      ctx.globalAlpha=1;
+    }
     // Fortschritt bis Alex
     const pw=200, px=W-pw-16, py=20;
     ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(px-6,10,pw+12,24);
