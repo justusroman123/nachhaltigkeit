@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>U-Bahn Berlin — Jump'n'Run</title>
+<style>
+  :root{
+    --bvg-yellow:#f0d722;
+    --bvg-purple:#7d2489;
+    --u-blue:#0a4a8f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#12121a;
+    color:#eee;
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;
+    gap:12px;
+    padding:12px;
+    overflow-x:hidden;
+  }
+  h1{
+    font-size:clamp(18px,4vw,30px);
+    letter-spacing:1px;
+    color:var(--bvg-yellow);
+    text-shadow:2px 2px 0 var(--bvg-purple);
+  }
+  #wrap{position:relative;width:min(960px,100%);}
+  canvas{
+    display:block;width:100%;height:auto;
+    background:#87c7e8;
+    border:4px solid var(--bvg-yellow);
+    border-radius:10px;
+    image-rendering:pixelated;
+    touch-action:none;
+  }
+  .bar{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
+    font-size:14px;color:#bbb;
+  }
+  .bar b{color:#fff}
+  kbd{
+    background:#2a2a38;border:1px solid #444;border-bottom-width:3px;
+    border-radius:5px;padding:2px 7px;font-family:monospace;color:#fff;
+  }
+  button{
+    background:var(--bvg-yellow);color:#111;border:none;
+    padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;
+    font-size:15px;
+  }
+  button:active{transform:translateY(1px)}
+  .muted{background:#333;color:#ccc}
+  /* Overlay */
+  #overlay{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;gap:14px;
+    background:rgba(10,10,20,.82);border-radius:8px;padding:20px;
+  }
+  #overlay h2{color:var(--bvg-yellow);font-size:clamp(20px,4vw,30px)}
+  #overlay p{max-width:560px;line-height:1.5;color:#ddd}
+  #overlay .big{font-size:22px;color:#fff}
+  a.restart{
+    color:var(--bvg-yellow);text-decoration:underline;cursor:pointer;
+    font-size:18px;font-weight:700;
+  }
+  a.restart:hover{color:#fff}
+  .hidden{display:none!important}
+  .credit{font-size:12px;color:#666}
+  .touch-only{display:none}
+  @media (hover:none) and (pointer:coarse){ .touch-only{display:flex} }
+</style>
+</head>
+<body>
+  <h1>🚇 U-BAHN BERLIN — Jump'n'Run</h1>
+
+  <div id="wrap">
+    <canvas id="game" width="960" height="420"></canvas>
+
+    <!-- Start / Game Over Overlay -->
+    <div id="overlay">
+      <h2 id="ovTitle">U-Bahn Berlin</h2>
+      <p id="ovText">
+        Spring durch Berlin, sammel <b>Döner 🥙</b>, gib brave Menschen ihr <b>Pfand 🍾</b>,
+        triff bekannte Gesichter und weich den <b>Ratten 🐀</b> aus.
+        Erreiche den <b>Alexanderplatz</b>!
+      </p>
+      <p class="big">
+        <kbd>←</kbd> <kbd>→</kbd> laufen &nbsp;·&nbsp; <kbd>Leertaste</kbd> / <kbd>↑</kbd> springen
+      </p>
+      <button id="startBtn">▶ Spiel starten</button>
+      <a class="restart hidden" id="restartLink">↻ Auf diesen Link klicken zum Neustart</a>
+      <p class="credit">Ein kleines Berlin-Erlebnis · BVG-Style</p>
+    </div>
+  </div>
+
+  <div class="bar">
+    <span>Steuerung: <kbd>←</kbd> <kbd>→</kbd> laufen · <kbd>Space</kbd>/<kbd>↑</kbd> springen</span>
+    <button id="muteBtn" class="muted">🔊 Musik an</button>
+  </div>
+
+  <div class="bar touch-only" style="gap:16px">
+    <button id="btnLeft">◀</button>
+    <button id="btnJump">⤒ SPRUNG</button>
+    <button id="btnRight">▶</button>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+  const cv = document.getElementById('game');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  const overlay   = document.getElementById('overlay');
+  const ovTitle   = document.getElementById('ovTitle');
+  const ovText    = document.getElementById('ovText');
+  const startBtn  = document.getElementById('startBtn');
+  const restartLink = document.getElementById('restartLink');
+  const muteBtn   = document.getElementById('muteBtn');
+
+  // ------------------------------------------------------------------
+  // AUDIO — kleine Chiptune-Melodie im "Alexanderplatz"-Gefühl
+  // ------------------------------------------------------------------
+  const Audio = (() => {
+    let actx = null, master = null, musicTimer = null, step = 0, muted = false;
+    // Eine fröhliche, ohrwurmige Loop-Melodie (Frequenzen in Hz, 0 = Pause)
+    const melody = [
+      330,392,440,392, 330,392,440,523, 494,440,392,440, 330,0,330,0,
+      349,440,523,440, 392,494,587,494, 440,392,349,392, 330,0,262,0
+    ];
+    const bass = [
+      110,0,110,0, 98,0,98,0, 82,0,82,0, 110,0,110,0,
+      117,0,117,0, 98,0,98,0, 110,0,110,0, 131,0,131,0
+    ];
+    function ensure(){
+      if(actx) return;
+      actx = new (window.AudioContext||window.webkitAudioContext)();
+      master = actx.createGain();
+      master.gain.value = 0.18;
+      master.connect(actx.destination);
+    }
+    function note(freq, dur, type, gain){
+      if(!actx || !freq) return;
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, actx.currentTime);
+      g.gain.linearRampToValueAtTime(gain, actx.currentTime+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+      o.connect(g); g.connect(master);
+      o.start(); o.stop(actx.currentTime+dur);
+    }
+    function tick(){
+      const m = melody[step % melody.length];
+      const b = bass[step % bass.length];
+      note(m, 0.22, 'square', 0.5);
+      note(b, 0.30, 'triangle', 0.6);
+      step++;
+    }
+    return {
+      startMusic(){
+        ensure();
+        if(actx.state==='suspended') actx.resume();
+        if(musicTimer) return;
+        step = 0;
+        musicTimer = setInterval(tick, 165);
+      },
+      stopMusic(){ if(musicTimer){clearInterval(musicTimer); musicTimer=null;} },
+      sfx(kind){
+        ensure();
+        if(muted) return;
+        if(actx.state==='suspended') actx.resume();
+        if(kind==='jump')  note(520,0.14,'square',0.5);
+        if(kind==='doner') { note(660,0.09,'square',0.5); setTimeout(()=>note(880,0.12,'square',0.5),70); }
+        if(kind==='pfand') { note(440,0.09,'triangle',0.6); setTimeout(()=>note(587,0.10,'triangle',0.6),70); setTimeout(()=>note(784,0.14,'triangle',0.6),150); }
+        if(kind==='hit')   { note(160,0.25,'sawtooth',0.5); }
+        if(kind==='win')   { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>note(f,0.2,'square',0.5),i*130)); }
+        if(kind==='meet')  { note(392,0.10,'sine',0.5); setTimeout(()=>note(494,0.12,'sine',0.5),90); }
+      },
+      toggleMute(){
+        ensure();
+        muted = !muted;
+        master.gain.value = muted ? 0 : 0.18;
+        return muted;
+      },
+      isMuted(){ return muted; }
+    };
+  })();
+
+  // ------------------------------------------------------------------
+  // SPIEL-DATEN
+  // ------------------------------------------------------------------
+  const GROUND = H - 60;      // Boden-Y
+  const GRAV = 0.7;
+  const LEVEL_END = 6400;     // Ziel: Alexanderplatz
+
+  // Berliner Sprüche für die Personen, die man trifft
+  const berliner = [
+    {emoji:'🧑‍🎤', name:'Techno-Sven',   line:'"Wa, hältste durch bis heute früh?"'},
+    {emoji:'👵',   name:'Oma Helga',     line:'"Junge, iss ma wat Anständiges!"'},
+    {emoji:'🚴',   name:'Öko-Lisa',      line:'"Nimm doch det Rad, ne!"'},
+    {emoji:'🧔',   name:'Currywurst-Uwe', line:'"Mit oder ohne Darm?"'},
+    {emoji:'👮',   name:'BVG-Kontrolle', line:'"Fahrscheine bitte!"'},
+    {emoji:'🎸',   name:'Straßenmusiker', line:'"Ick spiel für Kleingeld, wa."'},
+  ];
+
+  let game;
+
+  function newGame(){
+    return {
+      state:'play',          // play | dead | win
+      camX:0,
+      score:0,
+      pfand:0,
+      lives:3,
+      msg:null, msgT:0,
+      player:{ x:80, y:GROUND-46, w:30, h:46, vx:0, vy:0, onGround:true, face:1, coyote:0 },
+      keys:{left:false,right:false},
+      platforms:  buildPlatforms(),
+      doners:     buildDoners(),
+      bottles:    buildBottles(),
+      rats:       buildRats(),
+      people:     buildPeople(),
+      pfandGuy:   {x:2600, y:GROUND-52, w:34, h:52, done:false},
+      clouds:     buildClouds(),
+      t:0,
+    };
+  }
+
+  function buildPlatforms(){
+    // {x,y,w} — Bahnsteigkanten & Kisten
+    const p = [];
+    const spots = [700, 1150, 1600, 2050, 3100, 3550, 4200, 4700, 5300, 5750];
+    spots.forEach((x,i)=> p.push({x, y: GROUND-90-(i%3)*24, w:120}) );
+    p.push({x:1900,y:GROUND-150,w:90});
+    p.push({x:4400,y:GROUND-160,w:90});
+    return p;
+  }
+  function buildDoners(){
+    const d = [];
+    for(let x=420; x<LEVEL_END-200; x+=Math.random()*260+180){
+      const onAir = Math.random()<0.4;
+      d.push({x, y: onAir ? GROUND-120-Math.random()*80 : GROUND-30, taken:false});
+    }
+    return d;
+  }
+  function buildBottles(){
+    const b = [];
+    const spots = [520, 980, 1720, 2200, 3300, 3900, 4550, 5100, 5900];
+    spots.forEach(x=> b.push({x, y:GROUND-26, taken:false}));
+    return b;
+  }
+  function buildRats(){
+    const r = [];
+    const spots = [900,1400,1850,2400,2900,3400,3800,4300,4850,5400,5850,6150];
+    spots.forEach((x,i)=> r.push({x, y:GROUND-24, w:34,h:20, dir: i%2?1:-1, home:x, range:70}));
+    return r;
+  }
+  function buildPeople(){
+    const ppl = [];
+    const spots = [1250, 2150, 3250, 4100, 5000, 5700];
+    spots.forEach((x,i)=>{
+      const b = berliner[i % berliner.length];
+      ppl.push({x, y:GROUND-52, w:30,h:52, met:false, ...b});
+    });
+    return ppl;
+  }
+  function buildClouds(){
+    const c=[];
+    for(let i=0;i<14;i++) c.push({x:Math.random()*LEVEL_END, y:30+Math.random()*140, s:0.4+Math.random()*0.5});
+    return c;
+  }
+
+  // ------------------------------------------------------------------
+  // INPUT
+  // ------------------------------------------------------------------
+  const keyState = {left:false,right:false,jump:false};
+  function jump(){
+    if(!game || game.state!=='play') return;
+    const p = game.player;
+    if(p.onGround || p.coyote>0){
+      p.vy = -13.2; p.onGround=false; p.coyote=0;
+      Audio.sfx('jump');
+    }
+  }
+  window.addEventListener('keydown', e=>{
+    if(['ArrowLeft','ArrowRight','ArrowUp',' ','Spacebar'].includes(e.key)) e.preventDefault();
+    if(e.key==='ArrowLeft')  keyState.left=true;
+    if(e.key==='ArrowRight') keyState.right=true;
+    if(e.key==='ArrowUp'||e.key===' '||e.key==='Spacebar') jump();
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.key==='ArrowLeft')  keyState.left=false;
+    if(e.key==='ArrowRight') keyState.right=false;
+  });
+
+  // Touch-Buttons
+  const bind = (id, on, off) => {
+    const el = document.getElementById(id);
+    const s=e=>{e.preventDefault();on();};
+    const en=e=>{e.preventDefault();off&&off();};
+    el.addEventListener('touchstart',s,{passive:false});
+    el.addEventListener('touchend',en,{passive:false});
+    el.addEventListener('mousedown',s);
+    el.addEventListener('mouseup',en);
+    el.addEventListener('mouseleave',en);
+  };
+  bind('btnLeft', ()=>keyState.left=true,  ()=>keyState.left=false);
+  bind('btnRight',()=>keyState.right=true, ()=>keyState.right=false);
+  bind('btnJump', ()=>jump());
+
+  // ------------------------------------------------------------------
+  // UPDATE
+  // ------------------------------------------------------------------
+  function rectsHit(a,b){
+    return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  }
+  function setMsg(text, col='#fff'){ game.msg={text,col}; game.msgT=110; }
+
+  function update(){
+    if(!game || game.state!=='play') return;
+    game.t++;
+    const p = game.player;
+
+    // horizontal
+    const SPEED=4.4;
+    p.vx = 0;
+    if(keyState.left){ p.vx=-SPEED; p.face=-1; }
+    if(keyState.right){ p.vx= SPEED; p.face= 1; }
+    p.x += p.vx;
+    if(p.x<0) p.x=0;
+    if(p.x>LEVEL_END) p.x=LEVEL_END;
+
+    // gravity
+    p.vy += GRAV;
+    p.y += p.vy;
+    if(p.coyote>0) p.coyote--;
+
+    // ground
+    let landed=false;
+    if(p.y+p.h >= GROUND){ p.y=GROUND-p.h; p.vy=0; if(!p.onGround)landed=true; p.onGround=true; p.coyote=6; }
+    else p.onGround=false;
+
+    // platforms (nur von oben landbar)
+    for(const pl of game.platforms){
+      const within = p.x+p.w>pl.x && p.x<pl.x+pl.w;
+      if(within && p.vy>=0){
+        const feetPrev = p.y+p.h - p.vy;
+        if(feetPrev <= pl.y+8 && p.y+p.h >= pl.y && p.y+p.h <= pl.y+26){
+          p.y = pl.y-p.h; p.vy=0; p.onGround=true; p.coyote=6;
+        }
+      }
+    }
+
+    // Döner sammeln
+    for(const d of game.doners){
+      if(d.taken) continue;
+      if(rectsHit(p,{x:d.x-14,y:d.y-14,w:28,h:28})){
+        d.taken=true; game.score+=10; Audio.sfx('doner'); setMsg('Döner! 🥙 +10','#ffd54a');
+      }
+    }
+    // Pfandflaschen sammeln
+    for(const b of game.bottles){
+      if(b.taken) continue;
+      if(rectsHit(p,{x:b.x-10,y:b.y-22,w:22,h:30})){
+        b.taken=true; game.pfand++; Audio.sfx('doner'); setMsg('Pfandflasche eingesammelt 🍾','#8fe3a0');
+      }
+    }
+
+    // Pfand-Sammler-Typ ("Haste ma ne Flasche für Pfand?")
+    const pg = game.pfandGuy;
+    if(!pg.done && rectsHit(p,{x:pg.x-6,y:pg.y,w:pg.w+12,h:pg.h})){
+      if(game.pfand>0){
+        pg.done=true;
+        game.score += game.pfand*15;
+        Audio.sfx('pfand');
+        setMsg('"Danke dir, Meister!" 🍾 +'+(game.pfand*15),'#8fe3a0');
+        game.pfand=0;
+      } else {
+        if(game.t%40===0) setMsg('"Haste ma ne Flasche für Pfand?" 🍾','#ffd54a');
+      }
+    }
+
+    // Personen treffen
+    for(const person of game.people){
+      if(person.met) continue;
+      if(rectsHit(p,{x:person.x,y:person.y,w:person.w,h:person.h})){
+        person.met=true; game.score+=25; Audio.sfx('meet');
+        setMsg(person.emoji+' '+person.name+': '+person.line,'#9bd0ff');
+      }
+    }
+
+    // Ratten bewegen + Kollision
+    for(const r of game.rats){
+      r.x += r.dir*1.3;
+      if(r.x < r.home-r.range || r.x > r.home+r.range) r.dir*=-1;
+      if(rectsHit(p,{x:r.x,y:r.y,w:r.w,h:r.h})){
+        // von oben draufspringen = Ratte weg
+        if(p.vy>0 && (p.y+p.h - r.y) < 22){
+          r.dead=true; p.vy=-9; game.score+=15; Audio.sfx('doner'); setMsg('Ratte verscheucht! 🐀 +15','#ffd54a');
+        } else if(!r.dead && !p.hurtCd){
+          hurt();
+        }
+      }
+    }
+    game.rats = game.rats.filter(r=>!r.dead);
+    if(p.hurtCd) p.hurtCd--;
+
+    // In Grube / rausgefallen? (hier kein Loch, aber Sicherheit)
+    if(p.y>H+200) hurt(true);
+
+    // Ziel erreicht
+    if(p.x >= LEVEL_END-40){ win(); }
+
+    // Kamera
+    game.camX = Math.max(0, Math.min(p.x - W*0.35, LEVEL_END - W + 40));
+
+    if(game.msgT>0) game.msgT--;
+  }
+
+  function hurt(reset){
+    const p=game.player;
+    game.lives--;
+    Audio.sfx('hit');
+    p.hurtCd = 70;
+    if(game.lives<=0){ dead(); return; }
+    setMsg('Autsch! ❤️ '+game.lives+' Leben übrig','#ff9a9a');
+    // zurücksetzen an sichere Stelle
+    p.x = Math.max(60, p.x-90); p.y=GROUND-p.h; p.vy=0;
+  }
+
+  function dead(){
+    game.state='dead';
+    Audio.stopMusic();
+    showOverlay('💥 Game Over',
+      'Du hast es nicht bis zum Alex geschafft.<br>Punkte: <b>'+game.score+'</b>',
+      true);
+  }
+  function win(){
+    game.state='win';
+    Audio.sfx('win');
+    Audio.stopMusic();
+    showOverlay('🎉 Alexanderplatz erreicht!',
+      'Willkommen am Alex! Der Fernsehturm grüßt. 📺<br>Endpunktzahl: <b>'+game.score+'</b>',
+      true);
+  }
+
+  // ------------------------------------------------------------------
+  // RENDER
+  // ------------------------------------------------------------------
+  function draw(){
+    const cam = game ? game.camX : 0;
+    // Himmel (Farbverlauf)
+    const sky = ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#8fd0f2'); sky.addColorStop(1,'#cdeafc');
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+
+    if(!game){ return; }
+
+    // Wolken (Parallax)
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    for(const c of game.clouds){
+      const cx = c.x - cam*c.s;
+      if(cx<-120||cx>W+120) continue;
+      cloud(cx, c.y, 30);
+    }
+
+    // Fernsehturm am Ziel (Parallax mittel)
+    drawFernsehturm(LEVEL_END - cam - 40);
+
+    // Häuser-Silhouette (Parallax)
+    drawSkyline(cam);
+
+    // Boden
+    ctx.fillStyle='#5b5b6b'; ctx.fillRect(0,GROUND,W,H-GROUND);
+    ctx.fillStyle='#42424f'; ctx.fillRect(0,GROUND,W,6);
+    // Bahnsteig-Fliesen
+    ctx.fillStyle='#6d6d7d';
+    for(let x=-(cam%40); x<W; x+=40){ ctx.fillRect(x,GROUND+10,36,3); }
+    // gelbe Bahnsteig-Warnlinie
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bvg-yellow')||'#f0d722';
+    ctx.fillRect(0,GROUND+2,W,5);
+
+    // Plattformen
+    for(const pl of game.platforms){
+      const x = pl.x-cam;
+      if(x<-140||x>W) continue;
+      ctx.fillStyle='#8a5a2b'; ctx.fillRect(x,pl.y,pl.w,16);
+      ctx.fillStyle='#b3803f'; ctx.fillRect(x,pl.y,pl.w,4);
+    }
+
+    // Pfandflaschen
+    for(const b of game.bottles){ if(b.taken)continue; const x=b.x-cam; if(x<-30||x>W)continue; drawBottle(x,b.y); }
+
+    // Döner
+    for(const d of game.doners){ if(d.taken)continue; const x=d.x-cam; if(x<-30||x>W)continue; drawDoner(x,d.y); }
+
+    // Pfand-Typ
+    const pg=game.pfandGuy;
+    { const x=pg.x-cam; if(x>-60&&x<W){ drawPerson(x,pg.y,'🧉',pg.done?'':'Flasche?'); if(!pg.done){ ctx.fillStyle='#333'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText('Pfand?',x+pg.w/2,pg.y-8);} } }
+
+    // Personen
+    for(const person of game.people){
+      const x=person.x-cam; if(x<-60||x>W)continue;
+      drawPerson(x,person.y,person.emoji);
+      if(!person.met){ ctx.fillStyle='#222'; ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText('❔',x+person.w/2,person.y-10); }
+    }
+
+    // Ratten
+    for(const r of game.rats){ const x=r.x-cam; if(x<-40||x>W)continue; drawRat(x,r.y,r.dir); }
+
+    // Ziel-Schild
+    { const x=LEVEL_END-cam-10;
+      if(x>-40 && x<W+40){
+        ctx.fillStyle='#0a4a8f'; ctx.fillRect(x-30,GROUND-140,60,30);
+        ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+        ctx.fillText('U Alexanderpl.',x,GROUND-120);
+        ctx.fillStyle='#fff'; ctx.font='bold 14px sans-serif';
+        ctx.fillText('🏁',x,GROUND-100);
+      }
+    }
+
+    // Spieler
+    drawPlayer();
+
+    // HUD
+    drawHUD();
+
+    // Nachricht
+    if(game.msg && game.msgT>0){
+      const a = Math.min(1, game.msgT/40);
+      ctx.globalAlpha=a;
+      ctx.fillStyle='rgba(0,0,0,.65)';
+      ctx.font='bold 18px "Segoe UI",sans-serif'; ctx.textAlign='center';
+      const tw = ctx.measureText(game.msg.text).width;
+      ctx.fillRect(W/2-tw/2-14, 54, tw+28, 30);
+      ctx.fillStyle=game.msg.col;
+      ctx.fillText(game.msg.text, W/2, 74);
+      ctx.globalAlpha=1;
+    }
+  }
+
+  function cloud(x,y,r){
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,7); ctx.arc(x+r,y+6,r*0.8,0,7); ctx.arc(x-r,y+8,r*0.7,0,7);
+    ctx.arc(x+r*0.4,y-r*0.5,r*0.7,0,7);
+    ctx.fill();
+  }
+
+  function drawSkyline(cam){
+    const off = cam*0.5 % 260;
+    ctx.fillStyle='#9fb0c9';
+    for(let x=-off-260; x<W+260; x+=260){
+      ctx.fillRect(x+20,GROUND-120,60,120);
+      ctx.fillRect(x+95,GROUND-170,50,170);
+      ctx.fillRect(x+160,GROUND-90,70,90);
+      // Fenster
+      ctx.fillStyle='#c7d3e6';
+      for(let wy=GROUND-160; wy<GROUND-20; wy+=22)
+        for(let wx=x+100; wx<x+140; wx+=16) ctx.fillRect(wx,wy,8,10);
+      ctx.fillStyle='#9fb0c9';
+    }
+  }
+
+  function drawFernsehturm(x){
+    if(x<-80||x>W+80) return;
+    ctx.save();
+    ctx.fillStyle='#c3ccd8';
+    // Schaft
+    ctx.fillRect(x-8,GROUND-330,16,330);
+    // Kugel
+    ctx.beginPath(); ctx.arc(x,GROUND-300,26,0,7); ctx.fill();
+    ctx.fillStyle='#7d2489';
+    ctx.beginPath(); ctx.arc(x,GROUND-300,26,0,7); ctx.fill();
+    ctx.fillStyle='#c3ccd8';
+    // Spitze
+    ctx.fillRect(x-2,GROUND-400,4,72);
+    ctx.fillStyle='#e33';
+    ctx.beginPath(); ctx.arc(x,GROUND-402,4,0,7); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawDoner(x,y){
+    ctx.font='26px serif'; ctx.textAlign='center';
+    const bob = Math.sin((game.t+x)/18)*3;
+    ctx.fillText('🥙', x, y+bob);
+  }
+  function drawBottle(x,y){
+    ctx.font='24px serif'; ctx.textAlign='center';
+    ctx.fillText('🍾', x, y);
+  }
+  function drawRat(x,y,dir){
+    ctx.save(); ctx.translate(x+17,y+10); ctx.scale(dir<0?-1:1,1);
+    ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🐀',0,0);
+    ctx.restore(); ctx.textBaseline='alphabetic';
+  }
+  function drawPerson(x,y,emoji){
+    ctx.font='40px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText(emoji, x+15, y+52);
+    ctx.textBaseline='alphabetic';
+  }
+
+  function drawPlayer(){
+    const p=game.player;
+    const x=p.x-game.camX, y=p.y;
+    if(p.hurtCd && Math.floor(game.t/4)%2) return; // Blink bei Treffer
+    // Körper (kleiner Berliner mit Beanie)
+    ctx.save();
+    // Beine (Lauf-Animation)
+    const walk = (keyState.left||keyState.right) && p.onGround ? Math.sin(game.t/4)*4 : 0;
+    ctx.fillStyle='#26324a';
+    ctx.fillRect(x+5, y+30, 8, 16+ (walk>0?walk:0));
+    ctx.fillRect(x+17,y+30, 8, 16- (walk>0?walk:0));
+    // Jacke
+    ctx.fillStyle='#d1462f';
+    ctx.fillRect(x+3, y+14, 24, 20);
+    // Kopf
+    ctx.fillStyle='#f2c48d';
+    ctx.fillRect(x+7, y, 16, 16);
+    // Beanie (Berlin-Mütze)
+    ctx.fillStyle='#7d2489';
+    ctx.fillRect(x+5, y-2, 20, 8);
+    ctx.fillStyle='#f0d722';
+    ctx.fillRect(x+5, y+4, 20, 3);
+    // Gesicht (Blickrichtung)
+    ctx.fillStyle='#222';
+    ctx.fillRect(x+ (p.face>0?17:9), y+7, 3,3);
+    ctx.restore();
+  }
+
+  function drawHUD(){
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(10,10,270,34);
+    ctx.font='bold 16px "Segoe UI",sans-serif';
+    ctx.fillStyle='#ffd54a'; ctx.fillText('🥙 '+game.score, 22, 33);
+    ctx.fillStyle='#8fe3a0'; ctx.fillText('🍾 '+game.pfand, 120, 33);
+    ctx.fillStyle='#ff9a9a'; ctx.fillText('❤️'.repeat(Math.max(0,game.lives)), 190, 33);
+    // Fortschritt bis Alex
+    const pw=200, px=W-pw-16, py=20;
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(px-6,10,pw+12,24);
+    ctx.fillStyle='#333'; ctx.fillRect(px,py,pw,8);
+    ctx.fillStyle='#f0d722';
+    ctx.fillRect(px,py, pw*Math.min(1, game.player.x/LEVEL_END), 8);
+    ctx.fillStyle='#fff'; ctx.font='11px sans-serif'; ctx.textAlign='right';
+    ctx.fillText('→ Alexanderplatz', px+pw, py-2);
+    ctx.textAlign='left';
+  }
+
+  // ------------------------------------------------------------------
+  // LOOP
+  // ------------------------------------------------------------------
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ------------------------------------------------------------------
+  // OVERLAY / START / RESTART
+  // ------------------------------------------------------------------
+  function showOverlay(title, html, showRestart){
+    ovTitle.textContent = title;
+    ovText.innerHTML = html;
+    overlay.classList.remove('hidden');
+    startBtn.classList.add('hidden');
+    restartLink.classList.toggle('hidden', !showRestart);
+  }
+  function hideOverlay(){ overlay.classList.add('hidden'); }
+
+  function start(){
+    game = newGame();
+    hideOverlay();
+    if(!Audio.isMuted()) Audio.startMusic();
+  }
+
+  startBtn.addEventListener('click', start);
+  // Neustart per Link-Klick (wie gewünscht)
+  restartLink.addEventListener('click', (e)=>{ e.preventDefault(); start(); });
+
+  muteBtn.addEventListener('click', ()=>{
+    const m = Audio.toggleMute();
+    muteBtn.textContent = m ? '🔇 Musik aus' : '🔊 Musik an';
+    if(!m && game && game.state==='play') Audio.startMusic();
+    if(m) Audio.stopMusic();
+  });
+
+  // erste Zeichnung + Loop
+  loop();
+})();
+</script>
+</body>
+</html>
