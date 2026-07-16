@@ -26,8 +26,16 @@ Grafik und Musik werden live im Browser erzeugt (keine externen Dateien).
 - **Dancefloor-Zonen** vor den Parade-Wagen für dreifache Punkte.
 - **Party-Meter → MEGA PARTY MODE**: Regenbogen-Rausch, Konfetti, doppelte
   Punkte und kurze Unverwundbarkeit.
+- **8 Berliner Hindernisse** mit Berlin-Humor (E-Scooter, Bierkiste, Sekt-Pfütze,
+  Currywurst, Berliner Taube, BVG-Gitter …) – mit klaren Umrissen und Warn-Symbol.
+- **Power-Ups**: 👟 Glitzer-Schuhe (Mega-Sprung), 📻 Boombox (2× Punkte),
+  🌟 Regenbogen-Stern (sofort Party) und der seltene 🐻 Berliner Bär.
+- **Zufalls-Events**: ✨ Glitzer-Regen, 🔊 Techno-Drop und 🕺 Flashmob.
 - **Berliner Kulisse** mit Fernsehturm, Brandenburger Tor, Siegessäule und
   einem Techno-Finale – die Szene wird länger und wilder, je weiter du kommst.
 - **Live generierte House-/Techno-Musik** (Web Audio API, 124 BPM).
+
+Jede Runde ist anders: wechselnde Hindernisse, Events, Wagen-Sprüche und
+lustige Berliner Sprüche sorgen für Abwechslung.
 
 Viel Spaß beim Feiern! 🎉
