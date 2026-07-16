@@ -226,6 +226,25 @@
   @keyframes polawobble{0%,100%{transform:rotate(-3deg)}20%{transform:rotate(4deg) scale(1.04)}45%{transform:rotate(-6deg)}70%{transform:rotate(3deg)}}
   .tiphint{font-size:11px; color:var(--muted); margin:0 auto 8px; opacity:.85}
   #startOverlay{justify-content:flex-start; padding-top:26px}
+  /* Personalakte / Steckbrief */
+  .dossier-inner{align-items:stretch}
+  .dossier-head{font-family:var(--sans); font-size:11.5px; letter-spacing:.08em; color:var(--gold); text-transform:uppercase; margin:0 auto 16px; text-align:center}
+  .dossier-head b{color:var(--text)} .dossier-head span{color:var(--muted); font-variant-numeric:tabular-nums}
+  :root[data-theme="light"] .dossier-head{color:var(--gold-deep)}
+  .dossier-photo{position:relative; width:min(72vw,280px); aspect-ratio:3/4; margin:4px auto 20px}
+  .dossier-photo img{width:100%; height:100%; object-fit:cover; border-radius:8px; border:5px solid #fbf9f2; box-shadow:0 20px 42px -14px rgba(0,0,0,.75); cursor:pointer}
+  .dnote{position:absolute; max-width:130px; background:#fff7cf; color:#3a2b1e; font-size:11px; line-height:1.25; font-weight:600;
+    padding:6px 8px; border-radius:4px; box-shadow:0 6px 15px -4px rgba(0,0,0,.55); z-index:2;
+    opacity:0; transform:rotate(var(--rot,0)) scale(.4); transform-origin:center}
+  .dnote.in{animation:notepop .5s cubic-bezier(.2,1.5,.4,1) forwards}
+  @keyframes notepop{0%{opacity:0; transform:rotate(var(--rot,0)) scale(.4)}60%{opacity:1; transform:rotate(var(--rot,0)) scale(1.1)}100%{opacity:1; transform:rotate(var(--rot,0)) scale(1)}}
+  .dstamp2{position:absolute; right:0%; bottom:5%; z-index:3; color:#1f7a4d; border:4px solid #1f7a4d; border-radius:8px;
+    padding:1px 9px; font-family:var(--serif); font-weight:700; font-size:19px; text-transform:uppercase; letter-spacing:.04em;
+    transform:rotate(-12deg); opacity:0; background:rgba(255,255,255,.18)}
+  .dstamp2.in{animation:stampIn .95s cubic-bezier(.2,1.4,.3,1) both}
+  .dossier-notes{max-width:33ch; margin:0 auto 18px; display:flex; flex-direction:column; gap:8px; width:100%}
+  .dossier-notes .dn{font-size:13px; line-height:1.4; color:var(--text); background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:8px; padding:8px 11px}
+  .dossier-btns{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; width:100%; max-width:33ch; margin:0 auto}
   .fromline{font-size:13.5px; color:var(--text); margin:0 auto 4px; line-height:1.4}
   .fromline b{color:var(--wine-bright)}
   .ov-inner{position:relative; z-index:1; display:flex; flex-direction:column}
@@ -343,7 +362,7 @@
         <div class="polacap" id="polacap">Beweisfoto A-1 · das Geburtstagskind 🎉</div>
       </div>
       <p class="fromline">Ein Geschenk von <b>Sascha, Lisa &amp; Svenja</b> 🍷</p>
-      <p class="tiphint">👆 Tipp mal aufs Beweisfoto …</p>
+      <p class="tiphint">👆 Tipp aufs Foto → Tobis geheime Akte 📂</p>
       <div class="ov-kicker">Für Tobi · Happy Birthday 🎂</div>
       <h2 class="ov-title">Weinwanderung<br>durch Treptow</h2>
       <p class="ov-sub">Alles Gute, Tobi! 5 km an der Spree, 4 Flaschen Wein, ein Essens-Stopp im Zenner — heute mal ganz ohne Antrag in dreifacher Ausfertigung. 😉</p>
@@ -367,6 +386,21 @@
       <div class="recap" id="recap"></div>
       <div class="datefacts" id="dateFacts"></div>
       <button class="ov-cta" id="restartBtn" style="margin-top:24px">Neuen Vorgang anlegen</button>
+    </div>
+  </div>
+
+  <!-- Personalakte / Steckbrief-Lightbox -->
+  <div class="overlay hidden" id="dossier">
+    <div class="ov-inner dossier-inner">
+      <div class="dossier-head">🗂️ Personalakte · <b>Tobi, 30</b> · <span>Az. TOBI-30/2026</span></div>
+      <div class="dossier-photo" id="dphoto">
+        <img id="tobiBig" alt="Tobi – Personalakte" />
+      </div>
+      <div class="dossier-notes" id="dnotes"></div>
+      <div class="dossier-btns">
+        <button class="btn btn-gold" id="dmoreBtn">🔍 Neuer Aktenvermerk</button>
+        <button class="btn btn-ghost" id="dcloseBtn">Akte schließen</button>
+      </div>
     </div>
   </div>
 
@@ -456,6 +490,27 @@
     "Asservat aus dem Archiv der guten Laune"
   ];
   var _tobiLine=1;
+
+  // Personalakte: Klebezettel-Slots (Position + Drehung) an einzelnen Bild-Elementen
+  var DSLOTS=[
+    {pos:"top:-1%; left:-7%",   rot:"-6deg"},
+    {pos:"top:21%; right:-7%",  rot:"6deg"},
+    {pos:"top:51%; left:-9%",   rot:"-4deg"},
+    {pos:"bottom:-3%; left:30%",rot:"5deg"}
+  ];
+  var DNOTE_POOL=[
+    ["📌 Frisur: aktenkundig kurz","📌 Kopf: voller guter Ideen","📌 Scheitel: streng dienstlich"],
+    ["📌 Grinsen: tatverdächtig 😁","📌 Blick: 100 % feierbereit","📌 Miene: amtlich gut gelaunt"],
+    ["📌 Beweisstück A: TEAM-Shirt","📌 Textil: legendär 🏆","📌 Dresscode: Weltklasse"],
+    ["📌 Asservat: Getränk 🍹","📌 Haltung: standfest","📌 Hände: geständig gefaltet"]
+  ];
+  var DOSSIER_NOTES=[
+    ["Vermerk: Betroffener wirkt uneingeschränkt feierfähig.","Empfehlung: Bewilligung von 4 Flaschen Wein."],
+    ["Gutachten: Grinsen echtheitsgeprüft. ✓","Nächster Termin: heute, an der Spree."],
+    ["Aktenlage: eindeutig. Widerspruch aussichtslos.","Anlage: 1 legendäres Beweisfoto."],
+    ["Befund: Party-Tauglichkeit weit über Regelaltersgrenze.","Bearbeiter: Sascha, Lisa & Svenja."]
+  ];
+  var _dossIdx=0;
 
   // DRV-Witze pro Station (index-gleich zu STATIONS)
   var DRV_STATION=[
@@ -951,13 +1006,36 @@
     var card=document.getElementById("tobiCard"); if(!card) return;
     function poke(){
       card.classList.remove("wobble"); void card.offsetWidth; card.classList.add("wobble");
-      try{ AUDIO.sfx("clink"); }catch(e){}
-      var cap=document.getElementById("polacap");
-      if(cap){ cap.textContent = TOBI_LINES[_tobiLine % TOBI_LINES.length]; _tobiLine++; }
+      openDossier();
     }
     card.addEventListener("click", poke);
     card.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); poke(); } });
+    var more=document.getElementById("dmoreBtn"); if(more) more.addEventListener("click", moreVermerk);
+    var close=document.getElementById("dcloseBtn"); if(close) close.addEventListener("click", closeDossier);
+    var big=document.getElementById("dphoto"); if(big) big.addEventListener("click", moreVermerk);
   }
+  function renderDossier(){
+    var photo=document.getElementById("dphoto"); if(!photo) return;
+    var old=photo.querySelectorAll(".dnote,.dstamp2"); for(var k=0;k<old.length;k++) old[k].remove();
+    DSLOTS.forEach(function(s,i){
+      var n=document.createElement("div"); n.className="dnote";
+      n.style.cssText = s.pos+"; --rot:"+s.rot+"; animation-delay:"+(0.12+i*0.12)+"s";
+      n.textContent = DNOTE_POOL[i][_dossIdx % DNOTE_POOL[i].length];
+      photo.appendChild(n); void n.offsetWidth; n.classList.add("in");
+    });
+    var st=document.createElement("div"); st.className="dstamp2"; st.textContent="Geprüft ✓";
+    st.style.animationDelay="0.7s"; photo.appendChild(st); void st.offsetWidth; st.classList.add("in");
+    var dn=document.getElementById("dnotes");
+    if(dn) dn.innerHTML = DOSSIER_NOTES[_dossIdx % DOSSIER_NOTES.length].map(function(x){return '<div class="dn">'+x+'</div>';}).join("");
+  }
+  function openDossier(){
+    var d=document.getElementById("dossier"); if(!d) return;
+    var big=document.getElementById("tobiBig"); if(big && TOBI.indexOf("data:")===0) big.src=TOBI;
+    _dossIdx=0; d.classList.remove("hidden"); renderDossier();
+    confetti(60); try{ AUDIO.sfx("clink"); }catch(e){}
+  }
+  function closeDossier(){ var d=document.getElementById("dossier"); if(d) d.classList.add("hidden"); }
+  function moreVermerk(){ _dossIdx++; renderDossier(); try{ AUDIO.sfx("stamp"); }catch(e){} confetti(28); }
   function buildFloaties(){
     var host=document.getElementById("floaties"); if(!host) return;
     var emoji=["🍷","🎈","🎉","🥂","🍾","🎂","✨","🍇"];
