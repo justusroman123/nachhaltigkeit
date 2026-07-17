@@ -166,9 +166,10 @@
       Fahr die <b>U1</b> von <b>Kottbusser Tor</b> bis <b>Alexanderplatz</b>:
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
       einfahrende U-Bahn 🚇. Nimm den <b>🚪 Ausgang nach oben</b> – draußen
-      warten die <b>schrägsten Gestalten</b> Berlins (FKK im November 🩲,
-      Bollerwagen-DJ 🔊, Bären-Kostüm 🐻, Rave-Oma 💃 …). Und pass auf die
-      Kontrolleure 👮 auf!
+      warten die <b>schrägsten Gestalten</b> (FKK im November 🩲, Bollerwagen-DJ 🔊,
+      Politiker zum Schmieren 💶, Mecker-Rentner 👴, Schwabe aus Stuttgart 🧽 …),
+      es rasen rücksichtslose E-Scooter 🛴 & Radfahrer 🚴 vorbei – und pass auf
+      die Kontrolleure 👮 auf!
     </p>
     <div class="keys" id="deskKeys">
       <span class="kbd">W A S D</span><span class="kbd">Maus ziehen = umsehen</span>
@@ -290,6 +291,24 @@ function clearGroup(g){ while(g.children.length) g.remove(g.children[g.children.
 
 /* ---------- Person builder (viel Variation!) ---------- */
 function mat(c){ return new THREE.MeshStandardMaterial({color:c, roughness:0.8}); }
+function addFace(head,o){ o=o||{};
+  const dark=mat(0x1b1b1b), white=mat(0xf4f4f4), mouthc=mat(0x8a3b3b);
+  const f=o.face||'smile';
+  if(o.sunglasses||o.shades){ box(0.46,0.14,0.05,mat(0x111111),0,0.05,0.26,0,head); }
+  else {
+    const eL=box(0.13,0.15,0.05,white,-0.12,0.05,0.25,0,head), eR=box(0.13,0.15,0.05,white,0.12,0.05,0.25,0,head);
+    box(0.06,0.07,0.03,dark,-0.12,0.04,0.285,0,head); box(0.06,0.07,0.03,dark,0.12,0.04,0.285,0,head);
+    if(f==='angry'){ const bL=box(0.17,0.05,0.04,dark,-0.12,0.17,0.26,0,head); bL.rotation.z=-0.5;
+      const bR=box(0.17,0.05,0.04,dark,0.12,0.17,0.26,0,head); bR.rotation.z=0.5; }
+    if(f==='shock'){ eL.scale.set(1.3,1.4,1); eR.scale.set(1.3,1.4,1); }
+  }
+  if(f==='grin') box(0.3,0.11,0.04,white,0,-0.12,0.26,0,head);
+  else if(f==='shock') box(0.12,0.15,0.04,mouthc,0,-0.13,0.26,0,head);
+  else if(f==='angry') box(0.22,0.05,0.04,mouthc,0,-0.15,0.26,0,head);
+  else if(f==='sad'){ const m=box(0.19,0.06,0.04,mouthc,0,-0.15,0.26,0,head); m.rotation.z=Math.PI; }
+  else box(0.17,0.06,0.04,mouthc,0,-0.14,0.26,0,head);
+  if(o.mustache) box(0.28,0.07,0.04,mat(o.mustache===true?0x2a1c10:o.mustache),0,-0.06,0.27,0,head);
+}
 function makePerson(o){
   o=o||{};
   const g=new THREE.Group();
@@ -315,7 +334,7 @@ function makePerson(o){
   const armMat=mat(o.bare?skin:(o.arm||shirt));
   const armL=box(0.2,0.8,0.2,armMat,-0.52*bodyW,1.25,0);
   const armR=box(0.2,0.8,0.2,armMat, 0.52*bodyW,1.25,0); g.add(armL,armR);
-  const head=box(0.5,0.5,0.5,mat(skin),0,1.95,0); g.add(head);
+  const head=box(0.5,0.5,0.5,mat(skin),0,1.95,0); g.add(head); addFace(head,o);
   // Haare / Frisur
   const hs=o.hairStyle;
   if(hs!=='bald' && o.hair!==null){
@@ -349,6 +368,7 @@ function makeBear(){
   const aL=box(0.26,0.8,0.26,b,-0.6,1.2,0), aR=box(0.26,0.8,0.26,b,0.6,1.2,0); g.add(aL,aR);
   const h=ball(0.42,b,0,2.15,0,g); ball(0.14,b,-0.26,2.4,0,g); ball(0.14,b,0.26,2.4,0,g); // Ohren
   box(0.3,0.2,0.2,mat(0x3a2414),0,2.05,0.36,0,g); // Schnauze
+  box(0.1,0.1,0.08,mat(0x111),-0.16,2.25,0.34,0,g); box(0.1,0.1,0.08,mat(0x111),0.16,2.25,0.34,0,g);
   g.userData={legL:g.children[0],legR:g.children[1],armL:aL,armR:aR,head:h,torso:g.children[2]};
   return g;
 }
@@ -497,6 +517,7 @@ box(0.1,0.5,0.1,matDark,-9,4.85,0,0,ugStatic);
 const stationGroup=new THREE.Group(); scene.add(stationGroup);
 const streetGroup=new THREE.Group(); streetGroup.visible=false; scene.add(streetGroup);
 let npcs=[], guards=[], colliders=[], bounds=UG_BOUNDS;
+let hazards=[];
 let ugColl=[], streetColl=[];
 let place='underground';
 
@@ -582,10 +603,12 @@ function addPersonNPC(list,parent,def,x,z,rot,coll){
   else p=makePerson(def.look);
   p.position.set(x,0,z); if(rot!==undefined) p.rotation.y=rot; parent.add(p);
   const icon=makeFloatIcon(def.emoji,x,2.7,z,parent);
+  const cobj={x,z,r:0.7};
   const n={mesh:p,icon,name:def.name,emoji:def.emoji,lines:def.lines,act:def.act||'idle',
-           collected:false,x,z,bx:x,phase:Math.random()*6,extra:null};
+           verb:def.verb,special:def.special,wr:def.wr||5,
+           collected:false,x,z,bx:x,phase:Math.random()*6,extra:null,coll:cobj};
   if(def.prop) n.extra=def.prop(p,parent,x,z);
-  list.push(n); if(coll) coll.push({x,z,r:0.7});
+  list.push(n); if(coll) coll.push(cobj);
   return n;
 }
 
@@ -671,6 +694,23 @@ function uEntranceStreet(x,z,p){
 }
 
 const STREET_POOL={
+ politiker:{name:"Filz-Politiker",emoji:"🤵",act:'wave',verb:'schmieren 💶',
+   look:{shirt:0x14141f,pants:0x14141f,tie:0xcc2222,hair:0x9a9a9a,face:'grin',glasses:true,h:1.05,girth:1.05},
+   special:(n)=>{ n.bribes=(n.bribes||0)+1; if(n.bribes===1){momente++;updateMomente();streetDone[stationIndex].add(n.name);
+       const par=streetGroup; par.remove(n.icon); n.icon=makeFloatIcon("💶",n.x,2.7,n.z,par);}
+     beep(1200,0.08,'square',0.14); setTimeout(()=>beep(1650,0.1,'square',0.14),90);
+     const l=["Schmiergeld? Ick meine… 'ne Spende. Dankeschön!","Für Sie mach ick den BER nochmal auf. Kost' nur 'ne Milliarde.","Diskretion is mein zweiter Vorname. Der erste ooch.","Ick hab dit nie angenommen. (Steckt's ein.)"];
+     toast("🤑 Politiker geschmiert – Deal gesichert!"); showDialogue(n.name,l[Math.min(n.bribes-1,l.length-1)]); },
+   lines:["Korrupt? Ick? Bodenlose Unterstellung. Mit netter Rendite."]},
+ schwabe:{name:"Schwabe aus Stuttgart",emoji:"🧽",act:'idle',verb:'anhören',
+   look:{shirt:0x116644,pants:0x664422,hair:0x775533,face:'angry',girth:1.05,backpack:0x334455,mustache:0x775533},
+   lines:["Also bei uns in Schtuagart wär des saubrer UND billiger!","Wo kann mr denn hier no kehren? Des liegt ja alles rom!","Elf Euro für a Weckle? Send Se wahnsinnig?","Kennt hier eigentlich koiner d' Kehrwoch??"]},
+ meckerrentner:{name:"Mecker-Rentner",emoji:"👴",act:'pace',verb:'anhören',
+   look:{shirt:0x556655,pants:0x333333,hair:0xcccccc,face:'angry',hat:0x334422,girth:1.12,h:0.95},
+   lines:["Zu meiner Zeit war der Bürgersteig noch zum Gehen da!","Die Jugend! Immer am Handy! Und der Rasen! Und überhaupt!","Beschwer mich beim Amt. Termin hab ick 2027.","Radfahrer! Rowdys! Raus aus meinem Kiez!"]},
+ passant:{name:"Gehetzter Berliner",emoji:"🏃",act:'wander',verb:'anrempeln',wr:9,
+   look:{shirt:0x445566,pants:0x223344,face:'angry',backpack:0x333333,h:1.05},
+   lines:["Zur Seite, ick hab's eilig! Wohin? Weeß ick selbst nich!","Sorry-nich-sorry, ey!","Immer diese Touris im Weg, Alter."]},
  fkk:{name:"FKK-Sonnenanbeter",emoji:"🩲",act:'sit',look:{bare:true,skin:0xd8a878,pants:0x2244cc,hair:0x777777,hairStyle:'bald',girth:1.15},
    lines:["Sonne? Wo? Egal – Vitamin D is Vitamin D, Digga.","In Berlin is immer FKK-Wetter. Im Kopf.","Textilfrei is auch 'ne Meinung, wa."]},
  dj:{name:"Bollerwagen-DJ",emoji:"🔊",act:'dance',prop:(p,par,x,z)=>{ box(1.2,0.7,0.9,mat(0x222222),x+1.1,0.5,z,0,par);
@@ -678,13 +718,17 @@ const STREET_POOL={
      for(const wx of [-0.5,0.5]) cyl(0.2,0.2,0.2,mat(0x111),x+1.1+wx,0.15,z+0.45,par).rotation.x=Math.PI/2; },
    look:{shirt:0x00e5c0,pants:0x111111,glasses:true,hairStyle:'mohawk',hair:0xff2b7a,h:1.05},
    lines:["Mobile Rave, Alter! Der Beat gehört allen!","Bollerwagen-Sound-System, 3000 Watt, alles legal. Fast.","Untz untz – der Görli tanzt heute mit mir!"]},
- bear:{name:"Berliner Bär",emoji:"🐻",act:'wave',build:'bear',
+ bear:{name:"Berliner Bär",emoji:"🐻",act:'wave',build:'bear',verb:'Foto machen 📸',
    lines:["Ick bin der Berliner Bär. Foto? Kost' 'n Bier.","Grrr… also freundlich gemeint, wa.","Ick steh hier seit neun Uhr im Kostüm. Für die Kunst."]},
  yogi:{name:"Straßen-Yogi",emoji:"🧘",act:'yoga',prop:(p,par,x,z)=>{ box(2,0.06,0.9,mat(0x8a3ad0),x,0.03,z,0,par); },
    look:{bare:true,skin:0xc98d5a,pants:0xdddddd,hairStyle:'bun',hair:0x1a1008,beard:0x1a1008},
    lines:["Atme den Feinstaub, spüre den Kotti in dir.","Der Sonnengruß Richtung Späti. Namasté.","Mein Studio? Der Bürgersteig. Miete: unbezahlbar sonst."]},
- statue:{name:"Lebende Statue",emoji:"🗽",act:'statue',build:'statue',statueCol:0xb8b8c0,
-   lines:["…(bewegt sich minimal)… Münze rein, dann winke ick.","Psst. Ick bin 'ne Statue. Streng geheim.","Acht Stunden stillstehen. Mein Rücken hasst mich."]},
+ statue:{name:"Lebende Statue",emoji:"🗽",act:'statue',build:'statue',statueCol:0xb8b8c0,verb:'Münze geben 🪙',
+   special:(n)=>{ if(!n.collected){n.collected=true;momente++;updateMomente();streetDone[stationIndex].add(n.name);
+       const par=streetGroup; par.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,par);}
+     n.act2Until=clock.elapsedTime+3; beep(1500,0.1,'square',0.12); toast("🪙 Münze rein – die Statue winkt!");
+     showDialogue(n.name,"…(winkt kurz und erstarrt wieder)… die Kunst dankt."); },
+   lines:["…(bewegt sich minimal)… Münze rein, dann winke ick."]},
  floh:{name:"Flohmarkt-Verkäufer",emoji:"👟",act:'sit',prop:(p,par,x,z)=>{ box(1.6,0.05,1.2,mat(0x883333),x,0.03,z+0.6,0,par);
      box(0.3,0.15,0.5,mat(0xffffff),x+0.2,0.14,z+0.6,0,par); },
    look:{shirt:0x556655,pants:0x333322,beanie:0x884422,hair:0x2a1c10,beard:0x2a1c10},
@@ -693,7 +737,7 @@ const STREET_POOL={
      const a=k/6*6.28; box(0.28,0.24,0.34,mat(0x9aa0aa),x+Math.cos(a)*1.4,0.12,z+Math.sin(a)*1.4,0,par);} },
    look:{shirt:0x777788,jacket:0x445544,hair:0xbbbbbb,girth:1.1,h:0.92},
    lines:["Meine Mädels! Kommt zu Papa! Nich du, du hast geklaut.","Fünf Kilo Körner am Tag. Die kenn' mich schon.","Tauben sind die wahren Berliner. Frech und überall."]},
- fixie:{name:"Fixie-Hipster",emoji:"🚲",act:'idle',prop:(p,par,x,z)=>{ box(0.1,0.7,1.6,mat(0x111111),x+0.6,0.7,z,0,par);
+ fixie:{name:"Fixie-Hipster",emoji:"🚲",act:'wander',wr:4,prop:(p,par,x,z)=>{ box(0.1,0.7,1.6,mat(0x111111),x+0.6,0.7,z,0,par);
      cyl(0.4,0.4,0.08,mat(0x222),x+0.6,0.4,z-0.7,par).rotation.x=Math.PI/2; cyl(0.4,0.4,0.08,mat(0x222),x+0.6,0.4,z+0.7,par).rotation.x=Math.PI/2; },
    look:{shirt:0xcc6633,pants:0x223322,beanie:0x992222,hair:0x2a1c10,beard:0x3a2414,glasses:true,h:1.08},
    lines:["Mein Fahrrad hat nur einen Gang. Wie mein Leben.","Kaffee? Nur Filterkaffee aus Ruanda, Direct Trade.","Ick war schon in Neukölln, bevor's cool war."]},
@@ -708,12 +752,12 @@ const STREET_POOL={
 };
 
 const KIEZ=[
- {land:'kotti', pool:['fkk','dj','statue','philo','fixie']},
- {land:'park',  pool:['dj','yogi','tauben','floh','raveoma']},
- {land:'oberbaum', pool:['bear','statue','buergeramt','doenerman','philo']},
- {land:'fernsehturm', pool:['raveoma','fixie','tauben','buergeramt','bear']},
+ {land:'kotti', pool:['fkk','dj','statue','philo','fixie','passant']},
+ {land:'park',  pool:['dj','yogi','tauben','floh','raveoma','meckerrentner']},
+ {land:'oberbaum', pool:['bear','statue','buergeramt','doenerman','schwabe','passant']},
+ {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
-const STREET_SPOTS=[{x:-16,z:5},{x:-6,z:8},{x:8,z:5},{x:18,z:8},{x:-24,z:9},{x:26,z:5}];
+const STREET_SPOTS=[{x:-9,z:6},{x:9,z:7},{x:-19,z:5},{x:19,z:6},{x:-2,z:9},{x:15,z:9},{x:-26,z:8}];
 
 function landmark(kind,p){
   if(kind==='fernsehturm'){ cyl(0.9,1.4,26,mat(0xcfd6e2),-30,13,20,p); ball(2.6,mat(0xd0d8e6),-30,25,20,p);
@@ -724,6 +768,26 @@ function landmark(kind,p){
   else { box(24,1.4,1.4,mat(0x3a4a6a),0,7.5,19,0,p); for(let x=-10;x<=10;x+=4) box(0.8,7.5,0.8,mat(0x3a4a6a),x,3.7,19,0,p); }
 }
 
+function makeHazard(type,laneZ,speed){
+  const g=new THREE.Group(); let rider;
+  if(type==='scooter'){ rider=makePerson({shirt:0x18c98a,pants:0x222222,cap:0x111111,face:'grin',sunglasses:true,h:1.02});
+    box(0.7,0.08,0.24,mat(0x333333),0,0.12,0,0,g); box(0.06,0.9,0.06,mat(0x333333),0.32,0.55,0,0,g);
+    box(0.34,0.06,0.08,mat(0x111111),0.32,1.0,0,0,g);
+    cyl(0.16,0.16,0.06,mat(0x111111),0.32,0.12,0,g).rotation.x=Math.PI/2;
+    cyl(0.16,0.16,0.06,mat(0x111111),-0.32,0.12,0,g).rotation.x=Math.PI/2;
+    rider.position.set(-0.05,0.15,0); rider.scale.set(0.92,0.92,0.92); g.add(rider);
+  } else { rider=makePerson({shirt:0xff8800,pants:0x223344,beanie:0x990000,face:'grin',h:1.0});
+    box(0.1,0.6,1.5,mat(0x1133aa),0,0.7,0,0,g);
+    cyl(0.42,0.42,0.06,mat(0x111111),0,0.42,-0.72,g).rotation.x=Math.PI/2;
+    cyl(0.42,0.42,0.06,mat(0x111111),0,0.42,0.72,g).rotation.x=Math.PI/2;
+    rider.position.set(0,0.55,0); rider.scale.set(0.94,0.94,0.94); g.add(rider);
+  }
+  const start=speed>0?-50:50; g.position.set(start,0,laneZ); g.rotation.y=speed>0?Math.PI/2:-Math.PI/2; streetGroup.add(g);
+  const lines=type==='scooter'
+    ? ["AUS DEM WEG! Klingel is kaputt!","E-Scooter kennt kein Erbarmen!","Ich lad den nur schnell ab – auf dem Gehweg!"]
+    : ["Fahrrad hier!! Nich gucken bringt Glück!","Ampeln sind Empfehlungen!","Ick hab VORFAHRT! Immer!"];
+  return {g,z:laneZ,x:start,speed,type,talkCool:2,hitCool:0,lines,hphase:Math.random()*6};
+}
 function buildStreet(i){
   clearGroup(streetGroup); npcs=[]; streetColl=[]; const kz=KIEZ[i]; const st=STATIONS[i];
   // Boden: Gehweg + Straße
@@ -737,7 +801,7 @@ function buildStreet(i){
   landmark(kz.land,streetGroup);
   // U-Bahn-Eingang
   uEntranceStreet(ST_ENTRANCE.x,ST_ENTRANCE.z,streetGroup);
-  streetColl.push({x:ST_ENTRANCE.x,z:ST_ENTRANCE.z,r:2.4});
+  streetColl.push({x:ST_ENTRANCE.x,z:ST_ENTRANCE.z,r:1.7});
   // Späti + Imbiss
   box(6,3,4,mat(0x2b6b3a),-32,1.5,14,0,streetGroup); streetColl.push({x:-32,z:14,r:3});
   (function(){const s=makeTextPlane("SPÄTI",256,90,"#f3d000","#111",64); s.scale.set(3.4,1.2,1); s.position.set(-32,3.4,11.9); streetGroup.add(s);})();
@@ -762,6 +826,7 @@ function buildStreet(i){
     const n=addPersonNPC(npcs,streetGroup,def,spot.x,spot.z,Math.PI,streetColl);
     if(streetDone[i].has(def.name)){ n.collected=true; streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }
   });
+  hazards=[]; hazards.push(makeHazard('scooter',6,15)); hazards.push(makeHazard('cyclist',9,-11.5));
 }
 
 /* ============================================================
@@ -864,6 +929,7 @@ let stationNpcsRef=[]; // Referenz auf die Bahnsteig-NPCs (bleiben erhalten)
 
 /* Sammeln */
 function collectNPC(n){
+  if(n.special){ n.special(n); return; }
   if(!n.collected){
     n.collected=true; momente++; updateMomente();
     if(place==='underground') collected++;
@@ -933,22 +999,28 @@ function resolve(nx,nz){
 
 /* NPC-Aktionen (skurriles Verhalten) */
 function animateNPC(n,t){
-  const u=n.mesh.userData, ph=n.phase; n.mesh.rotation.z=0;
+  const u=n.mesh.userData, ph=n.phase;
+  function follow(nx){ n.mesh.position.x=nx; n.x=nx; if(n.coll)n.coll.x=nx; if(n.icon)n.icon.position.x=nx; }
+  if(n.act!=='sit') n.mesh.rotation.x=0; if(n.act!=='lean') n.mesh.rotation.z=0;
   switch(n.act){
     case 'dance': n.mesh.position.y=Math.abs(Math.sin(t*6+ph))*0.2;
       u.armL.rotation.z=0.7+Math.sin(t*6+ph)*0.7; u.armR.rotation.z=-0.7-Math.sin(t*6+ph)*0.7;
       u.head.rotation.z=Math.sin(t*6+ph)*0.2; break;
     case 'yoga': u.armL.rotation.z=1.5; u.armR.rotation.z=-1.5; n.mesh.rotation.z=Math.sin(t*1.2+ph)*0.06;
       u.head.position.y=1.95; break;
-    case 'statue': if(Math.sin(t*0.5+ph)>0.995) u.armR.rotation.z=-0.3; else u.armR.rotation.z=0; break;
-    case 'sit': u.legL.rotation.x=-1.35; u.legR.rotation.x=-1.35; n.mesh.position.y=-0.12;
-      n.mesh.rotation.x=-0.15; break;
-    case 'pace': n.mesh.position.x=n.bx+Math.sin(t*1.6+ph)*1.3;
-      { const s=Math.cos(t*1.6+ph); n.mesh.rotation.y=(s>0?1:-1)*1.4;
-        u.legL.rotation.x=Math.sin(t*7+ph)*0.6; u.legR.rotation.x=-Math.sin(t*7+ph)*0.6; } break;
-    case 'panic': n.mesh.position.x=n.bx+Math.sin(t*4+ph)*0.5;
+    case 'statue': if(n.act2Until&&t<n.act2Until){ u.armR.rotation.z=-0.4+Math.sin(t*8)*0.7; }
+      else { u.armR.rotation.z=(Math.sin(t*0.5+ph)>0.995)?-0.3:0; } break;
+    case 'sit': u.legL.rotation.x=-1.35; u.legR.rotation.x=-1.35; n.mesh.position.y=-0.12; n.mesh.rotation.x=-0.15; break;
+    case 'pace': { const nx=n.bx+Math.sin(t*1.5+ph)*1.6; follow(nx);
+      const s=Math.cos(t*1.5+ph); n.mesh.rotation.y=(s>0?1:-1)*1.4;
+      u.legL.rotation.x=Math.sin(t*7+ph)*0.6; u.legR.rotation.x=-Math.sin(t*7+ph)*0.6; } break;
+    case 'wander': { const nx=n.bx+Math.sin(t*0.45+ph)*(n.wr||5); follow(nx);
+      const s=Math.cos(t*0.45+ph); n.mesh.rotation.y=(s>=0?1:-1)*1.4;
+      u.legL.rotation.x=Math.sin(t*6+ph)*0.6; u.legR.rotation.x=-Math.sin(t*6+ph)*0.6;
+      u.head.position.y=1.95; } break;
+    case 'panic': { const nx=n.bx+Math.sin(t*3.5+ph)*0.8; follow(nx);
       u.armL.rotation.z=1.6+Math.sin(t*10)*0.4; u.armR.rotation.z=-1.6-Math.sin(t*10)*0.4;
-      n.mesh.rotation.y=Math.PI+Math.sin(t*8+ph)*0.3; break;
+      n.mesh.rotation.y=Math.PI+Math.sin(t*8+ph)*0.3; } break;
     case 'lean': n.mesh.rotation.z=0.14; u.armR.rotation.z=-0.5; break;
     case 'wave': u.armR.rotation.z=-0.4+Math.sin(t*6+ph)*0.7; break;
     default: u.head.position.y=1.95+Math.sin(t*2+ph)*0.03;
@@ -1092,15 +1164,26 @@ function animate(){
       annTimer-=dt; if(annTimer<=0){annTimer=22+Math.random()*14; announce(ANNOUNCE[(Math.random()*ANNOUNCE.length)|0]);}
     } else {
       elWarn.classList.remove('on');
-      const dEn=Math.hypot(P.x-ST_ENTRANCE.x,P.z-ST_ENTRANCE.z); if(dEn<2.9&&dEn<best+0.4){nearEntrance=true;nearNPC=null;}
-      for(const s of STANDS){ const d=Math.hypot(P.x-s.x,P.z-s.z); if(d<2.6&&d<best+0.3){nearStand=s; nearNPC=nearEntrance?null:nearNPC;} }
+      const dEn=Math.hypot(P.x-ST_ENTRANCE.x,P.z-ST_ENTRANCE.z); if(dEn<4.2){nearEntrance=true;nearNPC=null;}
+      if(!nearEntrance) for(const s of STANDS){ const d=Math.hypot(P.x-s.x,P.z-s.z); if(d<3.6){nearStand=s;nearNPC=null;} }
+      for(const hz of hazards){
+        hz.x+=hz.speed*dt; if(hz.x>54)hz.x=-54; if(hz.x<-54)hz.x=54; hz.g.position.x=hz.x;
+        hz.g.position.y=Math.abs(Math.sin(t*14+hz.hphase))*0.05;
+        hz.talkCool-=dt; hz.hitCool-=dt; const dh=Math.hypot(P.x-hz.x,P.z-hz.z);
+        if(dh<8&&hz.talkCool<=0&&Math.random()<0.03){ hz.talkCool=4;
+          toast((hz.type==='scooter'?'🛴 ':'🚴 ')+hz.lines[(Math.random()*hz.lines.length)|0]); beep(880,0.07,'square',0.12); }
+        if(dh<1.4&&hz.hitCool<=0){ hz.hitCool=2; const dir=hz.speed>0?1:-1;
+          P.z+=(P.z>=hz.z?1:-1)*1.4; P.x+=dir*0.5; [P.x,P.z]=resolve(P.x,P.z);
+          toast("💥 BONK! "+(hz.type==='scooter'?'E-Scooter':'Radfahrer')+" nietet dich um!");
+          say(hz.type==='scooter'?"Aus dem Weg!":"Fahrrad, Mann!"); beep(180,0.3,'sawtooth',0.18); }
+      }
       annTimer-=dt; if(annTimer<=0){annTimer=20+Math.random()*12; announce(STREET_ANN[(Math.random()*STREET_ANN.length)|0]);}
     }
 
     // Prompt
     const K=IS_TOUCH?'SPRECHEN':'E';
     if(nearNPC){ elPrompt.classList.add('on'); elPrompt.innerHTML= nearNPC.collected
-        ? `<b>${K}</b> · ${nearNPC.name} nochmal quatschen` : `<b>${K}</b> · ${nearNPC.emoji} ${nearNPC.name} ansprechen`; }
+        ? `<b>${K}</b> · ${nearNPC.name} nochmal quatschen` : `<b>${K}</b> · ${nearNPC.emoji} ${nearNPC.name} ${nearNPC.verb||'ansprechen'}`; }
     else if(nearAutomat){ elPrompt.classList.add('on'); elPrompt.innerHTML= ticketBought
         ? `<b>${K}</b> · Fahrschein hast du ✅` : `<b>${K}</b> · 🎫 Fahrschein kaufen`; }
     else if(nearExit){ elPrompt.classList.add('on'); elPrompt.innerHTML=`<b>${K}</b> · 🚪 Nach oben (raus an die Luft)`; }

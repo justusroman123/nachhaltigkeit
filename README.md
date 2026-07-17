@@ -47,8 +47,22 @@ die ganze Umgebung wechselt von U-Bahnhof zu **Berliner Kiez bei Tageslicht**
 (Himmel, Altbauten, Späti, Currywurst-Imbiss, Autos, Bäume, U-Bahn-Eingang).
 Jeder Kiez sieht anders aus (Fernsehturm, Oberbaumbrücke, Görli-Park …).
 
-Dort triffst du die **schrägsten Gestalten Berlins**, die alle was Seltsames
-machen – jede mit eigenem Look und eigener Animation:
+Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
+**laufen herum** statt nur zu stehen, und es rasen **rücksichtslose Hindernisse**
+über den Gehweg, denen du ausweichen musst:
+
+- 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
+- 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
+
+Und du kannst mehr als nur reden – je nach Gestalt eine eigene **Aktivität**:
+
+- 💶 **Filz-Politiker schmieren** (schwarzer Humor, „Für Sie mach ick den BER
+  nochmal auf")
+- 🪙 **Lebende Statue** mit Münze zum Winken bringen
+- 📸 **Foto** mit dem Berliner Bären
+
+Dazu die **schrägsten Gestalten Berlins**, jede mit eigenem Look & eigener
+Animation (tanzen, Yoga, panisch rennen, meckern):
 
 - 🩲 **FKK-Sonnenanbeter** (im November, sonnt sich trotzdem)
 - 🔊 **Bollerwagen-DJ** (mobiler Rave, tanzt)
@@ -58,7 +72,9 @@ machen – jede mit eigenem Look und eigener Animation:
 - 👟 **Flohmarkt-Verkäufer** mit genau einem Schuh
 - 🐦 **Tauben-Fütterer** (umringt von Tauben)
 - 🚲 **Fixie-Hipster**, 📋 **Bürgeramt-Verzweifelte** (rennt panisch),
-  💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp** …
+  💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp**,
+  👴 **Mecker-Rentner**, 🧽 **Schwabe aus Stuttgart** („bei uns wär des saubrer!"),
+  🏃 **gehetzte Berliner:innen**, die dich anrempeln …
 
 Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 🌟 **Berlin-Moment** (Zähler oben links).
