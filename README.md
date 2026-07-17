@@ -54,6 +54,21 @@ Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
 
+## 🎮 4 Minispiele (an den passenden Orten)
+
+- 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
+  natürlich – kaputt. Triff den grünen Strom-Bereich, um den Wackelkontakt zu
+  fixen, dann kannst du das Ticket ziehen.
+- 💶 **Politiker schmieren** (Straße am Alex): Übergib das Schmiergeld
+  **unauffällig** – halte den Knopf, aber nur wenn keiner guckt (👀), sonst
+  steigt der Verdacht. Erfolg gibt dir **Baurecht** – damit kannst du bei der
+  Wohnungsbesichtigung einfach kaufen.
+- 🛴 **Gehweg-Slalom** (Straße): Weich in 3 Spuren den Berliner Gefahren aus –
+  E-Scooter-Rowdys, Rentnern mit Rollator, Babys im Lastenrad und Kotti-Gestalten.
+- 🏠 **Wohnungsbesichtigung** (Straße): 50 Bewerber:innen vor dir – drängel dich
+  durch das Getümmel und überzeug am Ende den Vermieter (bestechen, ehrlich sein
+  oder mit Baurecht direkt kaufen).
+
 Und du kannst mehr als nur reden – je nach Gestalt eine eigene **Aktivität**:
 
 - 💶 **Filz-Politiker schmieren** (schwarzer Humor, „Für Sie mach ick den BER
