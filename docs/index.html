@@ -572,9 +572,42 @@ box(0.1,0.5,0.1,matDark,-9,4.85,0,0,ugStatic);
 /* BVG-Leitstelle: Verspätungen würfeln */
 const verspaetPos={x:-16,z:2.4};
 box(1.3,1.1,0.7,mat(0x7a2b8e),verspaetPos.x,0.55,verspaetPos.z,0,ugStatic);
-box(0.9,0.5,0.06,new THREE.MeshStandardMaterial({color:0x101820,emissive:0xf3a51a,emissiveIntensity:0.6}),verspaetPos.x,0.95,verspaetPos.z+0.36,0,ugStatic);
 staticColliders.push({x:verspaetPos.x,z:verspaetPos.z,r:0.6});
-const verspaetSign=makeFloatIcon("🎲",verspaetPos.x,2.4,verspaetPos.z,ugStatic);
+const verspaetSign=makeFloatIcon("🎲",verspaetPos.x,3.15,verspaetPos.z,ugStatic);
+// Große Verspätungs-Anzeigetafel über der Leitstelle (zeigt den Rekord)
+const vspCanvas=document.createElement('canvas'); vspCanvas.width=320; vspCanvas.height=160;
+const vspCtx=vspCanvas.getContext('2d'); const vspTex=new THREE.CanvasTexture(vspCanvas);
+box(0.12,1.7,0.12,mat(0x2a2f38),verspaetPos.x,1.75,verspaetPos.z,0,ugStatic);       // Pfosten
+box(3.0,1.66,0.12,mat(0x05070c),verspaetPos.x,2.55,verspaetPos.z,0,ugStatic);       // Rahmen/Rückwand
+const vspBoard=new THREE.Mesh(new THREE.PlaneGeometry(2.8,1.5),new THREE.MeshBasicMaterial({map:vspTex,side:THREE.DoubleSide}));
+vspBoard.position.set(verspaetPos.x,2.55,verspaetPos.z+0.07); ugStatic.add(vspBoard);
+const vspBoard2=new THREE.Mesh(new THREE.PlaneGeometry(2.8,1.5),new THREE.MeshBasicMaterial({map:vspTex,side:THREE.DoubleSide}));
+vspBoard2.position.set(verspaetPos.x,2.55,verspaetPos.z-0.07); vspBoard2.rotation.y=Math.PI; ugStatic.add(vspBoard2);
+function updateVerspaetBoard(){ const c=vspCtx; c.fillStyle='#0a0d14'; c.fillRect(0,0,320,160);
+  c.strokeStyle='#1c2740'; c.lineWidth=4; c.strokeRect(3,3,314,154);
+  c.textAlign='center'; c.fillStyle='#f3a51a'; c.font='700 22px Consolas, monospace';
+  c.fillText('⚠ BVG-VERSPÄTUNG', 160, 32);
+  const v=verspaetRecord;
+  c.fillStyle = v>=60?'#ff3a2a':(v>=25?'#ffa53a':(v>0?'#ffd23f':'#4ade80'));
+  c.font='900 62px Consolas, monospace'; c.fillText(v>0?('+'+v+' min'):'pünktlich?!', 160, 100);
+  c.fillStyle='#7fa0d0'; c.font='600 16px Consolas, monospace';
+  c.fillText(v>0?('Rekord · '+(v>=60?'Totalausfall!':v>=25?'na klar':'geht besser')):'…heute ausnahmsweise', 160, 134);
+  vspTex.needsUpdate=true; }
+// Default-Anzeige (verspaetRecord ist hier noch nicht initialisiert → inline zeichnen)
+vspCtx.fillStyle='#0a0d14'; vspCtx.fillRect(0,0,320,160); vspCtx.strokeStyle='#1c2740'; vspCtx.lineWidth=4; vspCtx.strokeRect(3,3,314,154);
+vspCtx.textAlign='center'; vspCtx.fillStyle='#f3a51a'; vspCtx.font='700 22px Consolas, monospace'; vspCtx.fillText('⚠ BVG-VERSPÄTUNG',160,32);
+vspCtx.fillStyle='#4ade80'; vspCtx.font='900 58px Consolas, monospace'; vspCtx.fillText('pünktlich?!',160,100);
+vspCtx.fillStyle='#7fa0d0'; vspCtx.font='600 16px Consolas, monospace'; vspCtx.fillText('…heute ausnahmsweise',160,134); vspTex.needsUpdate=true;
+
+/* U-Bahn-Blickduell: Sitzbank mit Fahrgast gegenüber (unten) */
+const eyePos={x:12,z:2.9};
+box(1.9,0.1,0.55,mat(0x33465e),eyePos.x,0.42,eyePos.z,0,ugStatic);        // Sitzbank
+box(1.9,0.5,0.08,mat(0x2b3b50),eyePos.x,0.62,eyePos.z-0.22,0,ugStatic);   // Lehne
+const eyeGuy=makePerson({shirt:0x6a3b2a,pants:0x2a2a30,hair:0x1a1008,beard:0x1a1008,girth:1.05});
+eyeGuy.position.set(eyePos.x,-0.1,eyePos.z); eyeGuy.rotation.y=Math.PI;    // schaut Richtung Bahnsteig
+eyeGuy.userData.legL.rotation.x=-1.35; eyeGuy.userData.legR.rotation.x=-1.35; ugStatic.add(eyeGuy);
+staticColliders.push({x:eyePos.x,z:eyePos.z,r:0.8});
+makeFloatIcon("👁️",eyePos.x,2.7,eyePos.z,ugStatic);
 
 /* ============================================================
    NPCs, STATIONEN, STRASSE
@@ -673,6 +706,7 @@ function addPersonNPC(list,parent,def,x,z,rot,coll){
   const cobj={x,z,r:0.7};
   const n={mesh:p,icon,name:def.name,emoji:def.emoji,lines:def.lines,act:def.act||'idle',
            verb:def.verb,special:def.special,wr:def.wr||5,dealer:!!def.dealer,psstCool:1.5,
+           psstSay:def.psstSay||['🤫 psst-psst','psst… psst','🌿 Digga!','Ey, komm ma'],
            collected:false,x,z,bx:x,phase:Math.random()*6,extra:null,coll:cobj};
   if(def.prop) n.extra=def.prop(p,parent,x,z);
   list.push(n); if(coll) coll.push(cobj);
@@ -837,6 +871,10 @@ function uEntranceStreet(x,z,p){
   const a=makeTextPlane("↓ U-BAHN",256,64,"#fff","#0057a8",44); a.scale.set(3.2,0.8,1); a.position.set(x,3.2,z-1.72); p.add(a);
 }
 
+function dealerBrushOff(n,pitches){ if(!n.collected){ n.collected=true; momente++; updateMomente(); streetDone[stationIndex].add(n.name);
+    try{ streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }catch(e){} beep(880,0.15,'triangle',0.15);
+    toast("🌟 Berlin-Moment: höflich abgewimmelt"); }
+  squeak(); n.talkUntil=clock.elapsedTime+2.4; showDialogue(n.name, pick(pitches)); }
 const STREET_POOL={
  makler:{name:"Makler",emoji:"🏠",act:'idle',verb:'Wohnung zeigen 🏠',special:(nn)=>miniWohnung(),
    look:{shirt:0x223a66,tie:0xdd3333,pants:0x14141f,hair:0x33261a,face:'grin',glasses:true,h:1.03},
@@ -894,24 +932,36 @@ const STREET_POOL={
    lines:["Zwei Döner, einer gratis – ick lauf sogar hinterher!","Im Kostüm schwitzt man wie im Grill. Passt.","Vegan? Ham wa auch. Frag nich, wie."]},
  dealer:{name:"Görli-Dealer",emoji:"🌿",act:'lean',verb:'abwimmeln 🤫',dealer:true,
    look:{shirt:0x14161c,jacket:0x0e0f14,pants:0x181a20,beanie:0x22252c,skin:0xb98a63,face:'grin',glasses:true,backpack:0x2a2f38,h:1.04},
-   special:(n)=>{ if(!n.collected){ n.collected=true; momente++; updateMomente(); streetDone[stationIndex].add(n.name);
-       streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); beep(880,0.15,'triangle',0.15);
-       toast("🌟 Berlin-Moment: höflich abgewimmelt"); }
-     squeak(); n.talkUntil=clock.elapsedTime+2.4;
-     showDialogue(n.name, pick(["Psst… Gras, Tschick, Bio-Oregano? Freundschaftspreis, Digga.",
-       "Für dich Sonderangebot: drei Gummibärchen, eins gratis, ehrlich.",
-       "Nur gucken kost' nix. Alles andere aber schon, wa.",
-       "Ick hab auch Pfandbons. Ganz legal. Quasi.",
-       "Willste 'ne Tüte? Also… 'ne Papiertüte, versteht sich."])); },
+   psstSay:['🤫 psst-psst','psst… psst','🌿 Digga!','Ey, komm ma'],
+   special:(n)=>dealerBrushOff(n,["Psst… Gras, Tschick, Bio-Oregano? Freundschaftspreis, Digga.",
+       "Für dich Sonderangebot: drei Gummibärchen, eins gratis, ehrlich.","Nur gucken kost' nix. Alles andere aber schon, wa.",
+       "Ick hab auch Pfandbons. Ganz legal. Quasi.","Willste 'ne Tüte? Also… 'ne Papiertüte, versteht sich."]),
    lines:["Psst… psst… ey, komm ma her, Digga.","Alles da. Frag nich woher, frag wieviel.","Ick steh hier nur so rum. Rein zufällig. Den ganzen Tag."]},
+ dealerBank:{name:"Parkbank-Dealer",emoji:"🌳",act:'sit',verb:'abwimmeln 🤫',dealer:true,
+   prop:(p,par,x,z)=>{ box(1.6,0.1,0.5,mat(0x5a4028),x,0.42,z,0,par); box(1.6,0.4,0.08,mat(0x5a4028),x,0.62,z+0.2,0,par); },
+   look:{shirt:0x203028,jacket:0x18201a,pants:0x22261e,cap:0x111511,skin:0xa87848,beard:0x1a140c,face:'grin',h:1.02},
+   psstSay:['🤫 na, Chef?','psst… setz dich','🌳 ey, Kollege','wheek wheek'],
+   special:(n)=>dealerBrushOff(n,["Setz dich, Kollege. Ick hab hier wat Feines unter der Bank.",
+       "Alles bio, alles aus'm eigenen Balkonkasten. Ehrenwort.","Guck nich so ängstlich, ick verkoof doch bloß gute Laune.",
+       "Erste is umsonst. Zweite auch. Aber die dritte, ne."]),
+   lines:["Psst. Bank is besetzt – aber für dich rutsch ick.","Ick sitz hier und berate. Kostenlos. Der Rest nich.","Wheek. Ähm. Ick meine: na, alles jut?"]},
+ dealerRad:{name:"Lieferando-Dealer",emoji:"🚴",act:'wander',wr:4,verb:'abwimmeln 🤫',dealer:true,
+   prop:(p,par,x,z)=>{ box(0.1,0.7,1.5,mat(0x111111),x+0.6,0.7,z,0,par); box(0.5,0.5,0.5,mat(0xff2d55),x+0.6,1.1,z,0,par);
+     cyl(0.4,0.4,0.08,mat(0x222),x+0.6,0.4,z-0.65,par).rotation.x=Math.PI/2; cyl(0.4,0.4,0.08,mat(0x222),x+0.6,0.4,z+0.65,par).rotation.x=Math.PI/2; },
+   look:{shirt:0xff2d55,jacket:0x22252c,pants:0x14141a,beanie:0x111111,skin:0xc99060,face:'grin',glasses:true,h:1.05},
+   psstSay:['🤫 Lieferung?','psst, express!','🚴 30 Min oder gratis','wheek!'],
+   special:(n)=>dealerBrushOff(n,["Lieferservice! Ick bring's dir vors Späti. Diskret, versteht sich.",
+       "App is abgestürzt, aber der Deal steht. Bar oder Pfandbon.","Express-Zuschlag zwei Sterni. Nimmste?",
+       "Trinkgeld? Ick GEB Trinkgeld, so gut läuft's."]),
+   lines:["Psst – bestellt? Nich? Egal, ick hab trotzdem wat.","Ick liefer alles. Frag nich die App, frag mich.","Wheek – äh, ick mein: Lieferung für Sie!"]},
 };
 
 const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma."];
 for(const d of Object.values(NPC_POOL)) d.lines=d.lines.concat(GENERIC);
 for(const d of Object.values(STREET_POOL)) if(d.lines) d.lines=d.lines.concat(GENERIC);
 const KIEZ=[
- {land:'kotti', pool:['fkk','dj','dealer','philo','fixie','passant']},
- {land:'park',  pool:['dj','yogi','dealer','floh','raveoma','makler']},
+ {land:'kotti', pool:['fkk','dealer','dj','dealerBank','fixie','passant','philo']},
+ {land:'park',  pool:['dj','dealer','yogi','dealerRad','raveoma','dealerBank','makler']},
  {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
@@ -981,20 +1031,31 @@ skydome.position.y=20; skydome.renderOrder=-2; skydome.visible=false; scene.add(
     if(Math.random()<0.28){ const a=new THREE.Mesh(new THREE.BoxGeometry(0.25,2+Math.random()*4,0.25),new THREE.MeshStandardMaterial({color:0xcc2222,emissive:0xaa1111,emissiveIntensity:0.6})); a.position.set(m.position.x,h+2,r.z); skylineGroup.add(a); }
   } }
 })();
-function groundTex(rx,ry){ const c=document.createElement('canvas');c.width=128;c.height=128;const x=c.getContext('2d');
-  x.fillStyle='#9a9d9f'; x.fillRect(0,0,128,128);
-  const greys=['#93969a','#9ea1a3','#8d9092','#a3a5a6','#96999b'];
-  for(let gy=0;gy<4;gy++) for(let gx=0;gx<4;gx++){ x.fillStyle=greys[(gx*3+gy*5)%greys.length]; x.fillRect(gx*32+1,gy*32+1,30,30); }
-  x.strokeStyle='#787b7e'; x.lineWidth=2;
-  for(let i=0;i<=128;i+=32){ x.beginPath();x.moveTo(i,0);x.lineTo(i,128);x.stroke(); x.beginPath();x.moveTo(0,i);x.lineTo(128,i);x.stroke(); }
-  // Risse
-  x.strokeStyle='rgba(30,30,30,0.4)'; x.lineWidth=1;
-  for(let k=0;k<3;k++){ x.beginPath(); let px=Math.random()*128, py=Math.random()*128; x.moveTo(px,py);
-    for(let j=0;j<4;j++){ px+=(Math.random()-0.5)*40; py+=(Math.random()-0.5)*40; x.lineTo(px,py);} x.stroke(); }
-  // Moos + Flecken + Kaugummi
-  x.fillStyle='rgba(60,90,50,0.35)'; for(let k=0;k<5;k++) x.fillRect((k*41)%120,(k*67)%120,6+((k*7)%6),4+((k*5)%5));
-  x.fillStyle='rgba(0,0,0,0.10)'; for(let k=0;k<8;k++){ x.beginPath(); x.arc((k*53)%128,(k*31)%128,2+((k)%3),0,7); x.fill(); }
-  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||30,ry||15); return t; }
+function groundTex(rx,ry){ const c=document.createElement('canvas');c.width=256;c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#989b9d'; x.fillRect(0,0,256,256);
+  // unregelmäßige Gehwegplatten (versetzt, leicht schief, verschiedene Grautöne)
+  const greys=['#8f9294','#9a9d9f','#889092','#a1a3a4','#93969a','#888b8d','#9ea0a1'];
+  x.strokeStyle='#75787b'; x.lineWidth=2;
+  for(let gy=0;gy<4;gy++){ const off=(gy%2)*18; for(let gx=-1;gx<5;gx++){
+    const px=gx*60+off+((gy*7+gx*3)%5)-2, py=gy*64+((gx*5)%4)-1, pw=58+((gx+gy)%3)*2, ph=60+((gx*2+gy)%4);
+    x.fillStyle=greys[(gx*3+gy*5+7)%greys.length]; x.fillRect(px,py,pw,ph); x.strokeRect(px,py,pw,ph);
+    // Körnung pro Platte
+    for(let n=0;n<26;n++){ x.fillStyle='rgba('+(Math.random()<0.5?'0,0,0':'255,255,255')+','+(Math.random()*0.06).toFixed(3)+')';
+      x.fillRect(px+Math.random()*pw,py+Math.random()*ph,2,2); } } }
+  // Risse (unregelmäßig, verzweigt)
+  x.strokeStyle='rgba(25,25,25,0.45)';
+  for(let k=0;k<5;k++){ x.lineWidth=0.6+Math.random(); x.beginPath(); let px=Math.random()*256, py=Math.random()*256; x.moveTo(px,py);
+    for(let j=0;j<6;j++){ px+=(Math.random()-0.5)*60; py+=(Math.random()-0.5)*60; x.lineTo(px,py);} x.stroke(); }
+  // Moos in den Fugen
+  x.fillStyle='rgba(60,95,50,0.4)'; for(let k=0;k<10;k++){ x.beginPath(); x.ellipse(Math.random()*256,Math.random()*256,3+Math.random()*7,2+Math.random()*4,Math.random()*3,0,7); x.fill(); }
+  // dunkle Öl-/Schmutzflecken (asymmetrisch)
+  for(let k=0;k<7;k++){ const bx=Math.random()*256,by=Math.random()*256,br=6+Math.random()*22;
+    const g=x.createRadialGradient(bx,by,1,bx,by,br); g.addColorStop(0,'rgba(20,18,16,0.30)'); g.addColorStop(1,'rgba(20,18,16,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(bx,by,br,0,7); x.fill(); }
+  // Kaugummi-Punkte (hell, platt gedrückt)
+  for(let k=0;k<14;k++){ x.fillStyle='rgba('+[ '210,205,195','120,120,120','160,150,140'][k%3]+',0.5)';
+    x.beginPath(); x.arc(Math.random()*256,Math.random()*256,1.5+Math.random()*2.5,0,7); x.fill(); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||24,ry||12); return t; }
 function groundDecals(p){
   // Gullideckel
   function gully(gx,gz){ const m=new THREE.Mesh(new THREE.CircleGeometry(0.55,12),new THREE.MeshStandardMaterial({color:0x33363c,metalness:0.4,roughness:0.7}));
@@ -1008,6 +1069,18 @@ function groundDecals(p){
     box(0.05,0.22+Math.random()*0.15,0.05,mat(0x3f7d3a),g[0]+(Math.random()-0.5)*1.2,0.11,g[1]+(Math.random()-0.5)*1.2,0,p);
   // Laub / Kippen / Müll
   for(let k=0;k<16;k++){ const col=[0x8a6a2a,0xa06a2a,0x777777,0xbbbbbb][k%4]; box(0.14,0.02,0.09,mat(col),-40+Math.random()*80,0.02,1+Math.random()*13,Math.random()*3,p); }
+  // unregelmäßige dunkle Flecken (Öl, verschütteter Kaffee, alter Dreck) – asymmetrisch verteilt
+  for(let k=0;k<18;k++){ const r=0.3+Math.random()*1.1;
+    const m=new THREE.Mesh(new THREE.CircleGeometry(r,10),new THREE.MeshStandardMaterial({color:0x1c1a17,roughness:0.95,transparent:true,opacity:0.18+Math.random()*0.22}));
+    m.rotation.x=-Math.PI/2; m.rotation.z=Math.random()*3; m.scale.x=0.6+Math.random()*0.9;
+    m.position.set(-42+Math.random()*84,0.012,1.5+Math.random()*13); p.add(m); }
+  // Kaugummi-Flecken (kleine helle Punkte, platt) – dicht wie am echten Bahnhofsausgang
+  for(let k=0;k<26;k++){ const m=new THREE.Mesh(new THREE.CircleGeometry(0.05+Math.random()*0.05,7),
+    new THREE.MeshStandardMaterial({color:[0xc9c3b6,0x8a8a8a,0x9a8f80][k%3],roughness:0.9}));
+    m.rotation.x=-Math.PI/2; m.position.set(-30+Math.random()*60,0.013,2+Math.random()*11); p.add(m); }
+  // ausgekippte Pfandflasche + Coffee-Cup als Detail
+  cyl(0.05,0.05,0.22,mat(0x3a6a3a),18.5,0.06,7.2,p).rotation.z=Math.PI/2;
+  cyl(0.06,0.05,0.12,mat(0xf4f0e8),-9.4,0.06,9.2,p);
 }
 function bikeTex(){ const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
   x.fillStyle='#8a3320'; x.fillRect(0,0,128,64); x.fillStyle='#a83c22'; x.fillRect(0,5,128,54);
@@ -1173,6 +1246,7 @@ function setPlace(pl){
   if(ug){ scene.background.set(0x0a0e1c); scene.fog.color.set(0x0a0e1c); scene.fog.near=30; scene.fog.far=90; }
   else { scene.background.set(0x9cc2ec); scene.fog.color.set(0xbcd6f2); scene.fog.near=55; scene.fog.far=170; }
   bounds=ug?UG_BOUNDS:ST_BOUNDS; colliders=ug?ugColl:streetColl;
+  if(ug) updateVerspaetBoard();
   updateObjective();
 }
 function goUp(){
@@ -1213,20 +1287,21 @@ function collectNPC(n){
 }
 
 /* Interaktion */
-let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null, nearVerspaet=false;
+let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null, nearVerspaet=false, nearEye=false;
 function tryInteract(){
   if(!started||ended||transitioning||miniActive) return;
   if(nearNPC){ collectNPC(nearNPC); return; }
   if(place==='underground'){
     if(nearAutomat){ if(!ticketBought) miniAutomat(); else showDialogue("Fahrkartenautomat","Haste schon. Einmal reicht, is ja nich Weihnachten."); return; }
     if(nearVerspaet){ miniVerspaetung(); return; }
+    if(nearEye){ miniEyeContact(); return; }
     if(nearExit){ goUp(); return; }
     if(nearTrain){ if(collected<stationTotal) showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente, dann fahr'n wir!`);
       else if(trainState!=='waiting'||train.userData.openAmt<0.6) showDialogue("BVG-Ansage","Der Zug fährt gleich ein – kurz warten.");
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='kontrolle') miniKontrolle(false); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1467,7 +1542,7 @@ function animate(){
     for(const n of npcs){ if(!n.dealer) continue; n.psstCool-=dt;
       const dd=Math.hypot(P.x-n.x,P.z-n.z);
       if(dd<7 && n.psstCool<=0){ n.psstCool=2.2+Math.random()*1.6;
-        squeak(); n.talkUntil=t+1.6; floatSay(n.x,2.55,n.z, pick(['🤫 psst-psst','psst… psst','🌿 Digga!','Ey, komm ma']));
+        squeak(); n.talkUntil=t+1.6; floatSay(n.x,2.55,n.z, pick(n.psstSay));
         if(dd<4.5) say(pick(["Psst. Gras? Tschick?","Alles da, Digga.","Komm ma her, ich hab wat für dich.","Bio-Oregano, ehrlich!"])); } }
     worldSayT-=dt;
     if(worldSayT<=0 && npcs.length){ worldSayT=2.2+Math.random()*3.2;
@@ -1476,7 +1551,7 @@ function animate(){
     for(let k=worldSays.length-1;k>=0;k--){ const ws=worldSays[k]; ws.life-=dt; ws.spr.position.y+=dt*0.35;
       ws.spr.material.opacity=Math.min(1,ws.life); if(ws.life<=0){ scene.remove(ws.spr); worldSays.splice(k,1); } }
 
-    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null; nearVerspaet=false;
+    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null; nearVerspaet=false; nearEye=false;
     let best=2.0;
     for(const n of npcs){ const d=Math.hypot(P.x-n.x,P.z-n.z); if(d<best){best=d; nearNPC=n;} }
 
@@ -1492,6 +1567,7 @@ function animate(){
       elWarn.classList.toggle('on',danger&&!ticketBought);
       const dA=Math.hypot(P.x-automatPos.x,P.z-automatPos.z); if(dA<2.3&&dA<best+0.4){nearAutomat=true;nearNPC=null;}
       const dV=Math.hypot(P.x-verspaetPos.x,P.z-verspaetPos.z); if(dV<2.5){nearVerspaet=true;nearNPC=null;nearAutomat=false;}
+      const dEy=Math.hypot(P.x-eyePos.x,P.z-eyePos.z); if(dEy<2.5){nearEye=true;nearNPC=null;nearAutomat=false;nearVerspaet=false;}
       const dE=Math.hypot(P.x-UG_EXIT.x,P.z-(UG_EXIT.z+1.5)); if(dE<2.8&&dE<best+0.4){nearExit=true;nearNPC=null;}
       if(P.z<-HALF_Z+1.7&&trainState==='waiting'){ nearTrain=true; nearNPC=(nearAutomat||nearExit)?null:nearNPC; }
       annTimer-=dt; if(annTimer<=0){annTimer=22+Math.random()*14; announce(ANNOUNCE[(Math.random()*ANNOUNCE.length)|0]);}
@@ -1534,6 +1610,7 @@ function animate(){
       aLabel=(nearNPC.verb||'sprechen').toUpperCase(); }
     else if(nearAutomat){ pv= ticketBought?`Fahrschein hast du ✅`:`🎫 Fahrkartenautomat (kaputt!)`; aLabel=ticketBought?'OK':'AUTOMAT'; }
     else if(nearVerspaet){ pv=`🎲 BVG-Leitstelle: Verspätungen würfeln`; aLabel='WÜRFELN'; }
+    else if(nearEye){ pv=`👁️ Blickduell in der U-Bahn`; aLabel='ANSTARREN'; }
     else if(nearExit){ pv=`🚪 Rauf an die Oberfläche`; aLabel='HOCH'; }
     else if(nearTrain){ pv= collected>=stationTotal?`🚇 In die U-Bahn einsteigen`:`U-Bahn (erst alle Momente!)`; aLabel='EINSTEIGEN'; }
     else if(nearEntrance){ pv=`↓ Runter zur U-Bahn`; aLabel='RUNTER'; }
@@ -1614,13 +1691,13 @@ function buildStreetExtras(i){
   makeFloatIcon("💼",bxp,3.3,bzp,streetGroup);
   streetColl.push({x:bxp,z:bzp,r:0.8});
   streetInteract.push({x:bxp,z:bzp,r:1.4,name:"Politiker schmieren",verb:"SCHMIEREN",kind:'bribe'});
-  // Kontrolle-entkommen (Schwarzfahr-Spot)
+  // Görli bei Nacht – durch die Dealer schleichen (Fahrkartenkontrolle ist jetzt unten im U-Bahnhof!)
   const kxp=8, kzp=9;
-  box(1.0,1.6,0.6,mat(0x1a2a55),kxp,0.8,kzp,0,streetGroup);
-  const ksg=makeTextPlane("🚔 KONTROLLE",256,64,"#fff","#c2183a",34); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
-  makeFloatIcon("🚔",kxp,2.8,kzp,streetGroup);
+  box(1.0,1.6,0.6,mat(0x14261a),kxp,0.8,kzp,0,streetGroup);
+  const ksg=makeTextPlane("🌙 GÖRLI NACHTS",256,64,"#fff","#1c7a3a",30); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
+  makeFloatIcon("🌙",kxp,2.8,kzp,streetGroup);
   streetColl.push({x:kxp,z:kzp,r:0.7});
-  streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Kontrolle entkommen",verb:"RENNEN",kind:'kontrolle'});
+  streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Görli bei Nacht durchqueren",verb:"SCHLEICHEN",kind:'nightpark'});
   // Verspätungen würfeln (BVG-Leitstelle, auch draußen)
   const vxp=18, vzp=8;
   box(1.1,1.5,0.6,mat(0x7a2b8e),vxp,0.75,vzp,0,streetGroup);
@@ -2046,12 +2123,150 @@ function miniVerspaetung(){
     if(flash>0){ ctx.fillStyle='rgba(255,80,40,'+flash*0.18+')'; ctx.fillRect(0,0,W,H); }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
-  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} verspaetRecord=Math.max(verspaetRecord,delayMin); momente+=2; updateMomente(); jingle();
-    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:44px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht – Rekord-Verspätung von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Draußen hängt jetzt die <b>Schandtafel</b> mit deinem Rekord! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die BVG ist stolz auf dich.');}); }
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
+    // Dramatisches Finale: die Verärgerung eskaliert die Verspätung ins Extreme
+    delayMin=Math.max(delayMin, 88+((Math.random()*12)|0));   // fette Zahl, ~88–99+
+    verspaetRecord=Math.max(verspaetRecord,delayMin); updateVerspaetBoard();
+    momente+=2; updateMomente(); jingle(); beep(140,0.6,'sawtooth',0.2);
+    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht – Rekord-Verspätung von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Die <b>Anzeigetafel im Bahnhof</b> zeigt jetzt dein Chaos, und draußen hängt die <b>Schandtafel</b>! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die Anzeigetafel glüht. 🔥');}); }
 }
 
+/* ---------- MG8: Görli bei Nacht – durch die Dealer-Gruppe schleichen ---------- */
+function miniNightPark(){
+  openMini();
+  panelEl().innerHTML=`<h2>🌙 Görli bei Nacht</h2>
+    <div class="miniDesc">Nachts kommt keiner in Ruhe durch den Görli. Schleich hoch zum <b>Ausgang 🚪</b>, ohne dass dich die <b>Dealer</b> bemerken – sie <b>scannen den Park</b> und rufen „psst-psst". Bleib aus ihren <b>Sicht-Kegeln</b> und geh nicht zu nah. <b>Pfeile / WASD / ziehen.</b></div>
+    <canvas id="mCanvas" width="360" height="470"></canvas>
+    <div class="mBar"><i id="hBar" style="background:#e0466a"></i><div class="lbl" id="hLbl">Aufmerksamkeit 0%</div></div>
+    <div id="miniResult">Nachts is keiner in Ruhe…</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const hBar=document.getElementById('hBar'),hLbl=document.getElementById('hLbl'),res=document.getElementById('miniResult');
+  const pl={x:W/2,y:H-22}; let heat=0, over=false, shake=0, sqCool=0;
+  const keys2={}, RANGE=94, CONE=0.55;
+  mOn(window,'keydown',e=>{const k=e.key.toLowerCase(); if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){e.preventDefault();keys2[k]=true;}});
+  mOn(window,'keyup',e=>{keys2[e.key.toLowerCase()]=false;});
+  let tgt=null;
+  function setTgt(e){const r=cv.getBoundingClientRect(); tgt={x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+  mOn(cv,'pointerdown',setTgt); mOn(cv,'pointermove',e=>{if(tgt)setTgt(e);}); mOn(window,'pointerup',()=>{tgt=null;});
+  const EM=['🌿','🌳','🚴','🧢','🕶️','🥤','🧥','🎒'], SAY=['psst-psst','wheek!','ey Chef','Gras?','komm ma','bio!','na?','Digga'];
+  const layout=[[0.30,0.74],[0.70,0.74],[0.22,0.57],[0.52,0.57],[0.82,0.57],[0.38,0.40],[0.68,0.40],[0.50,0.24]];
+  const dealers=layout.map((L,i)=>({bx:W*L[0],x:W*L[0],y:H*L[1],ang:Math.random()*6.28,
+    spd:(i%2?1:-1)*(0.5+Math.random()*0.5),pat:Math.random()*6.28,
+    e:EM[i%EM.length],say:SAY[i%SAY.length],alert:0,saidCool:Math.random()*2}));
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){
+      // Bewegung
+      let mx=0,my=0; if(keys2['arrowleft']||keys2['a'])mx-=1; if(keys2['arrowright']||keys2['d'])mx+=1;
+      if(keys2['arrowup']||keys2['w'])my-=1; if(keys2['arrowdown']||keys2['s'])my+=1;
+      if(tgt){ mx=tgt.x-pl.x; my=tgt.y-pl.y; const m=Math.hypot(mx,my)||1; if(m<4){mx=0;my=0;}else{mx/=m;my/=m;} }
+      else { const m=Math.hypot(mx,my); if(m>0){mx/=m;my/=m;} }
+      pl.x=Math.max(14,Math.min(W-14,pl.x+mx*128*dt)); pl.y=Math.max(14,Math.min(H-14,pl.y+my*128*dt));
+      if(sqCool>0)sqCool-=dt;
+      let anySpot=false;
+      for(const d of dealers){ d.pat+=dt*0.5; d.x=d.bx+Math.sin(d.pat)*16;
+        const dx=pl.x-d.x, dy=pl.y-d.y, dist=Math.hypot(dx,dy), aTo=Math.atan2(dy,dx);
+        let diff=aTo-d.ang; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283;
+        const spotted=(dist<RANGE&&Math.abs(diff)<CONE)||dist<36;
+        if(spotted){ anySpot=true; d.alert=Math.min(1,d.alert+dt*2.2); d.ang+=diff*0.12;   // dreht sich zu dir
+          heat=Math.min(100,heat+dt*(dist<36?58:40)); d.saidCool-=dt;
+          if(d.saidCool<=0){ d.saidCool=1.1; if(sqCool<=0){squeak(); sqCool=0.4;} }
+          if(dist<20){ heat=Math.min(100,heat+dt*40); shake=8; } }
+        else { d.alert=Math.max(0,d.alert-dt*1.1); d.ang+=d.spd*dt; }
+      }
+      if(!anySpot) heat=Math.max(0,heat-dt*16);
+      res.textContent = heat>66?'😰 Sie haben dich fast!' : anySpot?'🤫 Einer guckt – weg da!' : 'Weiter, leise…';
+      if(pl.y<=22){ over=true; return win(); }
+      if(heat>=100){ over=true; return lose(); }
+    }
+    hBar.style.width=heat+'%'; hLbl.textContent='Aufmerksamkeit '+(heat|0)+'%';
+    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*30; if(shake<0)shake=0;}
+    // Nacht-Park
+    ctx.fillStyle='#0c160f'; ctx.fillRect(0,0,W,H);
+    for(let k=0;k<26;k++){ ctx.fillStyle='rgba(120,160,120,0.05)'; ctx.fillRect((k*67)%W,(k*97)%H,3,3); }
+    // Ausgang oben
+    ctx.fillStyle='#1c3a24'; ctx.fillRect(0,0,W,26); ctx.fillStyle='#7dffb0'; ctx.font='700 15px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🚪 RAUS AUS\'M PARK', W/2, 13);
+    ctx.textBaseline='alphabetic';
+    // Bäume als Deko
+    ctx.font='26px serif'; ctx.textAlign='center';
+    for(const tx of [30,W-30,W*0.5]) { ctx.globalAlpha=0.5; ctx.fillText('🌲',tx,H*0.5); ctx.globalAlpha=1; }
+    // Dealer + Sichtkegel
+    for(const d of dealers){ ctx.beginPath(); ctx.moveTo(d.x,d.y);
+      ctx.arc(d.x,d.y,RANGE,d.ang-CONE,d.ang+CONE); ctx.closePath();
+      ctx.fillStyle=d.alert>0.4?'rgba(255,70,60,'+(0.10+d.alert*0.14)+')':'rgba(255,225,130,0.09)'; ctx.fill();
+      ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(d.e,d.x,d.y);
+      if(d.alert>0.5){ ctx.font='700 12px Segoe UI'; ctx.fillStyle='#ff9b8a'; ctx.fillText('🤫'+d.say,d.x,d.y-20); } }
+    // Spieler
+    ctx.font='26px serif'; ctx.textBaseline='middle'; ctx.fillText('🧍',pl.x,pl.y);
+    ctx.restore();
+    if(heat>0){ ctx.fillStyle='rgba(255,50,40,'+(heat/100*0.22)+')'; ctx.fillRect(0,0,W,H); }
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🌙 Durchgekommen!</h2><div style="font-size:52px">🚪💨</div><div class="miniDesc">Unbemerkt durch die halbe Dealer-Innung geschlichen. Der Görli bei Nacht – überlebt. Respekt!</div><button class="mBtn big" id="ok">😮‍💨 Puh (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🌙 Görli bei Nacht gemeistert!');}); }
+  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(150,0.5,'sawtooth',0.2); say("Ey, komm ma her!");
+    panelEl().innerHTML=`<h2>🤫 Umzingelt!</h2><div style="font-size:52px">🌿🌿🌿😅</div><div class="miniDesc">Zu nah dran – jetzt reden alle gleichzeitig auf dich ein: „psst-psst, komm ma, Chef!". Kein Durchkommen mehr.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniNightPark();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+}
 
+/* ---------- MG9: U-Bahn-Blickduell (zu langer Blickkontakt = Aggression) ---------- */
+function miniEyeContact(){
+  openMini();
+  panelEl().innerHTML=`<h2>👁️ Blickduell in der U-Bahn</h2>
+    <div class="miniDesc">In Berlin gilt: <b>zu langer Blickkontakt = Aggression</b> 😤. Starr den Fahrgast an, solange er <b>wegschaut (😌)</b> → sammel <b>Beobachtung</b>. Schaut er <b>zurück (👀)</b>: sofort <b>Blick lösen</b>, sonst steigt die <b>Aggression</b>! Ziel: Beobachtung <b>100%</b>, bevor er ausrastet.</div>
+    <canvas id="mCanvas" width="360" height="250"></canvas>
+    <div class="mBar"><i id="oBar" style="background:#3fd18a"></i><div class="lbl" id="oLbl">Beobachtung 0%</div></div>
+    <div class="mBar"><i id="gBar" style="background:#e0466a"></i><div class="lbl" id="gLbl">Aggression 0%</div></div>
+    <button class="mBtn big" id="stareBtn">👁️ ANSTARREN — halten</button>
+    <div id="miniResult">Er merkt alles…</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const oBar=document.getElementById('oBar'),oLbl=document.getElementById('oLbl'),gBar=document.getElementById('gBar'),gLbl=document.getElementById('gLbl'),res=document.getElementById('miniResult');
+  let obs=0, aggro=0, over=false, looking=false, state='away', stateT=1.4, flash=0;
+  const btn=document.getElementById('stareBtn');
+  const setLook=v=>{looking=v; btn.style.filter=v?'brightness(1.5)':'';};
+  mOn(btn,'pointerdown',e=>{e.preventDefault();setLook(true);}); mOn(window,'pointerup',()=>setLook(false));
+  mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();setLook(true);}}); mOn(window,'keyup',e=>{if(e.code==='Space')setLook(false);});
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){
+      stateT-=dt;
+      if(stateT<=0){ if(state==='away'){ state='back'; stateT=0.55+Math.random()*0.85; beep(760,0.05,'square',0.1); }
+        else { state='away'; stateT=1.0+Math.random()*1.7; } }
+      if(looking){ if(state==='away'){ obs=Math.min(100,obs+dt*27); }
+        else { aggro=Math.min(100,aggro+dt*56); flash=1; } }
+      else { aggro=Math.max(0,aggro-dt*15); }
+      if(flash>0)flash-=dt*3;
+      if(obs>=100){ over=true; return win(); }
+      if(aggro>=100){ over=true; return lose(); }
+      res.textContent = state==='back' ? (looking?'😠 ER GUCKT ZURÜCK – weg!':'👀 Er guckt zurück!') : (looking?'👁️ …beobachten…':'😌 Er schaut weg – jetzt!');
+    }
+    oBar.style.width=obs+'%'; oLbl.textContent='Beobachtung '+(obs|0)+'%';
+    gBar.style.width=aggro+'%'; gLbl.textContent='Aggression '+(aggro|0)+'%';
+    // U-Bahn-Innenraum
+    ctx.fillStyle='#12305a'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#0e2447'; ctx.fillRect(0,H-52,W,52);           // Sitzbank
+    ctx.fillStyle='#1c3f70'; for(let x=0;x<W;x+=48){ ctx.fillRect(x+6,26,36,H-96); }  // Fenster
+    // Fahrgast gegenüber
+    const face = aggro>75?'🤬' : (state==='back'? '👀' : (looking?'😐':'😌'));
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='84px serif'; ctx.fillText(face, W/2, H*0.42);
+    // Blick-Linie wenn man anstarrt
+    if(looking){ ctx.strokeStyle=state==='back'?'rgba(255,70,70,0.8)':'rgba(120,255,170,0.7)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(W/2,H-14); ctx.lineTo(W/2,H*0.5); ctx.stroke(); }
+    if(state==='back'){ ctx.font='700 16px Segoe UI'; ctx.fillStyle='#ffd23f'; ctx.fillText(aggro>50?'„Ey, was guckst du?!"':'…schaut zurück…', W/2, 16); }
+    ctx.font='30px serif'; ctx.fillText('🧍', W/2, H-14);        // du (von hinten)
+    if(flash>0){ ctx.fillStyle='rgba(255,50,40,'+flash*0.2+')'; ctx.fillRect(0,0,W,H); }
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>😎 Meister-Beobachter!</h2><div style="font-size:52px">👁️🚇</div><div class="miniDesc">Genug gesehen, nie erwischt. Du hast die hohe Kunst des <b>kurzen Berliner Blicks</b> gemeistert – gucken, aber nie zu lang.</div><button class="mBtn big" id="ok">👍 Weiter (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('👁️ Blickduell gewonnen!');}); }
+  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(160,0.5,'sawtooth',0.2); say("Ey, was guckst du?!");
+    panelEl().innerHTML=`<h2>😤 „Was guckst du?!"</h2><div style="font-size:52px">🤬👊</div><div class="miniDesc">Zu lange in die Augen geschaut – als Aggression gewertet. Der Fahrgast steht auf. Klassiker.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Wegschauen</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniEyeContact();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+}
 
 </script>
 </body>

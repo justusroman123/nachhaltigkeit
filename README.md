@@ -78,11 +78,23 @@ und ein **Erdgeschoss mit Ladentür & Schaufenstern (mit Markise)** – gleich b
 Rauskommen sieht der Kiez wohnlich aus. Die **Parkbänke** stehen ordentlich an
 der Häuserzeile (mit Blick zur Straße) statt mitten im Weg.
 
-## 🎮 7 Minispiele (visuelle Szenen)
+## 🎮 9 Minispiele (visuelle Szenen)
 
-In **jedem Kiez** findest du **alle** Minispiel-Schilder (💼 Politiker, 🚔
-Kontrolle, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich) plus den
-🔧 Automaten unten und die 🎲 BVG-Leitstelle an der Anzeigetafel.
+In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli bei
+Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich). Unten im
+**U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die 🎲 BVG-Leitstelle mit
+großer **Verspätungs-Anzeigetafel** und das 👁️ **Blickduell**. Die 👮
+**Fahrkartenkontrolle** ist – logischerweise – **unten im U-Bahnhof** (die
+Kontrolleure schnappen dich am Bahnsteig).
+
+- 🌙 **Görli bei Nacht** (neu, Stealth): Nachts kommt keiner in Ruhe durch den
+  Görlitzer Park. Schleich zum Ausgang, ohne dass dich die **Dealer-Gruppe**
+  bemerkt – sie **scannen den Park** mit Sicht-Kegeln, rufen „psst-psst" und
+  **drehen sich zu dir**, wenn sie dich sehen. Zu nah = umzingelt.
+- 👁️ **Blickduell in der U-Bahn** (neu): In Berlin gilt **zu langer Blickkontakt
+  = Aggression**. Starr den Fahrgast an, solange er **wegschaut** (😌), und
+  **lös den Blick sofort**, wenn er **zurückschaut** (👀) – sonst steht er auf:
+  „Ey, was guckst du?!".
 
 - 💶 **Politiker schmieren** (neu, als **Ampel** 🚦): Schieb das Kuvert **nur bei
   GRÜN** – springt die Ampel auf ROT, sofort loslassen, sonst fliegst du auf.
@@ -102,7 +114,9 @@ Was du in den Minispielen schaffst, siehst du danach im Kiez:
 
 - **Politiker geschmiert** → dein **🏗️ Baugrundstück** (mit Kran) erscheint.
 - **Wohnung bekommen** → daraus wird dein **🔑 Neubau** (gläsernes Hochhaus).
-- **Verspätungen-Rekord** → eine große **🚇 „+NN min" Anzeige** auf der Straße.
+- **Verspätungen-Rekord** → eine große **🚇 „+NN min" Anzeige** auf der Straße –
+  **und** die große **Anzeigetafel im U-Bahnhof** glüht dann in Rot mit deinem
+  Rekord (z. B. **+97 min · Totalausfall!**).
 
 - 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
   natürlich – kaputt (mit „DEFEKT"-Display und einer Ratte 🐀). Triff den grünen
@@ -138,9 +152,11 @@ Animation (tanzen, Yoga, panisch rennen, meckern):
 - 🗽 **Lebende Statue** (bewegt sich nur gegen Münze)
 - 👟 **Flohmarkt-Verkäufer** mit genau einem Schuh
 - 🐦 **Tauben-Fütterer** (umringt von Tauben)
-- 🌿 **Görli-Dealer** – lehnt an der Ecke, macht **„psst-psst" wie ein
-  Meerschweinchen**, sobald du in die Nähe kommst, und will dir unauffällig
-  „Bio-Oregano" & Co. andrehen (satirisch). Höflich abwimmeln = Berlin-Moment.
+- 🌿 **Dealer-Bande** – gleich mehrere Typen (🌿 Görli-Dealer, 🌳 Parkbank-Dealer,
+  🚴 „Lieferando"-Dealer), alle machen **„psst-psst" wie ein Meerschweinchen**,
+  sobald du in die Nähe kommst – aber jeder labert **was anderes** und will dir
+  unauffällig „Bio-Oregano" & Co. andrehen (satirisch). Höflich abwimmeln =
+  Berlin-Moment. Nachts triffst du sie als **ganze Gruppe** im 🌙-Minispiel.
 - 🚲 **Fixie-Hipster**, 📋 **Bürgeramt-Verzweifelte** (rennt panisch),
   💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp**,
   👴 **Mecker-Rentner**, 🧽 **Schwabe aus Stuttgart** („bei uns wär des saubrer!"),
@@ -155,8 +171,10 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 - **Berlin-Panorama am Horizont**: ein Skydome mit **Fernsehturm, Reichstag,
   Brandenburger Tor, Berliner Dom & Siegessäule** als Silhouette – kein leeres
   Blau mehr. Davor eine **Hochhaus-Skyline** und **fahrender Verkehr** (Autos
-  fahren auf der Straße), ein **roter Radweg** 🚲 und ein **natürlicher Gehweg**
-  (abwechslungsreiches Pflaster, Risse, Moos, Gullideckel, Pfütze, Gras, Laub).
+  fahren auf der Straße), ein **roter Radweg** 🚲 und ein **lebensechter Gehweg**:
+  **versetzte, leicht schiefe Gehwegplatten** in verschiedenen Grautönen,
+  unregelmäßige Risse, Moos in den Fugen, **Öl-/Schmutzflecken, Kaugummi-Punkte**,
+  Gullideckel, Pfütze, Gras und Laub – nichts symmetrisch, alles wie in echt.
 - **Angefahren werden hat Folgen**: E-Scooter/Radfahrer nieten dich um → du
   **stolperst/fällst**, der Bildschirm wackelt, „AUA!" – und sie rufen jedes Mal
   **etwas anderes** und fahren **wechselnde Routen**.
