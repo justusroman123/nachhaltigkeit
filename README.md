@@ -85,11 +85,19 @@ und ein **Erdgeschoss mit Ladentür & Schaufenstern (mit Markise)** – gleich b
 Rauskommen sieht der Kiez wohnlich aus. Die **Parkbänke** stehen ordentlich an
 der Häuserzeile (mit Blick zur Straße) statt mitten im Weg.
 
-## 🎮 11 Minispiele (visuelle Szenen)
+## 🎮 12 Minispiele (visuelle Szenen)
 
 In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli bei
 Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich, 📋 Bürgeramt,
-🕶️ Berlin-Look). Unten im **U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die
+🕶️ Berlin-Look) plus den **🚌 SEV-Bus** am Straßenrand.
+
+- 🚌 **Schienenersatzverkehr** (neu): Die U1 fällt aus – **du fährst den gelben
+  SEV-Bus** quer durch Berlin zum Alex! Der Bus steht **gut sichtbar am
+  Straßenrand**; steig ein und **lenke** (◀ ▶ / A D / Seiten tippen) um
+  **Baustellen 🚧, Radler 🚴, Staus 🚗, Umleitungen 🚸 und Schlaglöcher 🕳️** herum.
+  Sammel 🎫-Fahrgäste für gute Laune, pass auf die **Karosserie** auf – und
+  genieße die **echten Busfahrer-Sprüche** („Der Bus endet hier. Warum? Weeß ick
+  ooch nich.") samt meuterndem **Berliner Publikum** hinten drin („FARIKAAARTE!"). Unten im **U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die
 🎲 BVG-Leitstelle mit großer **Verspätungs-Anzeigetafel** und das 👁️
 **Blickduell**. Die 👮 **Fahrkartenkontrolle** ist – logischerweise – **unten im
 U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
