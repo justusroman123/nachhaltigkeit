@@ -658,7 +658,7 @@ let place='underground';
 
 /* Zug-NPCs (unten) */
 const NPC_SPOTS=[
-  {x:-18,z:2.7,rot:0.3},{x:2,z:3.0,rot:0.1},{x:14,z:-3.0,rot:-0.4},
+  {x:-18,z:2.7,rot:0.3},{x:1.7,z:3.0,rot:0.1},{x:14,z:-3.0,rot:-0.4},
   {x:-8,z:-2.9,rot:-0.5},{x:24,z:2.6,rot:0.2},{x:-25,z:-2.6,rot:0.8}
 ];
 const NPC_POOL={
@@ -1570,9 +1570,23 @@ document.getElementById('startBtn').addEventListener('click',()=>{
   if(window.speechSynthesis)speechSynthesis.getVoices();
   scene.remove(player); player=makePerson(CHARACTERS[selectedChar].look); scene.add(player);
   buildLineHud(); updateMomente(); loadStation(0); stationNpcsRef=npcs; setPlace('underground');
-  toast("Willkommen am Kotti! Quatsch die Leute an, kauf 'n 🎫 – dann 🚪 raus an die Oberfläche!");
-  if(introHintEl){ introHintEl.classList.add('on'); setTimeout(hideIntro,12000); }
+  toast("Willkommen am Kotti! 🐻 Gleich passiert wat…");
+  if(introHintEl){ introHintEl.classList.add('on'); setTimeout(hideIntro,11000); }
+  startIntro();
 });
+/* Comedy-Auftakt direkt nach dem Start – sofort Spaß & ein Gratis-Moment */
+let introDone=false;
+function startIntro(){
+  if(introDone) return; introDone=true;
+  const at=(ms,fn)=>setTimeout(()=>{ if(started&&!ended&&place==='underground'&&!miniActive) fn(); },ms);
+  at(600, ()=>{ announce("Herzlich willkommen bei der BVG. Wir entschuldigen uns für die Vergangenheit, die Gegenwart und die Zukunft."); });
+  at(3600, ()=>{ const ali=npcs.find(n=>n.name==='Döner-Ali'); if(ali){ ali.talkUntil=clock.elapsedTime+2.6; floatSay(ali.x,2.65,ali.z,"🥙 Ey, mit alles?"); say("Ey! Mit alles, Chef?"); } });
+  at(5200, ()=>{ floatSay(rat.position.x,1.0,rat.position.z,"🐀 Miete? Kenn ick nich."); beep(1400,0.05,'square',0.08); });
+  at(6600, ()=>{ const kl=npcs.find(n=>n.name==='Techno-Klaus'); if(kl){ kl.talkUntil=clock.elapsedTime+2.2; floatSay(kl.x,2.65,kl.z,"🎧 Untz untz… welcher Tag?"); } });
+  at(8000, ()=>{ momente++; updateMomente(); jingle(); beep(1046,0.12,'triangle',0.12);
+    toast("🌟 Willkommens-Moment geschenkt! So easy kommste in Berlin sonst nie an wat. 😏"); });
+  at(11000, ()=>{ toast("👉 Quatsch den 🥙 direkt vor dir an (E / Knopf) – dann 🎫 ziehen & 🚪 raus!"); });
+}
 document.getElementById('againBtn').addEventListener('click',()=>location.reload());
 (function(){ const cs=document.getElementById('charsel'); if(!cs)return;
   CHARACTERS.forEach((c,i)=>{ const b=document.createElement('button'); if(i===0)b.className='sel';

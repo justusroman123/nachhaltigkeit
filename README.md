@@ -21,6 +21,15 @@ kannst du die Kamera einmal ausrichten und dann intuitiv navigieren.
 Beim Start erklärt ein **Tipp-Banner**, dass man mit **Maus ziehen / Wischen die
 Kamera dreht** – das war vorher nicht offensichtlich.
 
+## 🎬 Der Auftakt (sofort Spaß)
+
+Direkt nach dem Start läuft eine kleine **Comedy-Show**: eine absurde
+BVG-Durchsage („Wir entschuldigen uns für die Vergangenheit, die Gegenwart und
+die Zukunft."), der **🥙 Döner-Ali** steht direkt vor dir und ruft „Ey, mit
+alles?", eine 🐀 grinst „Miete? Kenn ick nich.", Techno-Klaus fragt „welcher
+Tag?" – und du bekommst **sofort einen Willkommens-Moment geschenkt** 🌟. Der
+**Aktions-Knopf zeigt von der ersten Sekunde an**, wen du ansprechen kannst.
+
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
 | Laufen | `W A S D` / Pfeiltasten | Linker Joystick |
