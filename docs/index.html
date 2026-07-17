@@ -547,6 +547,21 @@ let exitIcon=null;
 })();
 staticColliders.push({x:UG_EXIT.x,z:UG_EXIT.z+2.4,r:2.2});
 
+/* Aufzug – zweite Möglichkeit nach oben (nah am Start, damit man's checkt) */
+const ELEV_POS={x:-6,z:4.3};
+let elevIcon=null;
+(function(){
+  box(2.8,5,1.5,mat(0x3a3f47),ELEV_POS.x,2.5,ELEV_POS.z+0.55,0,ugStatic);          // Schacht
+  box(2.2,3.5,0.16,mat(0x22262c),ELEV_POS.x,1.75,ELEV_POS.z-0.18,0,ugStatic);       // Türrahmen
+  box(0.72,3.1,0.1,matSteel,ELEV_POS.x-0.38,1.6,ELEV_POS.z-0.24,0,ugStatic);        // Tür links
+  box(0.72,3.1,0.1,matSteel,ELEV_POS.x+0.38,1.6,ELEV_POS.z-0.24,0,ugStatic);        // Tür rechts
+  box(0.9,0.3,0.06,new THREE.MeshStandardMaterial({color:0x111820,emissive:0x2fd18a,emissiveIntensity:0.7}),ELEV_POS.x,3.45,ELEV_POS.z-0.3,0,ugStatic); // ▲ Anzeige
+  box(0.16,0.16,0.06,new THREE.MeshStandardMaterial({color:0xffcc22,emissive:0xffaa00,emissiveIntensity:0.8}),ELEV_POS.x+1.0,1.6,ELEV_POS.z-0.28,0,ugStatic); // Ruf-Knopf
+  const a=makeTextPlane("🛗 AUFZUG ↑",256,64,"#2fd18a",null,40); a.scale.set(2.9,0.72,1); a.position.set(ELEV_POS.x,4.15,ELEV_POS.z-0.32); ugStatic.add(a);
+  elevIcon=makeFloatIcon("🛗",ELEV_POS.x,4.9,ELEV_POS.z-0.25,ugStatic);
+  staticColliders.push({x:ELEV_POS.x,z:ELEV_POS.z+0.3,r:1.5});
+})();
+
 /* Müll + Deko */
 function trash(x,z,p){ box(0.5,0.9,0.5,mat(0xbf8f2f),x,0.45,z,0,p); staticColliders.push({x,z,r:0.5}); }
 trash(-16,4.2,ugStatic); trash(8,4.2,ugStatic);
@@ -653,6 +668,8 @@ const stationGroup=new THREE.Group(); scene.add(stationGroup);
 const streetGroup=new THREE.Group(); streetGroup.visible=false; scene.add(streetGroup);
 let npcs=[], guards=[], colliders=[], bounds=UG_BOUNDS;
 let hazards=[];
+let groupDealers=[], groupCenter=null, groupShoutT=0;   // Dealer-Chor auf der Straße
+let adRotT=8;   // Timer für wechselnde U-Bahn-Werbetafeln
 let ugColl=[], streetColl=[];
 let place='underground';
 
@@ -745,6 +762,16 @@ const AD_UG=[
   {t:"SCHWARZFAHREN? MUTIG.",s:"60 €. Wir sehen uns. 👮",c:"#3a3a3a"},
   {t:"AUFZUG DEFEKT",s:"Rolltreppe auch. Viel Erfolg mit'm Kinderwagen!",c:"#5a4a1a"},
   {t:"BITTE ZURÜCKBLEIBEN",s:"Kommt eh nix. Aber sicher is sicher.",c:"#7a2b2b"},
+  {t:"WLAN IM TUNNEL",s:"Bald™. Wie der BER.",c:"#1a5fb4"},
+  {t:"UNSER NETZ WÄCHST",s:"Genau wie deine Wartezeit. 🌱",c:"#2e7d32"},
+  {t:"9-EURO-TICKET?",s:"War ein Versehen. Kommt nicht wieder.",c:"#b23a2a"},
+  {t:"BERLIN LIEBT DICH",s:"Deshalb die Miete. Aus Liebe.",c:"#8a2b6a"},
+  {t:"NEUE STRECKE 2099",s:"Spatenstich: demnächst. Vielleicht.",c:"#5a1a8a"},
+  {t:"BITTE NICHT LÄCHELN",s:"Das is die U-Bahn, nich Disneyland.",c:"#333333"},
+  {t:"RUFEN SIE 4-9-9",s:"…und warten Sie. Für immer.",c:"#106060"},
+  {t:"KLO AM BAHNHOF",s:"Existiert. Theoretisch. 🚽",c:"#6a4a1a"},
+  {t:"FAHRRAD IM ABTEIL?",s:"Klar. Sitzplätze sind eh Deko.",c:"#2a6a6a"},
+  {t:"DANKE, DASS SIE WARTEN",s:"Sie ham ja sonst nix vor, wa.",c:"#7a2b8e"},
 ];
 function ugAdTex(ad){ const c=document.createElement('canvas'); c.width=512;c.height=256; const x=c.getContext('2d');
   x.fillStyle=ad.c; x.fillRect(0,0,512,256); x.fillStyle='rgba(255,255,255,0.10)'; x.fillRect(0,0,512,84);
@@ -753,11 +780,13 @@ function ugAdTex(ad){ const c=document.createElement('canvas'); c.width=512;c.he
   x.font='700 30px Segoe UI, Arial'; x.fillStyle='rgba(255,255,255,0.94)'; wrap(ad.s,256,190,472,34);
   x.strokeStyle='rgba(255,255,255,0.4)'; x.lineWidth=8; x.strokeRect(4,4,504,248);
   return new THREE.CanvasTexture(c); }
+let ugAdBoards=[];   // wechselnde Werbetafeln
 function ugAd(x,ad,parent){ const zw=-(HALF_Z+3.72);           // an der Wand hinter dem einfahrenden Zug
   box(4.6,2.8,0.16,mat(0x05070c),x,4.3,zw-0.03,0,parent);       // Rahmen
   const pl=new THREE.Mesh(new THREE.PlaneGeometry(4.3,2.5),new THREE.MeshBasicMaterial({map:ugAdTex(ad)}));
   pl.position.set(x,4.3,zw+0.09); parent.add(pl);               // zeigt zum Bahnsteig (+z)
   box(4.3,0.16,0.45,new THREE.MeshStandardMaterial({color:0xfff4d0,emissive:0xffe6a0,emissiveIntensity:0.65}),x,5.75,zw+0.12,0,parent); // Strahler
+  ugAdBoards.push({mesh:pl, idx:AD_UG.indexOf(ad)});
 }
 // Absurde Politiker-Wahlplakate (satirisch)
 const POLIT_ADS=[
@@ -797,6 +826,7 @@ function addPersonNPC(list,parent,def,x,z,rot,coll){
   const cobj={x,z,r:0.7};
   const n={mesh:p,icon,name:def.name,emoji:def.emoji,lines:def.lines,act:def.act||'idle',
            verb:def.verb,special:def.special,wr:def.wr||5,dealer:!!def.dealer,psstCool:1.5,
+           xtrem:!!def.xtrem,dealerLines:def.dealerLines,
            psstSay:def.psstSay||['🤫 psst-psst','psst… psst','🌿 Digga!','Ey, komm ma'],
            collected:false,x,z,bx:x,phase:Math.random()*6,extra:null,coll:cobj};
   if(def.prop) n.extra=def.prop(p,parent,x,z);
@@ -823,6 +853,7 @@ function loadStation(i){
   for(let k=0;k<4;k++) graffiti(-24+k*16+(i*3),HALF_Z+3.7,2.4+((k+i)%2),["#ff3b7b","#3bd1ff","#f3d000","#8bff5a"][(k+i)%4],tags[(k+i)%tags.length],stationGroup);
   for(let k=0;k<3;k++){ const pp=POSTERS[(k+i)%POSTERS.length]; poster(-20+k*20,HALF_Z+3.72,pp[0],pp[1],pp[2],stationGroup); }
   // Lustige Werbetafeln an der Wand, wo die U-Bahn einfährt (gut sichtbar über dem Zug)
+  ugAdBoards=[];
   for(let k=0;k<3;k++){ ugAd([-14,4,22][k], AD_UG[(k*4+i*3)%AD_UG.length], stationGroup); }
   const npcColl=[];
   st.npcs.forEach((key,idx)=>{ const def=NPC_POOL[key]; const spot=NPC_SPOTS[idx];
@@ -1079,14 +1110,22 @@ const STREET_POOL={
        "App is abgestürzt, aber der Deal steht. Bar oder Pfandbon.","Express-Zuschlag zwei Sterni. Nimmste?",
        "Trinkgeld? Ick GEB Trinkgeld, so gut läuft's."]),
    lines:["Psst – bestellt? Nich? Egal, ick hab trotzdem wat.","Ick liefer alles. Frag nich die App, frag mich.","Wheek – äh, ick mein: Lieferung für Sie!"]},
+ dealerXtrem:{name:"Wheek-König",emoji:"🐹",act:'idle',verb:'abwimmeln 🤫',dealer:true,xtrem:true,
+   look:{shirt:0x1a3a1a,jacket:0x102810,pants:0x14201a,beanie:0x2a4a2a,skin:0xb98a63,face:'grin',glasses:true,backpack:0x2a3f2a,girth:1.1,h:1.06},
+   psstSay:['🐹 WHEEK-WHEEK!','WHEEEK!','🤫 pssssst-psst-psst','🐹 fiep fiep!','WHEEK Digga!'],
+   dealerLines:["WHEEK! Ähm… ick mein: haste Interesse?","Fiep fiep! …sorry, Reflex. Also: Gras?","Ick BIN quasi 'n Meerschweinchen mit Ware.","Wheek-wheek! Übersetzt: Sonderangebot!"],
+   special:(n)=>dealerBrushOff(n,["WHEEK! …ähm. Also. Freundschaftspreis, Digga.",
+       "Fiep! Bio-Oregano, frisch vom Balkon. Ehrenwort.","Ick verkoof Gute-Laune-Gummibärchen. Und… wheek.",
+       "Nur gucken? Wheek. Kaufen? WHEEEEK!"]),
+   lines:["Wheek. Wheek. …na, alles jut bei dir?","Ick steh hier und fiepe. Rein zufällig. Den ganzen Tag.","WHEEK! …dit war jetzt Absicht."]},
 };
 
 const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma."];
 for(const d of Object.values(NPC_POOL)) d.lines=d.lines.concat(GENERIC);
 for(const d of Object.values(STREET_POOL)) if(d.lines) d.lines=d.lines.concat(GENERIC);
 const KIEZ=[
- {land:'kotti', pool:['fkk','dealer','dj','dealerBank','fixie','passant','philo']},
- {land:'park',  pool:['dj','dealer','yogi','dealerRad','raveoma','dealerBank','makler']},
+ {land:'kotti', pool:['fkk','dj','fixie','passant','philo','yogi','tauben']},
+ {land:'park',  pool:['dj','yogi','dealerRad','raveoma','makler','floh','buergeramt']},
  {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
@@ -1283,6 +1322,14 @@ function buildStreet(i){
     const n=addPersonNPC(npcs,streetGroup,def,spot.x,spot.z,Math.PI,streetColl);
     if(streetDone[i].has(def.name)){ n.collected=true; streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }
   });
+  // Dealer-Ecke: zwei/drei stehen zusammen und fiepen im Chor 🐹
+  groupDealers=[]; groupCenter={x:0,z:5.5};
+  const clump=[['dealerXtrem',-1.4,5],['dealer',1.4,5],['dealerBank',0,6.6]];
+  clump.forEach(([key,cx,cz])=>{ const def=STREET_POOL[key]; const n=addPersonNPC(npcs,streetGroup,def,cx,cz,Math.PI,streetColl);
+    if(streetDone[i].has(def.name)){ n.collected=true; streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }
+    groupDealers.push(n); });
+  makeFloatIcon("🐹",0,3.2,4.4,streetGroup);
+  groupShoutT=3;
   hazards=[]; hazards.push(makeHazard('scooter',6,15)); hazards.push(makeHazard('cyclist',9,-11.5));
   buildStreetExtras(i);
 }
@@ -1419,7 +1466,7 @@ function collectNPC(n){
 }
 
 /* Interaktion */
-let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null, nearVerspaet=false, nearEye=false;
+let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null, nearVerspaet=false, nearEye=false, nearElevator=false;
 function tryInteract(){
   if(!started||ended||transitioning||miniActive) return;
   if(nearNPC){ collectNPC(nearNPC); return; }
@@ -1428,6 +1475,7 @@ function tryInteract(){
     if(nearVerspaet){ miniVerspaetung(); return; }
     if(nearEye){ miniEyeContact(); return; }
     if(nearExit){ goUp(); return; }
+    if(nearElevator){ doorChime(); toast("🛗 Der Aufzug fährt heute AUSNAHMSWEISE! Halt dich fest."); goUp(); return; }
     if(nearTrain){ if(collected<stationTotal) showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente hier unten, dann fahr'n wir!`);
       else if(!streetVisited[stationIndex]) showDialogue("BVG-Ansage","Ey, warst noch gar nich oben! Nimm erst den 🚪 Ausgang und guck dir den Kiez an – DANN fährste weiter.");
       else if(trainState!=='waiting'||train.userData.openAmt<0.6) showDialogue("BVG-Ansage","Der Zug fährt gleich ein – kurz warten.");
@@ -1540,6 +1588,15 @@ function squeak(){ if(!audioCtx||!soundOn)return;   // „psst-psst" wie ein Mee
     g.gain.value=0.05; g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);
     o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.2); }, k*190); }
 function doorChime(){ beep(988,0.12,'sine',0.12); setTimeout(()=>beep(740,0.18,'sine',0.12),120); }
+function squeak2(){ if(!audioCtx||!soundOn)return;   // MEGA-Meerschweinchen (extremer, wobbeliger)
+  for(let k=0;k<3;k++) setTimeout(()=>{ if(!audioCtx)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sawtooth'; const bfr=1500+Math.random()*500, tt=audioCtx.currentTime;
+    o.frequency.setValueAtTime(bfr,tt);
+    o.frequency.exponentialRampToValueAtTime(bfr+1500,tt+0.07);
+    o.frequency.exponentialRampToValueAtTime(bfr-350,tt+0.15);
+    o.frequency.exponentialRampToValueAtTime(bfr+1000,tt+0.23);
+    g.gain.value=0.06; g.gain.exponentialRampToValueAtTime(0.001,tt+0.27);
+    o.connect(g).connect(audioCtx.destination); o.start(tt); o.stop(tt+0.28); }, k*135); }
 /* ---- erweitertes Sound-Set für die Minispiele ---- */
 function noiseBurst(dur,vol,hp){ if(!audioCtx||!soundOn)return; const n=Math.max(1,Math.floor(audioCtx.sampleRate*dur));
   const buf=audioCtx.createBuffer(1,n,audioCtx.sampleRate); const d=buf.getChannelData(0);
@@ -1675,9 +1732,16 @@ function animate(){
   const dt=Math.min(clock.getDelta(),0.05); const t=clock.elapsedTime;
 
   // Ausgang-Marker pulsiert, solange man an dieser Station noch nicht oben war
-  if(exitIcon){ const need=started&&place==='underground'&&collected>=stationTotal&&!streetVisited[stationIndex];
-    const s=need?(0.9+Math.abs(Math.sin(t*4))*0.6):0.8; exitIcon.scale.setScalar(0.072*s);
-    exitIcon.position.y=4.2+(need?Math.abs(Math.sin(t*4))*0.25:0); }
+  { const need=started&&place==='underground'&&collected>=stationTotal&&!streetVisited[stationIndex];
+    const s=need?(0.9+Math.abs(Math.sin(t*4))*0.6):0.8;
+    if(exitIcon){ exitIcon.scale.setScalar(0.072*s); exitIcon.position.y=4.2+(need?Math.abs(Math.sin(t*4))*0.25:0); }
+    if(elevIcon){ elevIcon.scale.setScalar(0.072*s); elevIcon.position.y=4.9+(need?Math.abs(Math.sin(t*4+1))*0.25:0); } }
+  // Werbetafeln wechseln ab und zu ihren Spruch (lockert auf)
+  if(place==='underground'&&ugAdBoards.length){ adRotT-=dt; if(adRotT<=0){ adRotT=6+Math.random()*5;
+    const bd=ugAdBoards[(Math.random()*ugAdBoards.length)|0];
+    if(bd){ const ni=(bd.idx+1+((Math.random()*(AD_UG.length-1))|0))%AD_UG.length; bd.idx=ni;
+      const old=bd.mesh.material.map; bd.mesh.material.map=ugAdTex(AD_UG[ni]); bd.mesh.material.needsUpdate=true; if(old)old.dispose();
+      if(soundOn)beep(1200,0.05,'square',0.06); } } }
   // Ratte + Taube (nur unten sichtbar)
   rat.position.x+=ratDir*3.4*dt;
   if(rat.position.x>HALF_X-2){ratDir=-1;rat.rotation.y=Math.PI;} if(rat.position.x<-HALF_X+2){ratDir=1;rat.rotation.y=0;}
@@ -1722,9 +1786,9 @@ function animate(){
     // Görli-Dealer: macht „psst-psst" (wie 'n Meerschweinchen) und will was verticken, wenn du nah dran bist
     for(const n of npcs){ if(!n.dealer) continue; n.psstCool-=dt;
       const dd=Math.hypot(P.x-n.x,P.z-n.z);
-      if(dd<7 && n.psstCool<=0){ n.psstCool=2.2+Math.random()*1.6;
-        squeak(); n.talkUntil=t+1.6; floatSay(n.x,2.55,n.z, pick(n.psstSay));
-        if(dd<4.5) say(pick(["Psst. Gras? Tschick?","Alles da, Digga.","Komm ma her, ich hab wat für dich.","Bio-Oregano, ehrlich!"])); } }
+      if(dd<7 && n.psstCool<=0){ n.psstCool=(n.xtrem?1.3:2.2)+Math.random()*1.6;
+        (n.xtrem?squeak2:squeak)(); n.talkUntil=t+1.6; floatSay(n.x,2.55,n.z, pick(n.psstSay));
+        if(dd<4.5) say(pick(n.dealerLines||["Psst. Gras? Tschick?","Alles da, Digga.","Komm ma her, ich hab wat für dich.","Bio-Oregano, ehrlich!"])); } }
     worldSayT-=dt;
     if(worldSayT<=0 && npcs.length){ worldSayT=2.2+Math.random()*3.2;
       const n=npcs[(Math.random()*npcs.length)|0];
@@ -1732,7 +1796,7 @@ function animate(){
     for(let k=worldSays.length-1;k>=0;k--){ const ws=worldSays[k]; ws.life-=dt; ws.spr.position.y+=dt*0.35;
       ws.spr.material.opacity=Math.min(1,ws.life); if(ws.life<=0){ scene.remove(ws.spr); worldSays.splice(k,1); } }
 
-    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null; nearVerspaet=false; nearEye=false;
+    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null; nearVerspaet=false; nearEye=false; nearElevator=false;
     let best=2.0;
     for(const n of npcs){ const d=Math.hypot(P.x-n.x,P.z-n.z); if(d<best){best=d; nearNPC=n;} }
 
@@ -1750,6 +1814,7 @@ function animate(){
       const dV=Math.hypot(P.x-verspaetPos.x,P.z-verspaetPos.z); if(dV<2.5){nearVerspaet=true;nearNPC=null;nearAutomat=false;}
       const dEy=Math.hypot(P.x-eyePos.x,P.z-eyePos.z); if(dEy<2.5){nearEye=true;nearNPC=null;nearAutomat=false;nearVerspaet=false;}
       const dE=Math.hypot(P.x-UG_EXIT.x,P.z-(UG_EXIT.z+1.5)); if(dE<2.8&&dE<best+0.4){nearExit=true;nearNPC=null;}
+      const dEl=Math.hypot(P.x-ELEV_POS.x,P.z-ELEV_POS.z); if(dEl<2.6&&dEl<best+0.4){nearElevator=true;nearNPC=null;nearVerspaet=false;}
       if(P.z<-HALF_Z+1.7&&trainState==='waiting'){ nearTrain=true; nearNPC=(nearAutomat||nearExit)?null:nearNPC; }
       annTimer-=dt; if(annTimer<=0){annTimer=22+Math.random()*14; announce(ANNOUNCE[(Math.random()*ANNOUNCE.length)|0]);}
     } else {
@@ -1782,6 +1847,13 @@ function animate(){
           hitT=1.0; shakeT=0.7; floatSay(P.x,2.6,P.z,['🚗💥 WUMM!','💥 BÄM!','😵 Autsch!'][(Math.random()*3)|0]);
           toast("🚗 Auto erwischt dich – runter von der Straße!");
           say("Pass doch uff, Alter!"); beep(120,0.5,'sawtooth',0.22); break; } }
+      // Dealer-Chor: wenn du an der Dealer-Ecke bist, fiepen alle zusammen + ein Gruppenspruch
+      if(groupCenter && groupShoutT>0){ groupShoutT-=dt; }
+      if(groupCenter && groupShoutT<=0 && Math.hypot(P.x-groupCenter.x,P.z-groupCenter.z)<6.5){
+        groupShoutT=5+Math.random()*3;
+        groupDealers.forEach((gd,gi)=>setTimeout(()=>{ if(place==='street')squeak2(); },gi*130));
+        floatSay(groupCenter.x,3.4,groupCenter.z-1.4, pick(['🐹 WHEEK-CHOR!','🐹🐹🐹 fiep fiep!','„Ey, alle ma herhören!"','„Gruppenrabatt, Digga!"']));
+        say(pick(["Wheek wheek wheek!","Ey, Gruppenrabatt!","Alle ma herhören, Digga!"])); }
       annTimer-=dt; if(annTimer<=0){annTimer=20+Math.random()*12; announce(STREET_ANN[(Math.random()*STREET_ANN.length)|0]);}
     }
 
@@ -1793,6 +1865,7 @@ function animate(){
     else if(nearVerspaet){ pv=`🎲 BVG-Leitstelle: Verspätungen würfeln`; aLabel='WÜRFELN'; }
     else if(nearEye){ pv=`👁️ Blickduell in der U-Bahn`; aLabel='ANSTARREN'; }
     else if(nearExit){ pv=`🚪 Rauf an die Oberfläche`; aLabel='HOCH'; }
+    else if(nearElevator){ pv=`🛗 Mit dem Aufzug nach oben`; aLabel='HOCH'; }
     else if(nearTrain){ pv= (collected<stationTotal)?`U-Bahn (erst alle Momente unten!)`:(!streetVisited[stationIndex]?`U-Bahn (erst raus 🚪 an die Oberfläche!)`:`🚇 In die U-Bahn einsteigen`); aLabel='EINSTEIGEN'; }
     else if(nearEntrance){ pv=`↓ Runter zur U-Bahn`; aLabel='RUNTER'; }
     else if(nearSI){ pv=`${nearSI.name}`; aLabel=nearSI.verb; }
@@ -2287,6 +2360,17 @@ function miniVerspaetung(){
   const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult');
   const FACE=['','⚀','⚁','⚂','⚃','⚄','⚅'], REACT=['😐','😕','😠','😤','🤬'];
   const GAG=['„Wo bleibt die Bahn?!"','„Schon wieder!"','„Ick beschwer mich!"','„30 Minuten?!"','„Zu meiner Zeit…"','„Ersatzverkehr, klar."','„Ich komm zu spät zur Arbeit!"','„Das Ticket war teuer genug!"','„Gibt kein Netz zum Meckern!"','„Nächste Bahn: irgendwann."','„Ich nehm nie wieder die U8."','„Skandal!"'];
+  // Satirische Reaktions-Karten (übertriebene Gesichter statt nur Smiley)
+  const SCENES={
+    rage:{face:'🤬😡🤯',cap:'DER BAHNSTEIG KOCHT!',col:'#ff4a3a'},
+    mob:{face:'😤😡🤬😤',cap:'„Wir beschweren uns beim SENAT!"',col:'#ff6a2a'},
+    doppel:{face:'🎲🎲🔥',cap:'DOPPEL! Ersatzverkehr für alle!',col:'#ffd23f'},
+    signal:{face:'📢💥🚨',cap:'„Signalstörung. Wie üblich."',col:'#ff8a3a'},
+    puenktlich:{face:'😱🚇😱',cap:'EIN ZUG KOMMT?! KATASTROPHE!',col:'#8fd0ff'},
+    boss:{face:'🤝😎😎',cap:'„Wieder nüscht jemacht. Feierabend!"',col:'#7dffb0'},
+  };
+  let reactT=0, react=null;
+  function pop(k,ms){ react=SCENES[k]; reactT=ms||1.3; }
   function roll(){ if(over||rolling>0)return; rolling=0.55; clack(); setTimeout(clack,120); setTimeout(clack,260); }
   document.getElementById('rollBtn').addEventListener('click',roll);
   mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();roll();}});
@@ -2295,10 +2379,12 @@ function miniVerspaetung(){
     if(rolling>0){ rolling-=dt; d1=1+((Math.random()*6)|0); d2=1+((Math.random()*6)|0);
       if(rolling<=0){ const sum=d1+d2; rolls++;
         if(d1===1&&d2===1){ combo=0; const drop=12+((Math.random()*8)|0); anger=Math.max(0,anger-drop); delayMin=Math.max(0,delayMin-drop);
-          res.style.color='#8fd0ff'; res.textContent='😱 PÜNKTLICH! Ein Zug kommt! −'+drop+' min. Katastrophe!'; beep(420,0.25,'sine',0.14); }
+          res.style.color='#8fd0ff'; res.textContent='😱 PÜNKTLICH! Ein Zug kommt! −'+drop+' min. Katastrophe!'; beep(420,0.25,'sine',0.14); boo(); pop('puenktlich'); }
         else { combo++; const mult=combo>=6?2:(combo>=3?1.5:1); let add=Math.round(sum*mult); let bonus='';
           if(d1===d2){ add+=6; bonus=' 🎲 DOPPEL – Ersatzverkehr!'; } if(sum>=11){ add+=8; bonus+=' 🚨 Signalstörung!'; }
           anger=Math.min(100,anger+add); delayMin+=add; flash=1;
+          // passende übertriebene Reaktion einblenden
+          if(sum>=11) pop('signal'); else if(d1===d2) pop('doppel'); else if(combo>=6) pop('boss'); else if(anger>=70) pop('mob'); else if(add>=10) pop('rage');
           res.style.color='#ffd0d0'; res.textContent='+'+add+' min'+(mult>1?(' · COMBO ×'+mult):'')+bonus+'  '+GAG[(Math.random()*GAG.length)|0]; beep(680+sum*28,0.08,'square',0.12); }
         if(anger>=100){ over=true; setTimeout(win,400); } } }
     else { anger=Math.max(0,anger-dt*2.5); }
@@ -2318,6 +2404,13 @@ function miniVerspaetung(){
     const lvl=Math.min(4,Math.floor(anger/22));
     ctx.font='30px serif'; for(let i=0;i<6;i++) ctx.fillText(REACT[Math.min(4,lvl+((i%3===0)?1:0))], 34+i*((W-68)/5), H-28);
     if(flash>0){ ctx.fillStyle='rgba(255,80,40,'+flash*0.18+')'; ctx.fillRect(0,0,W,H); }
+    // Reaktions-Karte (übertriebene Gesichter / Chefetage feiert)
+    if(reactT>0&&react){ reactT-=dt; const a=Math.min(1,reactT*2.4);
+      const cw=W*0.9,ch=94,cx=W/2,cy=H*0.44+Math.sin(now/60)*2;
+      ctx.globalAlpha=a; ctx.fillStyle='rgba(8,10,18,0.93)'; ctx.fillRect(cx-cw/2,cy-ch/2,cw,ch);
+      ctx.strokeStyle=react.col; ctx.lineWidth=4; ctx.strokeRect(cx-cw/2,cy-ch/2,cw,ch);
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='40px serif'; ctx.fillText(react.face,cx,cy-16);
+      ctx.fillStyle='#fff'; ctx.font='800 15px Segoe UI'; ctx.fillText(react.cap,cx,cy+26); ctx.globalAlpha=1; }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
@@ -2325,7 +2418,7 @@ function miniVerspaetung(){
     delayMin=Math.max(delayMin, 88+((Math.random()*12)|0));   // fette Zahl, ~88–99+
     verspaetRecord=Math.max(verspaetRecord,delayMin); updateVerspaetBoard();
     momente+=2; updateMomente(); jingle(); beep(140,0.6,'sawtooth',0.2);
-    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht – Rekord-Verspätung von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Die <b>Anzeigetafel im Bahnhof</b> zeigt jetzt dein Chaos, und draußen hängt die <b>Schandtafel</b>! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
+    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div style="font-size:40px;margin:2px">🤝😎😎</div><div class="miniDesc"><i>„Wieder nüscht jemacht — und trotzdem Boni. Feierabend!"</i> — die BVG-Chefetage klatscht ab.<br>Verärgerung auf 100%! Der ganze Bahnsteig kocht – Rekord von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Die <b>Anzeigetafel</b> glüht, draußen hängt die <b>Schandtafel</b>! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die Anzeigetafel glüht. 🔥');}); }
 }
 

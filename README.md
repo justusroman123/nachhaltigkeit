@@ -138,6 +138,11 @@ U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
 - 🚔 **Kontrolle-Schleichen** (neu, echtes Stealth): Ohne Ticket zum Ausgang
   schleichen, aus dem **Sichtkegel** des Kontrolleurs bleiben, hinter Säulen
   verstecken. (Erwischt dich unten ein Kontrolleur, startet die Flucht direkt.)
+Beim **Verspätungen-Würfeln** blenden jetzt **übertriebene Reaktions-Karten** ein
+(„DER BAHNSTEIG KOCHT! 🤬😡🤯", „Signalstörung. Wie üblich.", bei Sieg klatscht die
+**BVG-Chefetage ab**: „Wieder nüscht jemacht — und trotzdem Boni. Feierabend!"
+🤝😎😎) – satirisch auf die Spitze getrieben.
+
 - 🎲 **Verspätungen würfeln** (neu): Als BVG-Leitstelle hohe Zahlen würfeln, um
   die **Verärgerung der Fahrgäste auf 100 %** zu treiben. Ein großer Zähler
   zeigt die aufsummierten **Verspätungs-Minuten**, ohne Doppel-1 baust du
@@ -190,10 +195,12 @@ Animation (tanzen, Yoga, panisch rennen, meckern):
 - 👟 **Flohmarkt-Verkäufer** mit genau einem Schuh
 - 🐦 **Tauben-Fütterer** (umringt von Tauben)
 - 🌿 **Dealer-Bande** – gleich mehrere Typen (🌿 Görli-Dealer, 🌳 Parkbank-Dealer,
-  🚴 „Lieferando"-Dealer), alle machen **„psst-psst" wie ein Meerschweinchen**,
-  sobald du in die Nähe kommst – aber jeder labert **was anderes** und will dir
-  unauffällig „Bio-Oregano" & Co. andrehen (satirisch). Höflich abwimmeln =
-  Berlin-Moment. Nachts triffst du sie als **ganze Gruppe** im 🌙-Minispiel.
+  🚴 „Lieferando"-Dealer und der 🐹 **Wheek-König**, der ein **noch extremeres,
+  wobbeliges Meerschweinchen-Fiepen** macht). In jedem Kiez steht eine
+  **Dealer-Ecke, wo zwei/drei zusammenstehen und im Chor „WHEEK-WHEEK!" fiepen**
+  samt Gruppenspruch („Ey, Gruppenrabatt, Digga!"). Jeder labert was anderes und
+  will dir „Bio-Oregano" andrehen – höflich abwimmeln = Berlin-Moment. Nachts
+  triffst du sie als ganze Gruppe im 🌙-Minispiel.
 - 🚲 **Fixie-Hipster**, 📋 **Bürgeramt-Verzweifelte** (rennt panisch),
   💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp**,
   👴 **Mecker-Rentner**, 🧽 **Schwabe aus Stuttgart** („bei uns wär des saubrer!"),
@@ -210,7 +217,11 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
   einfährt**, hängen jetzt **beleuchtete Werbetafeln mit satirischen Sprüchen**
   („100 % Pünktlichkeit. …nich.", „Weil wir dich lieben. *Liebe kann sich
   verspäten.", „Neu: der Aufzug – außer Betrieb seit 2019.", „Arm, aber sexy.
-  Vor allem arm.").
+  Vor allem arm.") – **22 Sprüche, die von selbst durchwechseln**, damit's nie
+  langweilig wird.
+- **Zwei Wege nach oben**: neben der Treppe (🚪 Ausgang) gibt's jetzt einen
+  **🛗 Aufzug** direkt am Start – beide Marker pulsieren, wenn's Zeit wird
+  rauszugehen (damit auch wirklich jede:r checkt, dass man hoch kann).
 - **Aufgeräumte Straße**: die Minispiel-Stände stehen jetzt **großzügig verteilt**
   (nichts klebt mehr aneinander), der SEV-Bus parkt mit viel Abstand am
   Straßenrand – alles übersichtlicher und gut erreichbar.
