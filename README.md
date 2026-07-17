@@ -15,8 +15,11 @@ nichts umstellen.
 
 **Kamera-relative Steuerung mit frei drehbarer Ansicht** (mathematisch sauber):
 dreh die Ansicht wie du willst – **„vorwärts" geht immer in den Bildschirm
-hinein**, links/rechts bleibt bildschirm-links/rechts. So kannst du die Kamera
-einmal ausrichten und dann intuitiv navigieren.
+hinein**, **links ist wirklich bildschirm-links, rechts bildschirm-rechts**. So
+kannst du die Kamera einmal ausrichten und dann intuitiv navigieren.
+
+Beim Start erklärt ein **Tipp-Banner**, dass man mit **Maus ziehen / Wischen die
+Kamera dreht** – das war vorher nicht offensichtlich.
 
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
@@ -37,6 +40,10 @@ in der Nähe ist – z. B. `HOCH`, `RUNTER`, `EINSTEIGEN`, `AUTOMAT`, `SCHMIEREN
 
 Fahr die **U1** über **4 Stationen**: **Kottbusser Tor → Görlitzer Bahnhof →
 Warschauer Straße → Alexanderplatz**. An jeder Station:
+
+**Wichtig:** An jeder Station musst du **erst raus an die Oberfläche** (🚪
+Ausgang – der Marker pulsiert, wenn's dran ist) und den Kiez erkunden, **bevor**
+du in die U-Bahn einsteigen kannst. Nur die paar Momente unten reichen nicht.
 
 1. **Quatsch die Leute an** (3 pro Station) – über ein Dutzend typische
    Berliner:innen mit eigenen Sprüchen: 🍺 Sterni-Opa, 🎧 Techno-Klaus (seit

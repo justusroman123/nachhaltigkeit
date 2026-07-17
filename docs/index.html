@@ -80,6 +80,15 @@
   #toast.on{opacity:1;top:88px;}
 
   /* ---------- Touch controls ---------- */
+  #introHint{position:fixed;left:50%;top:20%;transform:translateX(-50%);z-index:40;display:none;
+    max-width:min(90vw,540px);text-align:center;padding:18px 22px;border-radius:18px;
+    background:rgba(16,20,34,.9);border:2px solid rgba(243,208,0,.7);box-shadow:0 10px 40px rgba(0,0,0,.5);
+    color:#fff;pointer-events:auto;cursor:pointer;animation:ihpulse 1.6s ease-in-out infinite;}
+  #introHint.on{display:block;}
+  #introHint .ih-big{font-size:20px;font-weight:800;line-height:1.35;margin-bottom:6px;}
+  #introHint .ih-sub{font-size:14px;line-height:1.5;color:#d7ddf7;}
+  #introHint .ih-tap{font-size:12px;color:#f3d000;margin-top:8px;opacity:.85;}
+  @keyframes ihpulse{0%,100%{transform:translateX(-50%) scale(1);}50%{transform:translateX(-50%) scale(1.04);}}
   #touch{position:fixed;inset:0;z-index:25;pointer-events:none;display:none;}
   #stick{position:absolute;left:calc(env(safe-area-inset-left,0) + 22px);bottom:calc(env(safe-area-inset-bottom,0) + 26px);
     width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07);
@@ -187,6 +196,13 @@
   <div class="track"><i></i></div>
 </div>
 
+<!-- Intro-Kamera-Tipp -->
+<div id="introHint">
+  <div class="ih-big">🖱️ Zieh mit der Maus — oder <b>wisch</b> übern Screen 📱</div>
+  <div class="ih-sub">…um die <b>Kamera</b> zu drehen! Dann läufst du mit <b>WASD / Stick</b>. Suchst den <b>🚪 Ausgang</b> für die Minispiele.</div>
+  <div class="ih-tap">(tippen zum Schließen)</div>
+</div>
+
 <!-- Minispiel-Overlay -->
 <div id="mini"><div id="miniPanel"></div></div>
 
@@ -208,21 +224,25 @@
       Fahr die <b>U1</b> von <b>Kottbusser Tor</b> bis <b>Alexanderplatz</b>:
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
       einfahrende U-Bahn 🚇. <b>Dreh die Ansicht</b> mit Maus/Wisch – „vor" ist
-      immer in den Bildschirm hinein. Nimm den <b>🚪 Ausgang nach oben</b> an die
-      Straße: dort warten <b>7 Minispiele</b> in <b>jedem Kiez</b> (🔧 Automat,
-      💶 Politiker schmieren, 🛴 Slalom, 🏠 Wohnung, 💰 Länderfinanzausgleich,
-      🚔 Kontrolle-Schleichen, 🎲 Verspätungen würfeln), schräge Gestalten und
-      rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
+      immer in den Bildschirm hinein. <b>Erst musst du raus</b> an die Straße:
+      nimm den <b>🚪 Ausgang nach oben</b> – dort warten <b>viele Minispiele</b> in
+      <b>jedem Kiez</b> (💼 Politiker, 🌙 Görli nachts, 📋 Bürgeramt, 🕶️ Berlin-Look,
+      🛴 Slalom, 🏠 Wohnung, 💰 Finanzausgleich, 🎲 Verspätung), schräge Gestalten,
+      Dealer 🌿 und rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
     </p>
     <div class="csLabel">Wähle deine Figur:</div>
     <div class="charsel" id="charsel"></div>
+    <div style="background:rgba(243,208,0,.14);border:1px solid rgba(243,208,0,.5);border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.55;color:#ffe9a8">
+      <b>📷 Wichtig:</b> Mit der <b>Maus ziehen</b> (Handy: <b>über den Bildschirm wischen</b>) drehst du die <b>ganze Kamera</b> rundherum – probier's gleich aus!<br>
+      <b>Ablauf:</b> Unten Leute anquatschen → 🎫 Fahrschein → <b>🚪 Ausgang nach oben</b> (Minispiele im Kiez!) → zurück & in die 🚇 U-Bahn.
+    </div>
     <div class="keys" id="deskKeys">
-      <span class="kbd">W A S D / Pfeile = laufen</span><span class="kbd">Maus ziehen = Ansicht drehen</span>
-      <span class="kbd">E = reden</span><span class="kbd">Shift = rennen</span>
+      <span class="kbd">W A S D / Pfeile = laufen</span><span class="kbd">Maus ziehen = Kamera drehen</span>
+      <span class="kbd">E = machen</span><span class="kbd">Shift = rennen</span>
     </div>
     <div class="keys" id="touchKeys" style="display:none">
-      <span class="kbd">Linker Stick = laufen</span><span class="kbd">Rechts wischen = Ansicht drehen</span>
-      <span class="kbd">Aktions-Knopf</span>
+      <span class="kbd">Linker Stick = laufen</span><span class="kbd">Wischen = Kamera drehen</span>
+      <span class="kbd">Aktions-Knopf = machen</span>
     </div>
     <button class="btn" id="startBtn" style="margin-top:14px">▶ Losfahren</button>
     <div class="hint">Läuft direkt im Browser · Handy &amp; Desktop · kein Download</div>
@@ -516,12 +536,14 @@ function makeUSign(x,y,z,parent){
   const u=makeTextPlane("U",128,128,"#ffffff",null,110); u.scale.set(0.8,0.8,1); u.position.z=0.08; g.add(u);
   g.position.set(x,y,z); (parent||scene).add(g); return g;
 }
+let exitIcon=null;
 (function(){ // Treppe
   for(let i=0;i<5;i++) box(3.4,0.3,0.7,matSteel,UG_EXIT.x,0.15+i*0.3,UG_EXIT.z+0.5+i*0.5,0,ugStatic);
   box(0.2,2.2,3,matSteel,UG_EXIT.x-1.7,1.1,UG_EXIT.z+1.6,0,ugStatic);
   box(0.2,2.2,3,matSteel,UG_EXIT.x+1.7,1.1,UG_EXIT.z+1.6,0,ugStatic);
   makeUSign(UG_EXIT.x,2.6,UG_EXIT.z-0.2,ugStatic);
   const a=makeTextPlane("↑ AUSGANG",256,64,"#f3d000",null,44); a.scale.set(3.2,0.8,1); a.position.set(UG_EXIT.x,3.4,UG_EXIT.z-0.25); ugStatic.add(a);
+  exitIcon=makeFloatIcon("🚪",UG_EXIT.x,4.2,UG_EXIT.z-0.2,ugStatic);   // gut sichtbarer, pulsierender Ausgangs-Marker
 })();
 staticColliders.push({x:UG_EXIT.x,z:UG_EXIT.z+2.4,r:2.2});
 
@@ -794,6 +816,7 @@ function loadStation(i){
    STRASSE (Oberwelt)
    ============================================================ */
 const streetDone=[new Set(),new Set(),new Set(),new Set()];
+const streetVisited=[false,false,false,false];   // erst raus an die Oberfläche, dann darf man einsteigen
 
 function winTex(col,floors,colsN){
   const W=256,H=512; const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d');
@@ -1248,9 +1271,10 @@ function showDialogue(name,line){ elDSpeaker.textContent=name; elDText.textConte
   elDialogue.classList.add('on'); dialogueTimer=4.6; say(line); }
 function updateObjective(){
   const st=STATIONS[stationIndex]; let t;
-  if(place==='street') t=`🚶 ${st.short}-Kiez erkunden – zurück per U-Bahn ↓`;
+  if(place==='street') t=`🚶 ${st.short}-Kiez erkunden – Minispiele! Zurück per U-Bahn ↓`;
   else if(collected<stationTotal) t=`${st.name}: quatsch die Leute (${collected}/${stationTotal})`;
-  else if(!ticketBought && stationIndex===0) t=`🎫 Fahrschein kaufen – dann einsteigen!`;
+  else if(!ticketBought && stationIndex===0) t=`🎫 Fahrschein kaufen – dann 🚪 raus!`;
+  else if(!streetVisited[stationIndex]) t=`🚪 Erst raus an die Oberfläche (Ausgang)!`;
   else t=`🚇 U-Bahn Richtung ${STATIONS[Math.min(stationIndex+1,STATIONS.length-1)].short}!`;
   elObj.innerHTML=`<small>U1 · HALT ${stationIndex+1}/${STATIONS.length}</small>${t}`;
 }
@@ -1300,8 +1324,9 @@ function goUp(){
   document.getElementById('rideBig').textContent="Rauf an die frische Luft…";
   document.getElementById('rideSmall').textContent="Willkommen im "+STATIONS[stationIndex].short+"-Kiez!";
   ride.classList.add('on'); say("Ausgang.");
+  streetVisited[stationIndex]=true;
   setTimeout(()=>{ buildStreet(stationIndex); setPlace('street'); P.x=3; P.z=8; P.yaw=0; camYaw=0;
-    setTimeout(()=>{ ride.classList.remove('on'); transitioning=false; toast("Draußen is Berlin am wildesten. Quatsch die Gestalten an!"); },300); },1500);
+    setTimeout(()=>{ ride.classList.remove('on'); transitioning=false; toast("Draußen is Berlin am wildesten – Minispiele, Gestalten, Späti. Danach zurück zur U-Bahn ↓"); },300); },1500);
 }
 function goDown(){
   transitioning=true;
@@ -1341,7 +1366,8 @@ function tryInteract(){
     if(nearVerspaet){ miniVerspaetung(); return; }
     if(nearEye){ miniEyeContact(); return; }
     if(nearExit){ goUp(); return; }
-    if(nearTrain){ if(collected<stationTotal) showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente, dann fahr'n wir!`);
+    if(nearTrain){ if(collected<stationTotal) showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente hier unten, dann fahr'n wir!`);
+      else if(!streetVisited[stationIndex]) showDialogue("BVG-Ansage","Ey, warst noch gar nich oben! Nimm erst den 🚪 Ausgang und guck dir den Kiez an – DANN fährste weiter.");
       else if(trainState!=='waiting'||train.userData.openAmt<0.6) showDialogue("BVG-Ansage","Der Zug fährt gleich ein – kurz warten.");
       else boardTrain(); return; }
   } else {
@@ -1476,10 +1502,13 @@ const keys={};
 addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='e')tryInteract(); });
 addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 let dragging=false,lastX=0,lastY=0;
+const introHintEl=document.getElementById('introHint');
+function hideIntro(){ if(introHintEl) introHintEl.classList.remove('on'); }
+if(introHintEl){ introHintEl.addEventListener('pointerdown',hideIntro); introHintEl.addEventListener('touchstart',hideIntro); }
 renderer.domElement.addEventListener('pointerdown',e=>{ if(IS_TOUCH)return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
 addEventListener('pointerup',()=>dragging=false);
 addEventListener('pointermove',e=>{ if(IS_TOUCH||!dragging)return; camYaw-=(e.clientX-lastX)*0.006; camPitch+=(e.clientY-lastY)*0.004;
-  camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lastX=e.clientX; lastY=e.clientY; });
+  camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lastX=e.clientX; lastY=e.clientY; hideIntro(); });
 addEventListener('wheel',e=>{ camDist=Math.max(3.5,Math.min(9,camDist+e.deltaY*0.01)); },{passive:true});
 const touchUI=document.getElementById('touch'), stick=document.getElementById('stick'),
       nub=stick.querySelector('.nub'), looklayer=document.getElementById('looklayer');
@@ -1496,7 +1525,7 @@ if(IS_TOUCH){ touchUI.style.display='block';
   let lid=null,lx=0,ly=0;
   looklayer.addEventListener('touchstart',e=>{const t=e.changedTouches[0]; lid=t.identifier; lx=t.clientX; ly=t.clientY; e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchmove',e=>{for(const t of e.changedTouches){ if(t.identifier!==lid)continue;
-    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lx=t.clientX; ly=t.clientY;} e.preventDefault();},{passive:false});
+    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lx=t.clientX; ly=t.clientY; hideIntro();} e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchend',e=>{for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; }});
   const rb=document.getElementById('btnRun');
   rb.addEventListener('touchstart',e=>{keys['shift']=true;rb.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
@@ -1509,7 +1538,8 @@ document.getElementById('startBtn').addEventListener('click',()=>{
   if(window.speechSynthesis)speechSynthesis.getVoices();
   scene.remove(player); player=makePerson(CHARACTERS[selectedChar].look); scene.add(player);
   buildLineHud(); updateMomente(); loadStation(0); stationNpcsRef=npcs; setPlace('underground');
-  toast("Willkommen am Kotti! Quatsch die Leute an (E / SPRECHEN). Tipp: 🚪 Ausgang führt nach oben!");
+  toast("Willkommen am Kotti! Quatsch die Leute an, kauf 'n 🎫 – dann 🚪 raus an die Oberfläche!");
+  if(introHintEl){ introHintEl.classList.add('on'); setTimeout(hideIntro,12000); }
 });
 document.getElementById('againBtn').addEventListener('click',()=>location.reload());
 (function(){ const cs=document.getElementById('charsel'); if(!cs)return;
@@ -1542,6 +1572,10 @@ function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05); const t=clock.elapsedTime;
 
+  // Ausgang-Marker pulsiert, solange man an dieser Station noch nicht oben war
+  if(exitIcon){ const need=started&&place==='underground'&&collected>=stationTotal&&!streetVisited[stationIndex];
+    const s=need?(0.9+Math.abs(Math.sin(t*4))*0.6):0.8; exitIcon.scale.setScalar(0.072*s);
+    exitIcon.position.y=4.2+(need?Math.abs(Math.sin(t*4))*0.25:0); }
   // Ratte + Taube (nur unten sichtbar)
   rat.position.x+=ratDir*3.4*dt;
   if(rat.position.x>HALF_X-2){ratDir=-1;rat.rotation.y=Math.PI;} if(rat.position.x<-HALF_X+2){ratDir=1;rat.rotation.y=0;}
@@ -1568,7 +1602,7 @@ function animate(){
     let mag=Math.hypot(ix,iz); const running=keys['shift'];
     if(mag>0.02){ const nm=Math.max(mag,1); ix/=nm; iz/=nm;
       const cos=Math.cos(camYaw),sin=Math.sin(camYaw);
-      const wx=ix*cos-iz*sin, wz=-ix*sin-iz*cos;   // camera-relatives Laufen (konsistent: vor = in den Bildschirm)
+      const wx=-ix*cos-iz*sin, wz=ix*sin-iz*cos;   // camera-relativ: vor = in den Bildschirm, links = Bildschirm-links
       const spd=(running?P.run:P.speed)*Math.min(mag,1);
       let nx=P.x+wx*spd*dt, nz=P.z+wz*spd*dt;
       [nx,nz]=resolve(nx,nz); P.x=nx; P.z=nz; P.yaw=Math.atan2(wx,wz);
@@ -1657,7 +1691,7 @@ function animate(){
     else if(nearVerspaet){ pv=`🎲 BVG-Leitstelle: Verspätungen würfeln`; aLabel='WÜRFELN'; }
     else if(nearEye){ pv=`👁️ Blickduell in der U-Bahn`; aLabel='ANSTARREN'; }
     else if(nearExit){ pv=`🚪 Rauf an die Oberfläche`; aLabel='HOCH'; }
-    else if(nearTrain){ pv= collected>=stationTotal?`🚇 In die U-Bahn einsteigen`:`U-Bahn (erst alle Momente!)`; aLabel='EINSTEIGEN'; }
+    else if(nearTrain){ pv= (collected<stationTotal)?`U-Bahn (erst alle Momente unten!)`:(!streetVisited[stationIndex]?`U-Bahn (erst raus 🚪 an die Oberfläche!)`:`🚇 In die U-Bahn einsteigen`); aLabel='EINSTEIGEN'; }
     else if(nearEntrance){ pv=`↓ Runter zur U-Bahn`; aLabel='RUNTER'; }
     else if(nearSI){ pv=`${nearSI.name}`; aLabel=nearSI.verb; }
     else if(nearStand){ pv=`${nearStand.name}`; aLabel='KAUFEN'; }
