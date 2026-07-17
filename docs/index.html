@@ -100,6 +100,28 @@
   .win h1{color:var(--bvg-yellow);}
   .lose h1{color:#ff6b8a;}
   .fadehide{display:none !important;}
+
+  /* line progress dots */
+  #line{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 14px);left:50%;
+    transform:translateX(-50%);display:flex;gap:0;align-items:center;
+    background:rgba(8,12,28,.6);border:1px solid #2c3768;border-radius:20px;padding:6px 12px;}
+  #line .stop{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#8f9bc9;width:52px;text-align:center;line-height:1.1;}
+  #line .dot{width:12px;height:12px;border-radius:50%;background:#39406b;border:2px solid #566099;margin-bottom:3px;}
+  #line .stop.done .dot{background:#3fd18a;border-color:#3fd18a;}
+  #line .stop.here .dot{background:var(--bvg-yellow);border-color:#fff;box-shadow:0 0 10px var(--bvg-yellow);}
+  #line .stop.here{color:#fff;font-weight:800;}
+
+  /* riding transition */
+  #ride{position:fixed;inset:0;z-index:40;background:#05070f;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:8px;opacity:0;pointer-events:none;
+    transition:opacity .5s;text-align:center;padding:20px;}
+  #ride.on{opacity:1;pointer-events:auto;}
+  #ride .big{font-size:clamp(22px,6vw,40px);font-weight:900;color:var(--bvg-yellow);}
+  #ride .small{color:#aab3d6;font-size:15px;}
+  #ride .track{width:210px;height:6px;border-radius:3px;background:#1c2447;overflow:hidden;margin-top:12px;}
+  #ride .track i{display:block;height:100%;width:38%;background:var(--bvg-yellow);
+    animation:slide 1.05s linear infinite;}
+  @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
 </style>
 </head>
 <body>
@@ -115,8 +137,16 @@
   <div id="prompt"></div>
   <div id="toast"></div>
   <div id="dialogue"><div id="dspeaker"></div><div id="dtext"></div></div>
+  <div id="line"></div>
 </div>
 <button id="sound" title="Ton an/aus">🔊</button>
+
+<!-- Riding between stations -->
+<div id="ride">
+  <div class="big" id="rideBig">Nächster Halt…</div>
+  <div class="small" id="rideSmall"></div>
+  <div class="track"><i></i></div>
+</div>
 
 <!-- Touch controls -->
 <div id="touch">
@@ -131,11 +161,12 @@
   <div class="card">
     <div class="emoji-row">🚇 🍺 🥨 🐻 🎧</div>
     <h1><span class="u">U</span> BERLIN UNTERGRUND</h1>
-    <div class="sub">Eine U-Bahn-Odyssee am Kottbusser Tor</div>
+    <div class="sub">Eine U-Bahn-Odyssee auf der Linie U1</div>
     <p style="font-size:15px;line-height:1.5;color:#d7ddf7;margin:0 0 6px">
-      Schleich wie ein Profi über den Bahnsteig, quatsch die typischsten
-      Berliner:innen an, kauf dir bloß 'n Fahrschein am Automaten – und
-      lass dich <b>nicht</b> von den BVG-Kontrolleuren schnappen. 🎫
+      Fahr die <b>U1</b> von <b>Kottbusser Tor</b> bis <b>Alexanderplatz</b>:
+      quatsch an jeder Station die typischsten Berliner:innen an, kauf dir 'n
+      Fahrschein 🎫, steig in die einfahrende gelbe U-Bahn 🚇 – und lass dich
+      bloß <b>nicht</b> von den BVG-Kontrolleuren 👮 schnappen!
     </p>
     <div class="keys" id="deskKeys">
       <span class="kbd">W A S D</span><span class="kbd">Maus ziehen = umsehen</span>
@@ -172,20 +203,17 @@
 <script>
 "use strict";
 /* ============================================================
-   BERLIN UNTERGRUND – U-Bahn Odyssee
-   Third-Person 3D (Three.js) in einem einzigen HTML-File.
+   BERLIN UNTERGRUND – U-Bahn Odyssee (Linie U1)
+   Third-Person 3D (Three.js) – ein self-contained HTML-File.
    ============================================================ */
-
 if (!window.THREE) {
   document.getElementById('menu').innerHTML =
-    '<div class="card"><h1>Ups.</h1><div class="sub">Die 3D-Engine (Three.js) konnte nicht geladen werden. '+
-    'Bitte einmal online neu laden.</div></div>';
+    '<div class="card"><h1>Ups.</h1><div class="sub">Die 3D-Engine konnte nicht geladen werden.</div></div>';
   throw new Error("THREE not loaded");
 }
-
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
-// ---------- Renderer / Scene ----------
+/* ---------- Renderer / Scene ---------- */
 const container = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-performance"});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -196,51 +224,100 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0e1c);
-scene.fog = new THREE.Fog(0x0a0e1c, 22, 60);
+scene.fog = new THREE.Fog(0x0a0e1c, 30, 90);
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 300);
 camera.position.set(8, 4, 12);
 
-// ---------- Lights ----------
+/* ---------- Lights ---------- */
 scene.add(new THREE.HemisphereLight(0xbfd3ff, 0x1a1408, 0.55));
 const keyLight = new THREE.DirectionalLight(0xfff2d0, 0.5);
-keyLight.position.set(10, 20, 8);
-keyLight.castShadow = true;
+keyLight.position.set(10, 20, 8); keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(1024,1024);
-keyLight.shadow.camera.near = 1; keyLight.shadow.camera.far = 70;
-keyLight.shadow.camera.left=-35; keyLight.shadow.camera.right=35;
-keyLight.shadow.camera.top=20; keyLight.shadow.camera.bottom=-20;
+keyLight.shadow.camera.near=1; keyLight.shadow.camera.far=80;
+keyLight.shadow.camera.left=-45; keyLight.shadow.camera.right=45;
+keyLight.shadow.camera.top=22; keyLight.shadow.camera.bottom=-22;
 scene.add(keyLight);
 
+const HALF_X = 34;   // platform length /2 (laenger!)
+const HALF_Z = 5;    // walkable half-width
+const NEAR_Z = -(HALF_Z+2.4);  // boarding track (Zug haelt hier)
+const FAR_Z  =  (HALF_Z+2.4);  // durchfahrende Zuege
+
 const tubeLights = [];
-for (let x=-24; x<=24; x+=8){
-  const l = new THREE.PointLight(0xffe8b0, 0.7, 18, 2);
-  l.position.set(x, 5.2, 0);
+for (let x=-30; x<=30; x+=7.5){
+  const l = new THREE.PointLight(0xffe8b0, 0.6, 20, 2); l.position.set(x,5.2,0);
   scene.add(l); tubeLights.push(l);
   const tube = new THREE.Mesh(new THREE.BoxGeometry(4,0.15,0.5),
     new THREE.MeshStandardMaterial({color:0xfff3d0, emissive:0xffe6a0, emissiveIntensity:1.2}));
   tube.position.set(x,5.6,0); scene.add(tube);
 }
 
-// ---------- Materials ----------
+/* ---------- Materials ---------- */
 const matPlatform = new THREE.MeshStandardMaterial({color:0x8a8578, roughness:0.95});
 const matEdge = new THREE.MeshStandardMaterial({color:0xf3d000, roughness:0.6});
 const matTileWall = new THREE.MeshStandardMaterial({color:0xd9e5ea, roughness:0.7});
-const matPurple = new THREE.MeshStandardMaterial({color:0x7a2b8e, roughness:0.6});
 const matDark = new THREE.MeshStandardMaterial({color:0x141824, roughness:0.9});
 const matSteel = new THREE.MeshStandardMaterial({color:0x51565f, metalness:0.6, roughness:0.4});
+const matYellow = new THREE.MeshStandardMaterial({color:0xf3d000});
 
-const HALF_X = 27;
-const HALF_Z = 5;
-const colliders = [];
-
-function box(w,h,d,mat,x,y,z,rot){
+/* ---------- helpers ---------- */
+function box(w,h,d,mat,x,y,z,rot,parent){
   const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   m.position.set(x,y,z); if(rot) m.rotation.y=rot;
-  m.castShadow=true; m.receiveShadow=true; scene.add(m); return m;
+  m.castShadow=true; m.receiveShadow=true; (parent||scene).add(m); return m;
 }
+function makeTextPlane(text,w,h,fg,bg,fontSize){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const ctx=c.getContext('2d');
+  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);}
+  ctx.fillStyle=fg; ctx.font=`900 ${fontSize||44}px Segoe UI, Arial`;
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,w/2,h/2);
+  const tex=new THREE.CanvasTexture(c);
+  return new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+    new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+}
+function emojiTex(e){
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const ctx=c.getContext('2d'); ctx.font='96px serif'; ctx.textAlign='center';
+  ctx.textBaseline='middle'; ctx.fillText(e,64,74);
+  return new THREE.CanvasTexture(c);
+}
+function makeFloatIcon(emoji,x,y,z,parent){
+  const s=new THREE.Sprite(new THREE.SpriteMaterial(
+    {map:emojiTex(emoji),transparent:true,depthTest:false,sizeAttenuation:false}));
+  s.scale.set(0.075,0.075,0.075); s.position.set(x,y,z); s.renderOrder=5;
+  (parent||scene).add(s); return s;
+}
+function makePerson(opts){
+  opts = opts||{};
+  const g = new THREE.Group();
+  const skin=opts.skin||0xe6b58a, shirt=opts.shirt||0x3355aa, pants=opts.pants||0x222831;
+  const legL=box(0.28,0.8,0.28,new THREE.MeshStandardMaterial({color:pants}),-0.16,0.4,0);
+  const legR=box(0.28,0.8,0.28,new THREE.MeshStandardMaterial({color:pants}), 0.16,0.4,0);
+  const torso=box(0.8,0.9,0.42,new THREE.MeshStandardMaterial({color:shirt}),0,1.25,0);
+  const armMat=new THREE.MeshStandardMaterial({color:opts.arm||shirt});
+  const armL=box(0.2,0.8,0.2,armMat,-0.52,1.25,0);
+  const armR=box(0.2,0.8,0.2,armMat, 0.52,1.25,0);
+  const head=box(0.5,0.5,0.5,new THREE.MeshStandardMaterial({color:skin}),0,1.95,0);
+  g.add(legL,legR,torso,armL,armR,head);
+  if(opts.hair!==null){
+    const hcol=(opts.hair!==undefined)?opts.hair:0x2a1c10;
+    g.add(box(0.54,0.18,0.54,new THREE.MeshStandardMaterial({color:hcol}),0,2.24,0));
+  }
+  if(opts.hat){
+    g.add(box(0.62,0.18,0.62,new THREE.MeshStandardMaterial({color:opts.hat}),0,2.28,0));
+    g.add(box(0.46,0.28,0.46,new THREE.MeshStandardMaterial({color:opts.hat}),0,2.46,0));
+  }
+  if(opts.vest) g.add(box(0.86,0.5,0.46,new THREE.MeshStandardMaterial({color:opts.vest}),0,1.35,0));
+  if(opts.accent) g.add(box(0.18,0.3,0.18,new THREE.MeshStandardMaterial(
+      {color:opts.accent, emissive:opts.accentE||0x000000, emissiveIntensity:opts.accentE?0.8:0}),0.62,1.0,0.15));
+  g.userData={legL,legR,armL,armR,head,torso};
+  return g;
+}
+function clearGroup(g){ while(g.children.length) g.remove(g.children[g.children.length-1]); }
 
-// ---------- Platform & station ----------
+/* ---------- Static world ---------- */
 box(HALF_X*2+2, 0.4, HALF_Z*2+0.5, matPlatform, 0, -0.2, 0);
 box(HALF_X*2+2, 0.06, 0.5, matEdge, 0, 0.03, HALF_Z);
 box(HALF_X*2+2, 0.06, 0.5, matEdge, 0, 0.03, -HALF_Z);
@@ -252,340 +329,255 @@ for (const sz of [1,-1]){
 box(HALF_X*2+2, 6, 0.4, matTileWall, 0, 3, HALF_Z+3.9);
 box(HALF_X*2+2, 6, 0.4, matTileWall, 0, 3, -(HALF_Z+3.9));
 box(HALF_X*2+2, 0.4, HALF_Z*2+9, matDark, 0, 6, 0);
-for(let y=1;y<=5;y+=1.3){
-  for(const sz of [1,-1]) box(HALF_X*2+2,0.04,0.02,matDark,0,y,sz*(HALF_Z+3.68));
-}
+for(let y=1;y<=5;y+=1.3) for(const sz of [1,-1])
+  box(HALF_X*2+2,0.04,0.02,matDark,0,y,sz*(HALF_Z+3.68));
 
-// ---------- Canvas text / emoji helpers ----------
-function makeTextPlane(text,w,h,fg,bg,fontSize){
-  const c=document.createElement('canvas'); c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
-  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);}
-  ctx.fillStyle=fg; ctx.font=`900 ${fontSize||44}px Segoe UI, Arial`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(text,w/2,h/2);
-  const tex=new THREE.CanvasTexture(c);
-  return new THREE.Mesh(new THREE.PlaneGeometry(1,1),
-    new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+const staticColliders=[];
+for(let x=-28;x<=28;x+=9.33){
+  box(1,6,1,matSteel,x,3,0); staticColliders.push({x, z:0, r:1.1});
+  box(1.2,0.3,1.2,matSteel,x,5.7,0);
 }
-function emojiTex(e){
-  const c=document.createElement('canvas'); c.width=c.height=128;
-  const ctx=c.getContext('2d'); ctx.font='96px serif'; ctx.textAlign='center';
-  ctx.textBaseline='middle'; ctx.fillText(e,64,74);
-  return new THREE.CanvasTexture(c);
-}
-function makeFloatIcon(emoji,x,y,z){
-  const s=new THREE.Sprite(new THREE.SpriteMaterial(
-    {map:emojiTex(emoji),transparent:true,depthTest:false,sizeAttenuation:false}));
-  s.scale.set(0.075,0.075,0.075); s.position.set(x,y,z); s.renderOrder=5; scene.add(s);
-  return s;
-}
-
-// station name signs
-function stationSign(x, sz){
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(new THREE.BoxGeometry(6,1,0.1),
-    new THREE.MeshStandardMaterial({color:0x7a2b8e})));
-  const label = makeTextPlane("Kottbusser Tor", 512,86, "#ffffff", "#7a2b8e", 58);
-  label.scale.set(5.7,0.95,1); label.position.z = 0.07; g.add(label);
-  g.position.set(x, 3.4, sz*(HALF_Z+3.65));
-  if(sz<0) g.rotation.y = Math.PI;
-  scene.add(g);
-}
-stationSign(-12,1); stationSign(12,1); stationSign(-12,-1); stationSign(12,-1);
-
-// pillars
-for(let x=-20;x<=20;x+=10){
-  box(1,6,1,matSteel,x,3,0); colliders.push({x, z:0, r:1.1});
-  box(1.2,0.3,1.2,matPurple,x,5.7,0);
-}
-// benches
 function bench(x,z){
-  box(2.2,0.15,0.7,new THREE.MeshStandardMaterial({color:0xf3d000}),x,0.55,z);
-  box(2.2,0.5,0.12,new THREE.MeshStandardMaterial({color:0xf3d000}),x,0.85,z-0.3);
-  colliders.push({x,z,r:1.2});
+  box(2.2,0.15,0.7,matYellow,x,0.55,z);
+  box(2.2,0.5,0.12,matYellow,x,0.85,z-0.3);
+  staticColliders.push({x,z,r:1.2});
 }
-bench(-18,3.4); bench(6,3.4); bench(20,-3.4);
+bench(-24,3.4); bench(-2,3.4); bench(22,-3.4);
 
-// ---------- U-Bahn train ----------
-const train = new THREE.Group();
-const bodyMat = new THREE.MeshStandardMaterial({color:0xf3d000, roughness:0.5});
-const carBody = new THREE.Mesh(new THREE.BoxGeometry(30,3,2.6), bodyMat);
-carBody.position.y=1.5; carBody.castShadow=true; train.add(carBody);
-const skirt = new THREE.Mesh(new THREE.BoxGeometry(30,0.6,2.62), matDark); skirt.position.y=0.4; train.add(skirt);
-for(let x=-13;x<=13;x+=2.4){
-  const w = new THREE.Mesh(new THREE.BoxGeometry(1.4,1.1,0.05),
-    new THREE.MeshStandardMaterial({color:0x9fd8ff, emissive:0x224466, emissiveIntensity:0.4}));
-  w.position.set(x,1.9,-1.34); train.add(w);
-}
-const trainDoor = new THREE.Mesh(new THREE.BoxGeometry(2.0,2.4,0.1),
-  new THREE.MeshStandardMaterial({color:0x1a1d28}));
-trainDoor.position.set(0,1.3,-1.36); train.add(trainDoor);
-const stripe = new THREE.Mesh(new THREE.BoxGeometry(30,0.25,2.63), matPurple); stripe.position.y=2.7; train.add(stripe);
-train.position.set(0,0.2,-(HALF_Z+2.4));
-scene.add(train);
-
-// ---------- Fahrkartenautomat ----------
-const automatPos = {x:-23, z:3.2};
-const automat = new THREE.Group();
-const abody=new THREE.Mesh(new THREE.BoxGeometry(1.2,2.2,0.7),matPurple); abody.position.y=1.1; automat.add(abody);
-const ascreen = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.7,0.05),
-  new THREE.MeshStandardMaterial({color:0x111820, emissive:0x1fd18a, emissiveIntensity:0.7}));
-ascreen.position.set(0,1.5,0.36); automat.add(ascreen);
-const aslot=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.12,0.2),new THREE.MeshStandardMaterial({color:0xf3d000}));
-aslot.position.set(0,0.75,0.36); automat.add(aslot);
-automat.position.set(automatPos.x,0,automatPos.z);
-scene.add(automat);
-colliders.push({x:automatPos.x, z:automatPos.z, r:1.0});
+/* Fahrkartenautomat */
+const automatPos={x:-30, z:3.2};
+const abody=box(1.2,2.2,0.7,new THREE.MeshStandardMaterial({color:0x7a2b8e}),automatPos.x,1.1,automatPos.z);
+box(0.8,0.7,0.05,new THREE.MeshStandardMaterial({color:0x111820,emissive:0x1fd18a,emissiveIntensity:0.7}),automatPos.x,1.5,automatPos.z+0.36);
+box(0.9,0.12,0.2,matYellow,automatPos.x,0.75,automatPos.z+0.36);
+staticColliders.push({x:automatPos.x, z:automatPos.z, r:1.0});
 const automatSign = makeFloatIcon("🎫", automatPos.x, 3.0, automatPos.z);
 
-// Späti kiosk (deco)
-box(3,2.6,2,new THREE.MeshStandardMaterial({color:0x2b6b3a}),24,1.3,3.0);
-colliders.push({x:24,z:3.0,r:1.9});
-box(3.4,0.3,2.4,matDark,24,2.75,3.0);
-(function(){
-  const sign = makeTextPlane("SPÄTI 24h", 256,80,"#f3d000","#111111",44);
-  sign.scale.set(2.6,0.7,1); sign.position.set(24,2.4,1.98); scene.add(sign);
-})();
+/* Späti-Kiosk (Deko) */
+box(3,2.6,2,new THREE.MeshStandardMaterial({color:0x2b6b3a}),30,1.3,3.0);
+box(3.4,0.3,2.4,matDark,30,2.75,3.0);
+staticColliders.push({x:30,z:3.0,r:1.9});
+(function(){const s=makeTextPlane("SPÄTI 24h",256,80,"#f3d000","#111111",44);
+  s.scale.set(2.6,0.7,1); s.position.set(30,2.4,1.98); scene.add(s);})();
 
-// ---------- Person builder ----------
-function makePerson(opts){
-  opts = opts||{};
-  const g = new THREE.Group();
-  const skin = opts.skin||0xe6b58a;
-  const shirt = opts.shirt||0x3355aa;
-  const pants = opts.pants||0x222831;
-  const legL = box(0.28,0.8,0.28,new THREE.MeshStandardMaterial({color:pants}),-0.16,0.4,0);
-  const legR = box(0.28,0.8,0.28,new THREE.MeshStandardMaterial({color:pants}), 0.16,0.4,0);
-  const torso = box(0.8,0.9,0.42,new THREE.MeshStandardMaterial({color:shirt}),0,1.25,0);
-  const armMat = new THREE.MeshStandardMaterial({color:opts.arm||shirt});
-  const armL = box(0.2,0.8,0.2,armMat,-0.52,1.25,0);
-  const armR = box(0.2,0.8,0.2,armMat, 0.52,1.25,0);
-  const head = box(0.5,0.5,0.5,new THREE.MeshStandardMaterial({color:skin}),0,1.95,0);
-  g.add(legL,legR,torso,armL,armR,head);
-  if(opts.hair!==null){
-    const hcol = (opts.hair!==undefined)?opts.hair:0x2a1c10;
-    g.add(box(0.54,0.18,0.54,new THREE.MeshStandardMaterial({color:hcol}),0,2.24,0));
+/* Muelleimer + Flaschen + Deko-Kram */
+function trash(x,z){
+  box(0.5,0.9,0.5,new THREE.MeshStandardMaterial({color:0xbf8f2f}),x,0.45,z);
+  staticColliders.push({x,z,r:0.5});
+}
+trash(-16,4.2); trash(8,4.2); trash(26,-4.2);
+for(const p of [[-19,4.4],[5,-4.4],[15,4.5],[-8,4.3]]){
+  box(0.12,0.35,0.12,new THREE.MeshStandardMaterial({color:0x3a7d3a}),p[0],0.2,p[1]);
+}
+
+/* ---------- Ratte auf den Gleisen + Taube ---------- */
+const rat = box(0.5,0.2,0.25,new THREE.MeshStandardMaterial({color:0x2a2a2a}), 0, -0.55, NEAR_Z);
+const ratTail = box(0.4,0.05,0.05,new THREE.MeshStandardMaterial({color:0x1a1a1a}),-0.4,0,0,0,rat);
+let ratDir=1;
+const pigeon = box(0.3,0.3,0.4,new THREE.MeshStandardMaterial({color:0x9aa0aa}), 10, 0.15, 4.4);
+let pigeonT=0;
+
+/* ---------- U-Bahn Zug ---------- */
+function buildTrain(bodyColor, dest){
+  const g=new THREE.Group();
+  const L=44;
+  const bmat=new THREE.MeshStandardMaterial({color:bodyColor, roughness:0.5});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(L,3,2.6),bmat); body.position.y=1.6; body.castShadow=true; g.add(body);
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(L,0.6,2.66),matDark)).position.y=0.5;
+  // Dach
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(L,0.4,2.4),new THREE.MeshStandardMaterial({color:0x8a8f99}));
+  roof.position.y=3.15; g.add(roof);
+  // Zierstreifen
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(L,0.28,2.63),new THREE.MeshStandardMaterial({color:0x7a2b8e}));
+  stripe.position.y=2.75; g.add(stripe);
+  // Fenster + Tueren
+  const winMat=new THREE.MeshStandardMaterial({color:0x9fd8ff,emissive:0x2a4a66,emissiveIntensity:0.5});
+  const doorMat=new THREE.MeshStandardMaterial({color:0x11151f});
+  const doors=[];
+  const interiorMat=new THREE.MeshStandardMaterial({color:0xfff4d6,emissive:0xffe9b0,emissiveIntensity:0.0});
+  const interior=new THREE.Mesh(new THREE.BoxGeometry(L-2,2.2,0.1),interiorMat);
+  interior.position.set(0,1.7,-0.2); g.add(interior);
+  const doorXs=[-16,-8,0,8,16];
+  for(let x=-20;x<=20;x+=2){
+    if(doorXs.some(dx=>Math.abs(x-dx)<1.1)) continue;
+    const w=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.1,0.05),winMat);
+    w.position.set(x,1.95,-1.34); g.add(w);
   }
-  if(opts.hat){
-    g.add(box(0.62,0.18,0.62,new THREE.MeshStandardMaterial({color:opts.hat}),0,2.28,0));
-    g.add(box(0.46,0.28,0.46,new THREE.MeshStandardMaterial({color:opts.hat}),0,2.46,0));
+  for(const dx of doorXs){
+    const lp=new THREE.Mesh(new THREE.BoxGeometry(0.9,2.3,0.08),doorMat);
+    const rp=new THREE.Mesh(new THREE.BoxGeometry(0.9,2.3,0.08),doorMat);
+    lp.position.set(dx-0.46,1.35,-1.33); rp.position.set(dx+0.46,1.35,-1.33);
+    g.add(lp,rp); doors.push({l:lp,r:rp,bl:dx-0.46,br:dx+0.46});
   }
-  if(opts.vest){
-    g.add(box(0.86,0.5,0.46,new THREE.MeshStandardMaterial({color:opts.vest}),0,1.35,0));
+  // Fuehrerstand-Enden + Lichter
+  for(const ex of [-1,1]){
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.6,2.5),bmat);
+    cab.position.set(ex*(L/2-0.7),1.5,0); g.add(cab);
+    const ws=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.9,2.0),winMat);
+    ws.position.set(ex*(L/2),2.1,0); g.add(ws);
+    const hl=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.25,0.25),
+      new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff2c0,emissiveIntensity:1.0}));
+    hl.position.set(ex*(L/2+0.02),0.7,ex>0?0.8:-0.8); g.add(hl);
   }
-  if(opts.accent){
-    g.add(box(0.18,0.3,0.18,new THREE.MeshStandardMaterial(
-      {color:opts.accent, emissive:opts.accentE||0x000000, emissiveIntensity:opts.accentE?0.8:0}),0.62,1.0,0.15));
-  }
-  // detach children from scene (box() added them to scene) -> re-parent into group
-  [legL,legR,torso,armL,armR,head].forEach(m=>{ /* already added below via re-add */ });
-  g.userData = {legL,legR,armL,armR,head,torso};
+  // Zielanzeige
+  const zt=makeTextPlane(dest||"U1  Warschauer Str.",256,48,"#ffcc33","#111111",30);
+  zt.scale.set(3.0,0.55,1); zt.position.set(0,2.55,-1.36); g.add(zt);
+  g.userData={doors, interior, openAmt:0, openTarget:0};
   return g;
 }
 
-// ---------- NPCs (typische Berliner:innen) ----------
-const npcs = [];
-function addNPC(cfg){
-  const p = makePerson(cfg.look);
-  p.position.set(cfg.x, 0, cfg.z);
-  if(cfg.rot!==undefined) p.rotation.y=cfg.rot;
-  scene.add(p);
-  colliders.push({x:cfg.x, z:cfg.z, r:0.7});
-  const icon = makeFloatIcon(cfg.emoji, cfg.x, 2.7, cfg.z);
-  npcs.push({mesh:p, icon, name:cfg.name, lines:cfg.lines, collected:false,
-             x:cfg.x, z:cfg.z, phase:Math.random()*6, emoji:cfg.emoji});
+const train = buildTrain(0xf3d000, "U1  Alexanderplatz");
+train.position.set(60,0.2,NEAR_Z);
+scene.add(train);
+
+// durchfahrende Zuege (Deko) auf dem fernen Gleis
+const passers=[];
+let passerTimer=6;
+const passerColors=[0xdedede,0xf3d000,0xcf5a2a];
+function spawnPasser(){
+  const c=passerColors[(passers.length+ (train.position.x>0?1:0))%passerColors.length];
+  const t=buildTrain(c, "U1"); t.userData.openTarget=0;
+  const fromLeft=(passers.length%2===0);
+  t.position.set(fromLeft?-70:70, 0.2, FAR_Z);
+  t.rotation.y = Math.PI; // Rueckseite egal, sieht wie Zug aus
+  t.userData.vx = fromLeft? 34 : -34;
+  scene.add(t); passers.push(t);
 }
 
-addNPC({name:"Sterni-Opa", emoji:"🍺", x:-14, z:2.6, rot:0.3,
-  look:{shirt:0x6b3f2a, pants:0x33302b, hat:0x223322, skin:0xd9a878, hair:0xbfbfbf, accent:0x2e7d32},
-  lines:["Wa? Willste 'n Schluck? Sterni hält jung, ick sach's dir.",
-         "Zwee Euro fuffzich für 'n Kasten – wat willste mehr, Meister?"]});
-
-addNPC({name:"Techno-Klaus", emoji:"🎧", x:-6, z:-2.8, rot:-0.6,
-  look:{shirt:0x111111, pants:0x111111, hair:null, hat:null, skin:0xe6b58a, accent:0x00ffff, accentE:0x00ffff},
-  lines:["Bin seit Freitag wach. Welcher Tag is heute? …Sonntag? Nice, noch Zeit.",
-         "Berghain war zu voll, jetzt is der Bahnsteig mein Floor. Untz untz untz."]});
-
-addNPC({name:"Currywurst-Renate", emoji:"🌭", x:2, z:3.0, rot:0.2,
-  look:{shirt:0xd23b3b, pants:0xffffff, hair:0xaa2277, skin:0xe6b58a},
-  lines:["Mit oder ohne Darm? Und nee, die Pommes sind alle, Schätzchen.",
-         "Currywurst is keen Fastfood, dit is Kultur. Zack, elf Euro."]});
-
-addNPC({name:"Döner-Ali", emoji:"🥙", x:11, z:-3.0, rot:-0.4,
-  look:{shirt:0xffffff, pants:0x222831, hair:0x1a1008, skin:0xc98d5a},
-  lines:["Mit alles und scharf, Chef? Kommt sofort – Salat is auch frisch, echt jetzt.",
-         "Der beste Döner Berlins? Steht grade vor dir, Bruder."]});
-
-addNPC({name:"Straßenmusiker", emoji:"🎻", x:-20, z:-2.6, rot:0.8,
-  look:{shirt:0x556b2f, pants:0x3b2f1a, hat:0x554433, hair:0x30251a, skin:0xe0a878, accent:0x8b4513},
-  lines:["Ick spiel dir 'Berlin, Berlin' – oder zwee Euro für Ruhe. Deine Wahl.",
-         "Akustik im Tunnel, Alter, bessa als jede Konzerthalle."]});
-
-addNPC({name:"Touri-Paar", emoji:"📸", x:17, z:2.7, rot:0.1,
-  look:{shirt:0xff8800, pants:0x2266cc, hair:0x774411, skin:0xf0c8a0},
-  lines:["Excuse me… is this ze way to Berghain? We waited four hours, ja?",
-         "So autentic, everysing is graffiti! We love Börlin!"]});
-
-addNPC({name:"Handy-Schnacker", emoji:"📱", x:-2, z:-3.2, rot:-0.2,
-  look:{shirt:0x224488, pants:0x1a1a1a, hair:0x2a1c10, skin:0xe6b58a},
-  lines:["…und da sacht der zu mir, ey, und ick so, ey, und der so, EY!",
-         "Nee du, ick hab jetzt keen Kopf, Verbindung is gleich weg – tut tut tut."]});
-
-addNPC({name:"Späti-Chef", emoji:"🏪", x:24, z:2.0, rot:0.0,
-  look:{shirt:0x2b6b3a, pants:0x222831, hair:0x1a1008, skin:0xc98d5a},
-  lines:["Feierabendbier? Ham wa. Kartenzahlung? Ham wa nich. Nächster.",
-         "Ja klar isset kalt, dit is der SPÄTI und nich die Apotheke."]});
-
-// ---------- Kontrolleure ----------
-const guards = [];
-function addGuard(x, dir){
-  const g = makePerson({shirt:0x1a2a55, pants:0x141824, hat:0x101830, vest:0x0e1a3a, skin:0xd9a878, hair:0x2a2a2a});
-  g.position.set(x,0,-1);
-  scene.add(g);
-  const icon = new THREE.Sprite(new THREE.SpriteMaterial(
-    {map:emojiTex("👮"),transparent:true,depthTest:false,sizeAttenuation:false}));
-  icon.scale.set(0.085,0.085,0.085); icon.renderOrder=5; scene.add(icon);
-  guards.push({mesh:g, icon, x, z:-1, dir:dir||1, minX:-24, maxX:24, speed:2.6, phase:Math.random()*6});
-}
-addGuard(-10, 1);
-addGuard(14, -1);
-
-// ---------- Player ----------
+/* ---------- Player ---------- */
 const player = makePerson({shirt:0xcc3344, pants:0x22304a, hair:0x25150a, skin:0xe6b58a});
-player.position.set(5,0,3);
-scene.add(player);
-const P = {x:5, z:3, yaw:0, speed:4.4, run:7.2};
+player.position.set(5,0,3); scene.add(player);
+const P = {x:5, z:3, yaw:0, speed:4.6, run:7.6};
+let camYaw=Math.PI, camPitch=0.30, camDist=6.6;
 
-let camYaw = Math.PI, camPitch = 0.30, camDist = 6.6;
+/* ---------- Station-Inhalte (dynamisch) ---------- */
+const stationGroup = new THREE.Group(); scene.add(stationGroup);
+let npcs=[], guards=[], colliders=[];
 
-// ---------- Input (keyboard + mouse) ----------
-const keys = {};
-addEventListener('keydown', e=>{
-  keys[e.key.toLowerCase()] = true;
-  if(e.key.toLowerCase()==='e') tryInteract();
-});
-addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+const NPC_SPOTS=[
+  {x:-18,z:2.7,rot:0.3},{x:2,z:3.0,rot:0.1},{x:14,z:-3.0,rot:-0.4},
+  {x:-8,z:-2.9,rot:-0.5},{x:24,z:2.6,rot:0.2},{x:-25,z:-2.6,rot:0.8}
+];
 
-let dragging=false, lastX=0, lastY=0;
-renderer.domElement.addEventListener('pointerdown', e=>{
-  if(IS_TOUCH) return; dragging=true; lastX=e.clientX; lastY=e.clientY;
-});
-addEventListener('pointerup', ()=> dragging=false);
-addEventListener('pointermove', e=>{
-  if(IS_TOUCH || !dragging) return;
-  camYaw   -= (e.clientX-lastX)*0.005;
-  camPitch += (e.clientY-lastY)*0.004;
-  camPitch = Math.max(-0.15, Math.min(0.85, camPitch));
-  lastX=e.clientX; lastY=e.clientY;
-});
-addEventListener('wheel', e=>{ camDist = Math.max(3.5, Math.min(9, camDist+e.deltaY*0.01)); },{passive:true});
+const NPC_POOL = {
+ sterni:{name:"Sterni-Opa",emoji:"🍺",look:{shirt:0x6b3f2a,pants:0x33302b,hat:0x223322,skin:0xd9a878,hair:0xbfbfbf,accent:0x2e7d32},
+   lines:["Willste 'n Schluck? Sterni hält jung, sach ick dir.","Zwee Euro fuffzich für 'n Kasten – wat willste mehr, Meister?","Früher war der Kotti wilder. Aba dit Bier war ooch billiger."]},
+ doener:{name:"Döner-Ali",emoji:"🥙",look:{shirt:0xffffff,pants:0x222831,hair:0x1a1008,skin:0xc98d5a},
+   lines:["Mit alles und scharf, Chef? Salat is frisch, echt jetzt!","Bester Döner Berlins steht grade vor dir, Bruder.","Knoblauch? Ick frag nur einmal."]},
+ techno:{name:"Techno-Klaus",emoji:"🎧",look:{shirt:0x111111,pants:0x111111,hair:null,skin:0xe6b58a,accent:0x00ffff,accentE:0x00ffff},
+   lines:["Bin seit Freitag wach. Welcher Tag? …Sonntag? Nice, noch Zeit.","Berghain war voll, jetzt is der Bahnsteig mein Floor. Untz untz untz.","Haste dit Bassbeben gespürt? Nee? Dit war nur ick."]},
+ currywurst:{name:"Currywurst-Renate",emoji:"🌭",look:{shirt:0xd23b3b,pants:0xffffff,hair:0xaa2277,skin:0xe6b58a},
+   lines:["Mit oder ohne Darm? Pommes sind alle, Schätzchen.","Currywurst is keen Fastfood, dit is Kultur. Zack, elf Euro.","Ketchup UND Majo? Du lebst gefährlich."]},
+ punkhund:{name:"Punk mit Hund",emoji:"🐕",look:{shirt:0x1a1a1a,pants:0x2a2a2a,hair:0x00aa55,skin:0xe0b090},
+   lines:["Haste ma 'n Euro? Für Hundefutter, ganz ehrlich!","Der Hund heißt Chaos. Passt, wa?","Anarchie, Alter. Aba erst nachm Feierabendbier."]},
+ touri:{name:"Touri-Paar",emoji:"📸",look:{shirt:0xff8800,pants:0x2266cc,hair:0x774411,skin:0xf0c8a0},
+   lines:["Excuse me… is this ze way to Berghain? Four hours we waited!","So autentic, everysing is graffiti! We love Börlin!","Where can we buy ze… how you say… Club Mate?"]},
+ musiker:{name:"Straßenmusiker",emoji:"🎻",look:{shirt:0x556b2f,pants:0x3b2f1a,hat:0x554433,hair:0x30251a,skin:0xe0a878,accent:0x8b4513},
+   lines:["Ick spiel dir 'Berlin, Berlin' – oder zwee Euro für Ruhe.","Akustik im Tunnel, Alter, bessa als jede Konzerthalle.","Wunschlied? Kost' extra, wa."]},
+ influencer:{name:"Influencerin",emoji:"🤳",look:{shirt:0xff77aa,pants:0xffffff,hair:0x3a2a1a,skin:0xf0c8a0,accent:0x333333},
+   lines:["Kannste ma filmen? Nur 40 Takes, ganz kurz!","Der Kotti is grade sooo mein Aesthetic.","Link in Bio! …welche Bio? Egal – Link in Bio!"]},
+ spaeti:{name:"Späti-Chef",emoji:"🏪",look:{shirt:0x2b6b3a,pants:0x222831,hair:0x1a1008,skin:0xc98d5a},
+   lines:["Feierabendbier? Ham wa. Kartenzahlung? Ham wa nich.","Isset kalt? Dit is der SPÄTI, nich die Apotheke.","Pfand is unten links. Wie immer, wa."]},
+ handy:{name:"Handy-Schnacker",emoji:"📱",look:{shirt:0x224488,pants:0x1a1a1a,hair:0x2a1c10,skin:0xe6b58a},
+   lines:["…und da sacht der, ey, und ick so, ey, und der so, EY!","Nee du, Verbindung is gleich weg – tut tut tut.","Ick ruf dich zurück, bin grade U-Bahn."]},
+ rentnerin:{name:"Rentnerin",emoji:"🧳",look:{shirt:0x8a5aa0,pants:0x445566,hair:0xcccccc,skin:0xe6c0a0},
+   lines:["Junger Mann, wo is der Fahrstuhl? Kaputt? Natürlich.","Zu meiner Zeit fuhr die Bahn pünktlich. Angeblich.","Könnse den Koffer… nee? Typisch Berlin."]},
+ laermtyp:{name:"Handy-Lautsprecher-Typ",emoji:"🔊",look:{shirt:0x333333,pants:0x111111,hair:0x1a1008,skin:0xc98d5a},
+   lines:["Musik übern Handylautsprecher – für alle, gern geschehen!","Kopfhörer? Dann hört ihr ja meinen Sound nich.","Dit is Drill, Bruder, dit muss laut."]},
+ rad:{name:"Fahrrad-Reinschlepper",emoji:"🚲",look:{shirt:0xdd4444,pants:0x222831,hair:0x2a1c10,skin:0xe6b58a},
+   lines:["Klar darf dit Rad mit – steht ja keiner im Weg. Außer alle.","Fahrradabteil? Der ganze Zug is Fahrradabteil.","Vorsicht, Kette! …nee, zu spät."]},
+};
 
-// ---------- Touch controls ----------
-const touchUI = document.getElementById('touch');
-const stick = document.getElementById('stick');
-const nub = stick.querySelector('.nub');
-const looklayer = document.getElementById('looklayer');
-let move = {x:0, y:0};
-if(IS_TOUCH){
-  touchUI.style.display='block';
-  document.getElementById('deskKeys').style.display='none';
-  document.getElementById('touchKeys').style.display='flex';
+/* ---------- Stationen (Linie U1) ---------- */
+const STATIONS = [
+ {name:"Kottbusser Tor", accent:0x7a2b8e, line:"U1 · U8", mural:"kotti",
+  npcs:["sterni","doener","techno"], guards:0, short:"Kotti"},
+ {name:"Görlitzer Bahnhof", accent:0x2e7d32, line:"U1", mural:"park",
+  npcs:["currywurst","punkhund","rad"], guards:1, short:"Görli"},
+ {name:"Warschauer Straße", accent:0xd23b3b, line:"U1 · U3", mural:"oberbaum",
+  npcs:["musiker","touri","spaeti"], guards:2, short:"Warschauer"},
+ {name:"Alexanderplatz", accent:0x1a5fb4, line:"U2 · U5 · U8", mural:"fernsehturm",
+  npcs:["handy","rentnerin","laermtyp"], guards:2, final:true, short:"Alex"},
+];
+let stationIndex=0;
 
-  let stickId=null, sc={x:0,y:0};
-  const stickStart = e=>{
-    const t=e.changedTouches[0]; stickId=t.identifier;
-    const r=stick.getBoundingClientRect(); sc={x:r.left+r.width/2, y:r.top+r.height/2};
-    stickMove(e); e.preventDefault();
-  };
-  const stickMove = e=>{
-    for(const t of e.changedTouches){ if(t.identifier!==stickId) continue;
-      let dx=t.clientX-sc.x, dy=t.clientY-sc.y;
-      const d=Math.hypot(dx,dy), max=52;
-      if(d>max){dx*=max/d; dy*=max/d;}
-      nub.style.transform=`translate(${dx}px,${dy}px)`;
-      move.x=dx/max; move.y=dy/max;
-    }
-    e.preventDefault();
-  };
-  const stickEnd = e=>{
-    for(const t of e.changedTouches){ if(t.identifier!==stickId) continue;
-      stickId=null; move.x=move.y=0; nub.style.transform='translate(0,0)';
-    }
-  };
-  stick.addEventListener('touchstart',stickStart,{passive:false});
-  stick.addEventListener('touchmove',stickMove,{passive:false});
-  stick.addEventListener('touchend',stickEnd);
-  stick.addEventListener('touchcancel',stickEnd);
-
-  let lookId=null, lx=0, ly=0;
-  looklayer.addEventListener('touchstart', e=>{
-    const t=e.changedTouches[0]; lookId=t.identifier; lx=t.clientX; ly=t.clientY; e.preventDefault();
-  },{passive:false});
-  looklayer.addEventListener('touchmove', e=>{
-    for(const t of e.changedTouches){ if(t.identifier!==lookId) continue;
-      camYaw   -= (t.clientX-lx)*0.006;
-      camPitch += (t.clientY-ly)*0.005;
-      camPitch = Math.max(-0.15, Math.min(0.85, camPitch));
-      lx=t.clientX; ly=t.clientY;
-    }
-    e.preventDefault();
-  },{passive:false});
-  looklayer.addEventListener('touchend', e=>{
-    for(const t of e.changedTouches){ if(t.identifier===lookId) lookId=null; }
-  });
-
-  const runBtn=document.getElementById('btnRun');
-  runBtn.addEventListener('touchstart',e=>{keys['shift']=true;runBtn.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
-  runBtn.addEventListener('touchend',e=>{keys['shift']=false;runBtn.style.background='rgba(20,27,57,.8)';});
-  const actBtn=document.getElementById('btnAct');
-  actBtn.addEventListener('touchstart',e=>{tryInteract();e.preventDefault();},{passive:false});
+/* Mural / Skyline-Silhouette pro Station */
+function makeMural(kind){
+  const c=document.createElement('canvas'); c.width=1024; c.height=256;
+  const ctx=c.getContext('2d');
+  const grd=ctx.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,'#12203a'); grd.addColorStop(1,'#0a1424');
+  ctx.fillStyle=grd; ctx.fillRect(0,0,1024,256);
+  ctx.fillStyle='#0e1830';
+  function bld(x,w,h){ ctx.fillRect(x,256-h,w,h); }
+  ctx.fillStyle='#1b2b4d';
+  for(let x=0;x<1024;x+=46) bld(x+4,38, 40+((x*7)%110));
+  ctx.fillStyle='#f3d000';
+  if(kind==='fernsehturm'){
+    ctx.fillStyle='#243b63'; ctx.fillRect(486,60,52,196);       // Schaft
+    ctx.beginPath(); ctx.fillStyle='#c9d4e6'; ctx.arc(512,86,34,0,7); ctx.fill(); // Kugel
+    ctx.fillStyle='#e94a4a'; ctx.fillRect(508,10,8,50);         // Spitze
+    ctx.fillStyle='#ffd84a';
+    for(let a=0;a<8;a++) ctx.fillRect(496+a*4,80,2,2);
+    txt('ALEXANDERPLATZ');
+  } else if(kind==='oberbaum'){
+    ctx.fillStyle='#5a3a2a';
+    ctx.fillRect(300,120,20,136); ctx.fillRect(700,120,20,136); // Tuerme
+    ctx.fillRect(300,120,420,16);
+    ctx.fillRect(290,96,40,30); ctx.fillRect(690,96,40,30);     // Turmspitzen
+    for(let x=320;x<700;x+=40){ ctx.beginPath(); ctx.arc(x,160,16,Math.PI,0,true); ctx.stroke(); }
+    ctx.strokeStyle='#5a3a2a'; ctx.lineWidth=4;
+    txt('WARSCHAUER STRASSE');
+  } else if(kind==='park'){
+    ctx.fillStyle='#2e7d32';
+    for(let x=60;x<980;x+=120){ ctx.beginPath(); ctx.arc(x,190,44,0,7); ctx.fill();
+      ctx.fillStyle='#5a3a1a'; ctx.fillRect(x-6,190,12,50); ctx.fillStyle='#2e7d32'; }
+    txt('GÖRLITZER PARK');
+  } else {
+    ctx.fillStyle='#3a4a6a';
+    ctx.fillRect(120,150,784,20); // Hochbahn
+    for(let x=140;x<900;x+=80) ctx.fillRect(x,170,10,86);
+    txt('KOTTBUSSER TOR');
+  }
+  function txt(s){ ctx.fillStyle='rgba(243,208,0,0.9)'; ctx.font='900 40px Segoe UI, Arial';
+    ctx.textAlign='center'; ctx.fillText(s,512,238); }
+  const tex=new THREE.CanvasTexture(c);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(30,7.5),
+    new THREE.MeshBasicMaterial({map:tex}));
+  m.position.set(0,3.6,FAR_Z+3.7); m.rotation.y=Math.PI; // faces -z (zum Bahnsteig)
+  return m;
 }
 
-// ---------- Audio (Web Audio, generiert) ----------
-let audioCtx=null, rumbleGain=null, soundOn=true;
-function initAudio(){
-  if(audioCtx) return;
-  try{
-    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate);
-    const d = buf.getChannelData(0); let last=0;
-    for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.5; }
-    const src = audioCtx.createBufferSource(); src.buffer=buf; src.loop=true;
-    const lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=180;
-    rumbleGain = audioCtx.createGain(); rumbleGain.gain.value=0.12;
-    src.connect(lp).connect(rumbleGain).connect(audioCtx.destination); src.start();
-  }catch(e){}
+/* Graffiti-Tags */
+function graffiti(x,z,sz,col,tag){
+  const g=makeTextPlane(tag,256,96,col,null,60);
+  g.scale.set(sz,sz*0.38,1);
+  g.position.set(x,1.6,z); g.rotation.y=(z>0?Math.PI:0);
+  return g;
 }
-function beep(freq,dur,type,vol){
-  if(!audioCtx||!soundOn) return;
-  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-  o.type=type||'sine'; o.frequency.value=freq;
-  g.gain.value=vol||0.15; g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
-  o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);
-}
-function jingle(){ beep(660,0.18,'square',0.12); setTimeout(()=>beep(880,0.28,'square',0.12),160); }
-function say(text){
-  if(!soundOn || !window.speechSynthesis) return;
-  try{
-    const u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; u.rate=1.02;
-    const vs=speechSynthesis.getVoices();
-    const de=vs.find(v=>/de-?DE/i.test(v.lang))||vs.find(v=>/german|deutsch/i.test(v.name));
-    if(de) u.voice=de;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  }catch(e){}
-}
-document.getElementById('sound').addEventListener('click', ()=>{
-  soundOn=!soundOn;
-  document.getElementById('sound').textContent = soundOn?'🔊':'🔇';
-  if(rumbleGain) rumbleGain.gain.value = soundOn?0.12:0;
-  if(!soundOn && window.speechSynthesis) speechSynthesis.cancel();
-});
 
-// ---------- Game state ----------
-let started=false, ended=false, ticketBought=false, collected=0;
-const TOTAL = npcs.length;
+/* Werbeplakat */
+function poster(x,z,title,sub,col){
+  const c=document.createElement('canvas'); c.width=256;c.height=340;
+  const ctx=c.getContext('2d'); ctx.fillStyle=col; ctx.fillRect(0,0,256,340);
+  ctx.fillStyle='#ffffff'; ctx.font='900 30px Segoe UI'; ctx.textAlign='center';
+  wrap(title,128,90,28,34); ctx.font='600 20px Segoe UI'; wrap(sub,128,230,24,180);
+  function wrap(t,cx,cy,fs,maxy){const words=t.split(' ');let line='',y=cy;
+    for(const w of words){const test=line+w+' ';if(ctx.measureText(test).width>210){ctx.fillText(line,cx,y);line=w+' ';y+=fs+6;}else line=test;}
+    ctx.fillText(line,cx,y);}
+  const tex=new THREE.CanvasTexture(c);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.1),new THREE.MeshBasicMaterial({map:tex}));
+  m.position.set(x,2.3,z); m.rotation.y=(z>0?Math.PI:0);
+  return m;
+}
+const POSTERS=[
+  ["BERGHAIN","Heute geöffnet: vielleicht.","#111111"],
+  ["SPÄTI","Dein zweites Wohnzimmer.","#2b6b3a"],
+  ["BVG","Weil wir müssen.","#7a2b8e"],
+  ["CLUB MATE","Wach seit 2004.","#3a5a2a"],
+  ["WOHNUNG GESUCHT","Nur 40 Bewerber:innen.","#8a3a2a"],
+];
 
+/* ---------- HUD refs ---------- */
 const elPrompt=document.getElementById('prompt');
 const elDialogue=document.getElementById('dialogue');
 const elDSpeaker=document.getElementById('dspeaker');
@@ -593,32 +585,186 @@ const elDText=document.getElementById('dtext');
 const elObj=document.getElementById('objMain');
 const elWarn=document.getElementById('warn');
 const elToast=document.getElementById('toast');
+const elStation=document.getElementById('station');
+const elLine=document.getElementById('line');
 let dialogueTimer=0, toastTimer=0;
 
-function updateObjective(){
-  let t;
-  if(collected<TOTAL) t = `Berlin-Momente: ${collected}/${TOTAL}`;
-  else if(!ticketBought) t = `🎫 Kauf 'n Fahrschein am Automaten!`;
-  else t = `🚇 Steig in die gelbe U-Bahn ein!`;
-  elObj.innerHTML = `<small>MISSION</small>${t}`;
+function buildLineHud(){
+  elLine.innerHTML='';
+  STATIONS.forEach((s,i)=>{
+    const d=document.createElement('div'); d.className='stop';
+    d.innerHTML=`<div class="dot"></div>${s.short}`;
+    elLine.appendChild(d);
+  });
 }
-function toast(msg){ elToast.textContent=msg; elToast.classList.add('on'); toastTimer=2.6; }
+function updateLineHud(){
+  [...elLine.children].forEach((el,i)=>{
+    el.className='stop'+(i<stationIndex?' done':'')+(i===stationIndex?' here':'');
+  });
+}
+function toast(msg){ elToast.textContent=msg; elToast.classList.add('on'); toastTimer=2.8; }
 function showDialogue(name, line){
-  elDSpeaker.textContent = name; elDText.textContent = line;
-  elDialogue.classList.add('on'); dialogueTimer=4.4; say(line);
+  elDSpeaker.textContent=name; elDText.textContent=line;
+  elDialogue.classList.add('on'); dialogueTimer=4.6; say(line);
 }
 
-// ---------- Interaction ----------
+/* ---------- Game state ---------- */
+let started=false, ended=false, ticketBought=false, collected=0, stationTotal=0;
+let transitioning=false;
+
+function updateObjective(){
+  const st=STATIONS[stationIndex];
+  let t;
+  if(collected<stationTotal) t=`${st.name}: quatsch die Leute (${collected}/${stationTotal})`;
+  else if(!ticketBought && stationIndex===0) t=`🎫 Kauf 'n Fahrschein – dann einsteigen!`;
+  else t=`🚇 Zug einsteigen Richtung ${STATIONS[Math.min(stationIndex+1,STATIONS.length-1)].short}!`;
+  elObj.innerHTML=`<small>U1 · HALT ${stationIndex+1}/${STATIONS.length}</small>${t}`;
+}
+
+/* ---------- Station laden ---------- */
+function loadStation(i){
+  stationIndex=i;
+  const st=STATIONS[i];
+  clearGroup(stationGroup);
+  npcs=[]; guards=[]; collected=0; stationTotal=st.npcs.length;
+
+  // Wand-Akzent / Schild-Farbe
+  elStation.textContent="🚇 "+st.name;
+  elStation.style.background='#'+st.accent.toString(16).padStart(6,'0');
+
+  // Mural
+  stationGroup.add(makeMural(st.mural));
+
+  // Stationsschilder an den Saeulen
+  for(const sx of [-18,0,18]){
+    const g=new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(5.4,0.95,0.1),
+      new THREE.MeshStandardMaterial({color:st.accent})));
+    const label=makeTextPlane(st.name,512,86,"#ffffff",null,52);
+    label.scale.set(5.1,0.86,1); label.position.z=0.07; g.add(label);
+    g.position.set(sx,3.4,HALF_Z+3.65); g.rotation.y=Math.PI;
+    stationGroup.add(g);
+  }
+
+  // Graffiti + Poster (zufaellig gestreut)
+  const tags=["KREUZBERG36","U1","BERLIN","XBERG","ACAB♥","MATE","TÜPÜÜ"];
+  for(let k=0;k<4;k++){
+    stationGroup.add(graffiti(-24+k*16+(i*3), HALF_Z+3.7, 2.4+((k+i)%2), 
+      ["#ff3b7b","#3bd1ff","#f3d000","#8bff5a"][(k+i)%4], tags[(k+i)%tags.length]));
+  }
+  for(let k=0;k<3;k++){
+    const pp=POSTERS[(k+i)%POSTERS.length];
+    stationGroup.add(poster(-20+k*20, HALF_Z+3.72, pp[0],pp[1],pp[2]));
+  }
+
+  // NPCs
+  st.npcs.forEach((key,idx)=>{
+    const def=NPC_POOL[key]; const spot=NPC_SPOTS[idx];
+    const p=makePerson(def.look); p.position.set(spot.x,0,spot.z); p.rotation.y=spot.rot;
+    stationGroup.add(p);
+    const icon=makeFloatIcon(def.emoji, spot.x,2.7,spot.z, stationGroup);
+    npcs.push({mesh:p, icon, name:def.name, emoji:def.emoji, lines:def.lines,
+               collected:false, x:spot.x, z:spot.z, phase:Math.random()*6});
+  });
+
+  // Kontrolleure
+  for(let k=0;k<st.guards;k++){
+    const g=makePerson({shirt:0x1a2a55, pants:0x141824, hat:0x101830, vest:0x0e1a3a, skin:0xd9a878, hair:0x2a2a2a});
+    const sx=(k===0?-14:16); g.position.set(sx,0,-1); stationGroup.add(g);
+    const icon=new THREE.Sprite(new THREE.SpriteMaterial(
+      {map:emojiTex("👮"),transparent:true,depthTest:false,sizeAttenuation:false}));
+    icon.scale.set(0.085,0.085,0.085); icon.renderOrder=5; stationGroup.add(icon);
+    guards.push({mesh:g, icon, x:sx, z:-1, dir:(k===0?1:-1),
+                 minX:-HALF_X+3, maxX:HALF_X-3, speed:2.6+k*0.5, phase:Math.random()*6});
+  }
+
+  // Collider neu
+  colliders = staticColliders.concat(npcs.map(n=>({x:n.x,z:n.z,r:0.7})));
+
+  // Zug frisch einfahren lassen
+  trainState='arriving'; trainGap=0; trainWait=0;
+  train.position.x=60; train.userData.openAmt=0; train.userData.openTarget=0;
+  setDoors(0);
+
+  updateObjective(); updateLineHud(); updateBoard();
+  announce(`${st.name}. `+(st.final?"Endstation, alles aussteigen bitte.":"Ausstieg in Fahrtrichtung links."));
+}
+
+/* ---------- Departure board (3D, haengt an der Decke) ---------- */
+const boardCanvas=document.createElement('canvas'); boardCanvas.width=512; boardCanvas.height=140;
+const boardCtx=boardCanvas.getContext('2d');
+const boardTex=new THREE.CanvasTexture(boardCanvas);
+const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.2),
+  new THREE.MeshBasicMaterial({map:boardTex, side:THREE.DoubleSide}));
+boardMesh.position.set(-9,4.35,0); boardMesh.rotation.y=Math.PI/2; scene.add(boardMesh);
+box(0.1,0.5,0.1,matDark,-9,4.85,0); // Aufhaengung
+function updateBoard(status){
+  const st=STATIONS[stationIndex];
+  const next=STATIONS[Math.min(stationIndex+1,STATIONS.length-1)];
+  boardCtx.fillStyle='#0a0d14'; boardCtx.fillRect(0,0,512,140);
+  boardCtx.fillStyle='#f3a51a'; boardCtx.font='900 30px Consolas, monospace';
+  boardCtx.textAlign='left';
+  boardCtx.fillText('U1  '+(st.final?'Endstation':next.name), 16, 44);
+  boardCtx.font='700 24px Consolas, monospace';
+  let s = status || (trainState==='arriving'?'einfahrend':
+          trainState==='waiting'?'Türen offen':
+          trainState==='departing'?'Abfahrt':'2 min');
+  boardCtx.fillStyle= (s==='einfahrend'||s==='Türen offen')?'#4ade80':'#f3a51a';
+  boardCtx.fillText('▶ '+s, 16, 90);
+  boardCtx.fillStyle='#7fa0d0'; boardCtx.font='600 18px Consolas, monospace';
+  boardCtx.fillText('Halt '+(stationIndex+1)+'/'+STATIONS.length+'  ·  '+st.line, 16, 122);
+  boardTex.needsUpdate=true;
+}
+
+/* ---------- Tueren ---------- */
+function setDoors(amt){
+  train.userData.openAmt=amt;
+  for(const d of train.userData.doors){
+    d.l.position.x=d.bl - amt*0.85;
+    d.r.position.x=d.br + amt*0.85;
+  }
+  train.userData.interior.material.emissiveIntensity = amt*0.9;
+}
+
+/* ---------- Zug-Statemachine ---------- */
+let trainState='gone', trainGap=3, trainWait=0;
+function updateTrain(dt){
+  const u=train.userData;
+  if(trainState==='arriving'){
+    train.position.x += (0 - train.position.x)*Math.min(1,dt*1.7);
+    if(Math.abs(train.position.x)<0.2){
+      train.position.x=0; trainState='waiting'; trainWait=14;
+      u.openTarget=1; screech(); announce("Zurückbleiben, bitte."); updateBoard('Türen offen');
+    }
+  } else if(trainState==='waiting'){
+    trainWait-=dt;
+    if(trainWait<=0){ trainState='departing'; u.openTarget=0; doorChime(); updateBoard('Abfahrt'); }
+  } else if(trainState==='departing'){
+    train.position.x += (-70 - train.position.x)*Math.min(1,dt*1.4);
+    if(train.position.x<-52){ trainState='gone'; trainGap=5; updateBoard('2 min'); }
+  } else { // gone
+    trainGap-=dt;
+    if(trainGap<=0){ trainState='arriving'; train.position.x=60; updateBoard('einfahrend'); }
+  }
+  // Tuer-Animation
+  const target=u.openTarget;
+  if(Math.abs(u.openAmt-target)>0.001){
+    setDoors(u.openAmt + (target-u.openAmt)*Math.min(1,dt*4));
+  }
+}
+
+/* ---------- Interaktion ---------- */
 let nearNPC=null, nearAutomat=false, nearTrain=false;
 function tryInteract(){
-  if(!started||ended) return;
+  if(!started||ended||transitioning) return;
   if(nearNPC){
     if(!nearNPC.collected){
       nearNPC.collected=true; collected++;
-      scene.remove(nearNPC.icon);
-      nearNPC.icon = makeFloatIcon("✅", nearNPC.x, 2.7, nearNPC.z);
+      stationGroup.remove(nearNPC.icon);
+      nearNPC.icon=makeFloatIcon("✅", nearNPC.x,2.7,nearNPC.z, stationGroup);
       beep(880,0.15,'triangle',0.15);
-      toast(`Berlin-Moment gesammelt! (${collected}/${TOTAL})`);
+      toast(`Berlin-Moment! (${collected}/${stationTotal})`);
+      if(collected>=stationTotal) toast(`Alle erledigt – ab in die U-Bahn! 🚇`);
       updateObjective();
     }
     showDialogue(nearNPC.name, nearNPC.lines[(Math.random()*nearNPC.lines.length)|0]);
@@ -631,91 +777,230 @@ function tryInteract(){
       showDialogue("Fahrkartenautomat","Fahrschein AB gekauft! Der Automat nimmt heut sogar Karte. Wunder gibt's.");
       toast("🎫 Fahrschein gekauft – Kontrolle kann kommen!");
       updateObjective();
-    } else {
-      showDialogue("Fahrkartenautomat","Haste schon. Einmal reicht, is ja nich Weihnachten.");
-    }
+    } else showDialogue("Fahrkartenautomat","Haste schon. Einmal reicht, is ja nich Weihnachten.");
     return;
   }
   if(nearTrain){
-    if(collected<TOTAL) showDialogue("BVG-Ansage",`Erst noch ${TOTAL-collected} echte Berlin-Momente erleben, dann fahr'n wir!`);
-    else winGame();
+    if(collected<stationTotal){
+      showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente erleben, dann fahr'n wir!`);
+    } else if(trainState!=='waiting' || train.userData.openAmt<0.6){
+      showDialogue("BVG-Ansage","Der Zug fährt gleich ein – kurz warten, Süße/r.");
+    } else {
+      boardTrain();
+    }
     return;
   }
 }
 
-// ---------- End screens ----------
-function endGame(win, title, sub, text){
+function boardTrain(){
+  const st=STATIONS[stationIndex];
+  if(st.final){ winGame(); return; }
+  transitioning=true;
+  trainState='departing'; train.userData.openTarget=0; doorChime();
+  const next=STATIONS[stationIndex+1];
+  const ride=document.getElementById('ride');
+  document.getElementById('rideBig').textContent="Nächster Halt: "+next.name;
+  const gags=["Bitte festhalten. Oder auch nicht, mir egal.",
+    "Signalstörung? Heute mal nicht. Wahnsinn.",
+    "Zurückbleiben bitte – ausser du sitzt schon.",
+    "Wir fahren. Pünktlich ist relativ."];
+  document.getElementById('rideSmall').textContent=gags[stationIndex%gags.length];
+  ride.classList.add('on');
+  say("Zurückbleiben bitte. Nächster Halt: "+next.name);
+  setTimeout(()=>{
+    loadStation(stationIndex+1);
+    setTimeout(()=>{ ride.classList.remove('on'); transitioning=false; }, 300);
+  }, 1700);
+}
+
+/* ---------- Ende ---------- */
+function endGame(win,title,sub,text){
   ended=true;
-  document.getElementById('endCard').className = 'card ' + (win?'win':'lose');
-  document.getElementById('endTitle').textContent = title;
-  document.getElementById('endSub').textContent = sub;
-  document.getElementById('endText').textContent = text;
+  document.getElementById('endCard').className='card '+(win?'win':'lose');
+  document.getElementById('endTitle').textContent=title;
+  document.getElementById('endSub').textContent=sub;
+  document.getElementById('endText').textContent=text;
   document.getElementById('endScreen').classList.remove('fadehide');
   if(win) jingle(); else beep(200,0.5,'sawtooth',0.2);
 }
 function winGame(){
-  const bonus = ticketBought ? "Und mit gültigem Fahrschein – vorbildlich!"
-    : "Ganz ohne Fahrschein reingesprungen… mutig. Riskant. Sehr berlinerisch.";
-  say("Zurückbleiben bitte!");
-  endGame(true,"🚇 Einstieg geschafft!","„Zurückbleiben bitte!“",
-    `Du hast alle ${TOTAL} typischen Berliner:innen erlebt und die U-Bahn erwischt. `+bonus);
+  const bonus=ticketBought?"Und mit gültigem Fahrschein – vorbildlich!":
+    "Ganz ohne Fahrschein durchgekommen… mutig. Sehr berlinerisch.";
+  say("Endstation Alexanderplatz. Alles aussteigen bitte!");
+  endGame(true,"🏙️ Endstation Alex!","„Alles aussteigen, bitte!“",
+    `Du hast die ganze U1 vom Kotti bis zum Alex überlebt, alle Berliner:innen erlebt `+
+    `und jeden Zug erwischt. `+bonus+` 🐻`);
 }
 function caughtGame(){
   say("Fahrscheine bitte! Erhöhtes Beförderungsentgelt, sechzig Euro!");
   endGame(false,"👮 Erwischt!","„Fahrscheine, bitte!“",
     "Ohne Fahrschein von der Kontrolle geschnappt: 60 € erhöhtes Beförderungsentgelt. "+
-    "Tipp: erst zum Automaten (🎫), dann entspannt weiter.");
+    "Tipp: an der ersten Station den Automaten (🎫) nicht vergessen!");
 }
+
+/* ---------- Input ---------- */
+const keys={};
+addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='e') tryInteract(); });
+addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+let dragging=false,lastX=0,lastY=0;
+renderer.domElement.addEventListener('pointerdown', e=>{ if(IS_TOUCH)return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointerup', ()=>dragging=false);
+addEventListener('pointermove', e=>{
+  if(IS_TOUCH||!dragging) return;
+  camYaw-=(e.clientX-lastX)*0.005; camPitch+=(e.clientY-lastY)*0.004;
+  camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lastX=e.clientX; lastY=e.clientY;
+});
+addEventListener('wheel', e=>{ camDist=Math.max(3.5,Math.min(9,camDist+e.deltaY*0.01)); },{passive:true});
+
+const touchUI=document.getElementById('touch');
+const stick=document.getElementById('stick');
+const nub=stick.querySelector('.nub');
+const looklayer=document.getElementById('looklayer');
+let move={x:0,y:0};
+if(IS_TOUCH){
+  touchUI.style.display='block';
+  document.getElementById('deskKeys').style.display='none';
+  document.getElementById('touchKeys').style.display='flex';
+  let stickId=null, sc={x:0,y:0};
+  const ss=e=>{const t=e.changedTouches[0]; stickId=t.identifier;
+    const r=stick.getBoundingClientRect(); sc={x:r.left+r.width/2,y:r.top+r.height/2}; sm(e); e.preventDefault();};
+  const sm=e=>{for(const t of e.changedTouches){ if(t.identifier!==stickId)continue;
+    let dx=t.clientX-sc.x,dy=t.clientY-sc.y; const d=Math.hypot(dx,dy),max=52;
+    if(d>max){dx*=max/d;dy*=max/d;} nub.style.transform=`translate(${dx}px,${dy}px)`;
+    move.x=dx/max; move.y=dy/max;} e.preventDefault();};
+  const se=e=>{for(const t of e.changedTouches){ if(t.identifier!==stickId)continue;
+    stickId=null; move.x=move.y=0; nub.style.transform='translate(0,0)';}};
+  stick.addEventListener('touchstart',ss,{passive:false});
+  stick.addEventListener('touchmove',sm,{passive:false});
+  stick.addEventListener('touchend',se); stick.addEventListener('touchcancel',se);
+  let lookId=null,lx=0,ly=0;
+  looklayer.addEventListener('touchstart',e=>{const t=e.changedTouches[0]; lookId=t.identifier; lx=t.clientX; ly=t.clientY; e.preventDefault();},{passive:false});
+  looklayer.addEventListener('touchmove',e=>{for(const t of e.changedTouches){ if(t.identifier!==lookId)continue;
+    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005;
+    camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lx=t.clientX; ly=t.clientY;} e.preventDefault();},{passive:false});
+  looklayer.addEventListener('touchend',e=>{for(const t of e.changedTouches){ if(t.identifier===lookId) lookId=null; }});
+  const runBtn=document.getElementById('btnRun');
+  runBtn.addEventListener('touchstart',e=>{keys['shift']=true;runBtn.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
+  runBtn.addEventListener('touchend',e=>{keys['shift']=false;runBtn.style.background='rgba(20,27,57,.8)';});
+  const actBtn=document.getElementById('btnAct');
+  actBtn.addEventListener('touchstart',e=>{tryInteract();e.preventDefault();},{passive:false});
+}
+
+/* ---------- Audio ---------- */
+let audioCtx=null, rumbleGain=null, soundOn=true;
+function initAudio(){
+  if(audioCtx) return;
+  try{
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate);
+    const d=buf.getChannelData(0); let last=0;
+    for(let i=0;i<d.length;i++){const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.5;}
+    const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true;
+    const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=170;
+    rumbleGain=audioCtx.createGain(); rumbleGain.gain.value=0.10;
+    src.connect(lp).connect(rumbleGain).connect(audioCtx.destination); src.start();
+  }catch(e){}
+}
+function beep(freq,dur,type,vol){
+  if(!audioCtx||!soundOn) return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=type||'sine'; o.frequency.value=freq; g.gain.value=vol||0.15;
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+  o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur);
+}
+function jingle(){ beep(660,0.18,'square',0.12); setTimeout(()=>beep(880,0.28,'square',0.12),160); }
+function doorChime(){ beep(988,0.12,'sine',0.12); setTimeout(()=>beep(740,0.18,'sine',0.12),120); }
+function screech(){
+  if(!audioCtx||!soundOn) return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(1200,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(260,audioCtx.currentTime+0.9);
+  g.gain.value=0.05; g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.9);
+  o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.9);
+}
+function say(text){
+  if(!soundOn||!window.speechSynthesis) return;
+  try{ const u=new SpeechSynthesisUtterance(text); u.lang='de-DE'; u.rate=1.02;
+    const vs=speechSynthesis.getVoices();
+    const de=vs.find(v=>/de-?DE/i.test(v.lang))||vs.find(v=>/german|deutsch/i.test(v.name));
+    if(de) u.voice=de; speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+const ANNOUNCE=[
+  "Sehr geehrte Fahrgäste, aufgrund einer Signalstörung verzögert sich alles.",
+  "Bitte beachten Sie: der Aufzug ist außer Betrieb. Wie immer.",
+  "Taschendiebe sind auch heute wieder für Sie da.",
+  "Bitte lassen Sie Ihren Sperrmüll nicht auf dem Sitz. Danke, Kevin.",
+  "Wir bitten um Ihr Verständnis. Kriegen es aber nicht.",
+  "Nächster Halt: irgendwann.",
+];
+let annTimer=16;
+function announce(text){ toast("📢 "+text); say(text); }
+
+document.getElementById('sound').addEventListener('click', ()=>{
+  soundOn=!soundOn;
+  document.getElementById('sound').textContent=soundOn?'🔊':'🔇';
+  if(rumbleGain) rumbleGain.gain.value=soundOn?0.10:0;
+  if(!soundOn&&window.speechSynthesis) speechSynthesis.cancel();
+});
 
 document.getElementById('startBtn').addEventListener('click', ()=>{
   document.getElementById('menu').classList.add('fadehide');
   started=true; initAudio();
   if(window.speechSynthesis) speechSynthesis.getVoices();
-  updateObjective();
+  buildLineHud(); loadStation(0);
   toast("Willkommen am Kotti! Quatsch die Leute an (E / SPRECHEN).");
 });
 document.getElementById('againBtn').addEventListener('click', ()=> location.reload());
 
-// ---------- Collision ----------
+/* ---------- Collision ---------- */
 function resolve(nx,nz){
-  nx = Math.max(-HALF_X+0.5, Math.min(HALF_X-0.5, nx));
-  nz = Math.max(-HALF_Z+0.4, Math.min(HALF_Z-0.4, nz));
+  nx=Math.max(-HALF_X+0.5,Math.min(HALF_X-0.5,nx));
+  nz=Math.max(-HALF_Z+0.4,Math.min(HALF_Z-0.4,nz));
   for(const c of colliders){
-    const dx=nx-c.x, dz=nz-c.z, d=Math.hypot(dx,dz);
-    if(d < c.r+0.35){
-      const push=(c.r+0.35-d)||0.01;
-      nx += (dx/(d||1))*push; nz += (dz/(d||1))*push;
-    }
+    const dx=nx-c.x,dz=nz-c.z,d=Math.hypot(dx,dz);
+    if(d<c.r+0.35){ const push=(c.r+0.35-d)||0.01; nx+=(dx/(d||1))*push; nz+=(dz/(d||1))*push; }
   }
   return [nx,nz];
 }
 
-// ---------- Main loop ----------
-const clock = new THREE.Clock();
+/* ---------- Main loop ---------- */
+const clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
+  const dt=Math.min(clock.getDelta(),0.05);
+  const t=clock.elapsedTime;
 
-  if(started && !ended){
-    let ix=0, iz=0;
-    if(keys['w']||keys['arrowup']) iz-=1;
-    if(keys['s']||keys['arrowdown']) iz+=1;
-    if(keys['a']||keys['arrowleft']) ix-=1;
-    if(keys['d']||keys['arrowright']) ix+=1;
-    if(IS_TOUCH){ ix+=move.x; iz+=move.y; }
-    let mag=Math.hypot(ix,iz);
-    const running = keys['shift'];
+  // Ratte + Taube leben immer
+  rat.position.x += ratDir*3.4*dt;
+  if(rat.position.x>HALF_X-2){ratDir=-1; rat.rotation.y=Math.PI;} if(rat.position.x<-HALF_X+2){ratDir=1; rat.rotation.y=0;}
+  pigeonT+=dt; pigeon.position.y=0.15+Math.abs(Math.sin(pigeonT*4))*0.25;
+  pigeon.position.x=10+Math.sin(pigeonT*0.7)*3;
+
+  // durchfahrende Zuege
+  passerTimer-=dt;
+  if(passerTimer<=0 && started){ passerTimer=9+Math.random()*7; if(passers.length<2) spawnPasser(); }
+  for(let k=passers.length-1;k>=0;k--){
+    const pt=passers[k]; pt.position.x+=pt.userData.vx*dt;
+    if(pt.position.x>90||pt.position.x<-90){ scene.remove(pt); passers.splice(k,1); }
+  }
+
+  if(started && !ended && !transitioning){
+    // Bewegung
+    let ix=0,iz=0;
+    if(keys['w']||keys['arrowup'])iz-=1;
+    if(keys['s']||keys['arrowdown'])iz+=1;
+    if(keys['a']||keys['arrowleft'])ix-=1;
+    if(keys['d']||keys['arrowright'])ix+=1;
+    if(IS_TOUCH){ix+=move.x;iz+=move.y;}
+    let mag=Math.hypot(ix,iz); const running=keys['shift'];
     if(mag>0.02){
       const nmag=Math.max(mag,1); ix/=nmag; iz/=nmag;
-      const cos=Math.cos(camYaw), sin=Math.sin(camYaw);
-      const wx = ix*cos - iz*sin;
-      const wz = ix*sin + iz*cos;
-      const spd = (running?P.run:P.speed)*Math.min(mag,1);
-      let nx=P.x + wx*spd*dt, nz=P.z + wz*spd*dt;
-      [nx,nz]=resolve(nx,nz);
-      P.x=nx; P.z=nz;
-      P.yaw = Math.atan2(wx, wz);
+      const cos=Math.cos(camYaw),sin=Math.sin(camYaw);
+      const wx=ix*cos-iz*sin, wz=ix*sin+iz*cos;
+      const spd=(running?P.run:P.speed)*Math.min(mag,1);
+      let nx=P.x+wx*spd*dt, nz=P.z+wz*spd*dt;
+      [nx,nz]=resolve(nx,nz); P.x=nx; P.z=nz; P.yaw=Math.atan2(wx,wz);
       const sw=Math.sin(t*(running?16:11))*(running?0.9:0.6);
       player.userData.legL.rotation.x=sw; player.userData.legR.rotation.x=-sw;
       player.userData.armL.rotation.x=-sw*0.7; player.userData.armR.rotation.x=sw*0.7;
@@ -723,86 +1008,89 @@ function animate(){
       player.userData.legL.rotation.x*=0.8; player.userData.legR.rotation.x*=0.8;
       player.userData.armL.rotation.x*=0.8; player.userData.armR.rotation.x*=0.8;
     }
-    player.position.set(P.x,0,P.z);
-    player.rotation.y = P.yaw;
+    player.position.set(P.x,0,P.z); player.rotation.y=P.yaw;
 
-    // guards
+    // Zug
+    updateTrain(dt);
+
+    // Kontrolleure
     let danger=false;
     for(const gd of guards){
-      gd.x += gd.dir*gd.speed*dt;
-      if(gd.x>gd.maxX){gd.x=gd.maxX; gd.dir=-1;}
-      if(gd.x<gd.minX){gd.x=gd.minX; gd.dir=1;}
-      gd.mesh.position.set(gd.x,0,gd.z);
-      gd.mesh.rotation.y = gd.dir>0?Math.PI/2:-Math.PI/2;
+      gd.x+=gd.dir*gd.speed*dt;
+      if(gd.x>gd.maxX){gd.x=gd.maxX;gd.dir=-1;} if(gd.x<gd.minX){gd.x=gd.minX;gd.dir=1;}
+      gd.mesh.position.set(gd.x,0,gd.z); gd.mesh.rotation.y=gd.dir>0?Math.PI/2:-Math.PI/2;
       const sw=Math.sin(t*10+gd.phase)*0.7;
       gd.mesh.userData.legL.rotation.x=sw; gd.mesh.userData.legR.rotation.x=-sw;
-      gd.icon.position.set(gd.x, 2.7, gd.z);
-      const dist=Math.hypot(P.x-gd.x, P.z-gd.z);
-      if(!ticketBought){
-        if(dist<5.5) danger=true;
-        if(dist<1.7) caughtGame();
-      }
+      gd.icon.position.set(gd.x,2.7,gd.z);
+      const dist=Math.hypot(P.x-gd.x,P.z-gd.z);
+      if(!ticketBought){ if(dist<5.5)danger=true; if(dist<1.7)caughtGame(); }
     }
-    elWarn.classList.toggle('on', danger && !ticketBought);
+    elWarn.classList.toggle('on', danger&&!ticketBought);
 
-    // proximity
-    nearNPC=null; nearAutomat=false; nearTrain=false;
-    let best=1.9;
+    // Naehe / Prompts
+    nearNPC=null; nearAutomat=false; nearTrain=false; let best=1.9;
     for(const n of npcs){
-      const d=Math.hypot(P.x-n.x, P.z-n.z);
-      n.mesh.userData.head.position.y = 1.95 + Math.sin(t*2+n.phase)*0.02;
-      if(d<best){ best=d; nearNPC=n; }
+      const d=Math.hypot(P.x-n.x,P.z-n.z);
+      n.mesh.userData.head.position.y=1.95+Math.sin(t*2+n.phase)*0.02;
+      if(d<best){best=d; nearNPC=n;}
     }
-    const dA=Math.hypot(P.x-automatPos.x, P.z-automatPos.z);
+    const dA=Math.hypot(P.x-automatPos.x,P.z-automatPos.z);
     if(dA<2.3 && dA<best+0.4){ nearAutomat=true; nearNPC=null; }
-    if(P.z < -HALF_Z+1.7 && Math.abs(P.x)<3.2){ nearTrain=true; nearNPC=nearAutomat?null:nearNPC; }
+    if(P.z<-HALF_Z+1.7 && trainState==='waiting'){ nearTrain=true; nearNPC=nearAutomat?null:nearNPC; }
 
     if(nearNPC){
       elPrompt.classList.add('on');
-      elPrompt.innerHTML = nearNPC.collected
+      elPrompt.innerHTML=nearNPC.collected
         ? `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · ${nearNPC.name} nochmal quatschen`
         : `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · ${nearNPC.emoji} ${nearNPC.name} ansprechen`;
     } else if(nearAutomat){
       elPrompt.classList.add('on');
-      elPrompt.innerHTML = ticketBought
-        ? `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · Fahrschein hast du schon ✅`
+      elPrompt.innerHTML=ticketBought
+        ? `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · Fahrschein hast du ✅`
         : `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · 🎫 Fahrschein kaufen`;
     } else if(nearTrain){
       elPrompt.classList.add('on');
-      elPrompt.innerHTML = collected>=TOTAL
+      elPrompt.innerHTML=collected>=stationTotal
         ? `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · 🚇 In die U-Bahn einsteigen`
         : `<b>${IS_TOUCH?'SPRECHEN':'E'}</b> · U-Bahn (erst alle Momente!)`;
-    } else {
-      elPrompt.classList.remove('on');
-    }
+    } else elPrompt.classList.remove('on');
+
+    // Zufalls-Durchsage
+    annTimer-=dt;
+    if(annTimer<=0){ annTimer=22+Math.random()*14; announce(ANNOUNCE[(Math.random()*ANNOUNCE.length)|0]); }
 
     if(dialogueTimer>0){ dialogueTimer-=dt; if(dialogueTimer<=0) elDialogue.classList.remove('on'); }
     if(toastTimer>0){ toastTimer-=dt; if(toastTimer<=0) elToast.classList.remove('on'); }
+  } else if(transitioning){
+    // Zug faehrt beim Umstieg raus
+    train.position.x += (-70-train.position.x)*Math.min(1,dt*1.4);
+    const u=train.userData;
+    if(Math.abs(u.openAmt-u.openTarget)>0.001) setDoors(u.openAmt+(u.openTarget-u.openAmt)*Math.min(1,dt*4));
   }
 
-  // camera follow
+  // Kamera
   const px=player.position.x, pz=player.position.z;
-  const cx = px + Math.sin(camYaw)*Math.cos(camPitch)*camDist;
-  const cz = pz + Math.cos(camYaw)*Math.cos(camPitch)*camDist;
-  const cy = 2.0 + Math.sin(camPitch)*camDist;
-  camera.position.lerp(new THREE.Vector3(cx, cy, cz), started?0.15:0.04);
-  camera.lookAt(px, 1.6, pz);
+  const cx=px+Math.sin(camYaw)*Math.cos(camPitch)*camDist;
+  const cz=pz+Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  const cy=2.0+Math.sin(camPitch)*camDist;
+  camera.position.lerp(new THREE.Vector3(cx,cy,cz), started?0.15:0.04);
+  camera.lookAt(px,1.6,pz);
 
-  for(let i=0;i<tubeLights.length;i++){
-    tubeLights[i].intensity = 0.6 + Math.sin(t*7+i)*0.06 + (Math.random()<0.004? -0.4:0);
-  }
-  automatSign.position.y = 3.0 + Math.sin(t*2)*0.06;
+  for(let i=0;i<tubeLights.length;i++)
+    tubeLights[i].intensity=0.55+Math.sin(t*7+i)*0.06+(Math.random()<0.004?-0.4:0);
+  automatSign.position.y=3.0+Math.sin(t*2)*0.06;
 
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 }
 animate();
 
 addEventListener('resize', ()=>{
-  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(window.innerWidth,window.innerHeight);
 });
-if(window.speechSynthesis){ speechSynthesis.onvoiceschanged = ()=>speechSynthesis.getVoices(); }
+if(window.speechSynthesis) speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();
+
 </script>
 </body>
 </html>
