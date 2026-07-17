@@ -1,41 +1,44 @@
-# 🏳️‍🌈 CSD Berlin – Dance Parade
+# 🚇 Berlin Untergrund – U-Bahn Odyssee
 
-Ein bunter Jump-&-Dance-Runner durch den Christopher Street Day in Berlin.
-Tanz mit **Justus** oder **Svenja** durch die Parade, spring über Hindernisse,
-sammel Regenbogenflaggen und dropp deine besten Moves auf dem Beat!
+Ein kleines **3D-Spiel** (Third-Person, Hitman-Style light) am Berliner
+U-Bahnhof **Kottbusser Tor**. Du läufst über den Bahnsteig, sprichst die
+typischsten Berliner:innen an, kaufst dir bloß rechtzeitig einen Fahrschein –
+und lässt dich **nicht** von den BVG-Kontrolleuren erwischen. 🎫
 
 ## Spielen
 
-Einfach `index.html` in einem Browser öffnen – läuft komplett offline,
-Grafik und Musik werden live im Browser erzeugt (keine externen Dateien).
+Einfach den GitHub-Pages-Link öffnen (oder `docs/index.html` im Browser) –
+läuft komplett im Browser, auf **Desktop und Smartphone**, kein Download,
+nichts umstellen.
 
 ## Steuerung
 
-| Aktion | Tastatur | Touch |
+| Aktion | Desktop | Handy |
 | --- | --- | --- |
-| Springen | Leertaste / ↑ / W / tippen | **SPRUNG**-Button |
-| Tanz-Moves | Tasten `1` `2` `3` `4` (oder `A` `S` `D` `F`) | 4 farbige Tanz-Buttons |
-| Pause | `P` | ⏸️ |
-| Musik an/aus | – | 🔊 |
+| Laufen | `W A S D` / Pfeiltasten | Linker Joystick |
+| Umsehen | Maus ziehen | Rechts über den Screen wischen |
+| Sprechen / Interagieren | `E` | **SPRECHEN**-Knopf |
+| Rennen | `Shift` | **RENN**-Knopf |
+| Ton an/aus | 🔊-Button oben rechts | 🔊-Button oben rechts |
 
-## Highlights
+## Ziel
 
-- **Zwei Charaktere** mit eigenen CSD-Outfits – Justus (Regenbogen-Harness, Bart)
-  und Svenja (Glitzer-Tutu, Blumenkranz, Brille).
-- **Tanzen auf dem Beat**: Moves auf dem Takt geben „PERFEKT!"-Bonus und Combos.
-- **Dancefloor-Zonen** vor den Parade-Wagen für dreifache Punkte.
-- **Party-Meter → MEGA PARTY MODE**: Regenbogen-Rausch, Konfetti, doppelte
-  Punkte und kurze Unverwundbarkeit.
-- **8 Berliner Hindernisse** mit Berlin-Humor (E-Scooter, Bierkiste, Sekt-Pfütze,
-  Currywurst, Berliner Taube, BVG-Gitter …) – mit klaren Umrissen und Warn-Symbol.
-- **Power-Ups**: 👟 Glitzer-Schuhe (Mega-Sprung), 📻 Boombox (2× Punkte),
-  🌟 Regenbogen-Stern (sofort Party) und der seltene 🐻 Berliner Bär.
-- **Zufalls-Events**: ✨ Glitzer-Regen, 🔊 Techno-Drop und 🕺 Flashmob.
-- **Berliner Kulisse** mit Fernsehturm, Brandenburger Tor, Siegessäule und
-  einem Techno-Finale – die Szene wird länger und wilder, je weiter du kommst.
-- **Live generierte House-/Techno-Musik** (Web Audio API, 124 BPM).
+1. **Alle 8 typischen Berlin-Momente sammeln** – sprich jede:n Berliner:in an:
+   🍺 Sterni-Opa, 🎧 Techno-Klaus (seit Freitag wach), 🌭 Currywurst-Renate,
+   🥙 Döner-Ali, 🎻 Straßenmusiker, 📸 verlorenes Touri-Paar (sucht das
+   Berghain), 📱 Handy-Schnacker und der 🏪 Späti-Chef ("Kartenzahlung? Ham wa nich.").
+2. **Fahrschein kaufen** am 🎫 Fahrkartenautomaten.
+3. **In die gelbe U-Bahn einsteigen** – „Zurückbleiben bitte!"
 
-Jede Runde ist anders: wechselnde Hindernisse, Events, Wagen-Sprüche und
-lustige Berliner Sprüche sorgen für Abwechslung.
+Aber Vorsicht: Zwei **BVG-Kontrolleure** 👮 patrouillieren über den Bahnsteig.
+Erwischen sie dich ohne gültigen Fahrschein, gibt's **60 € erhöhtes
+Beförderungsentgelt** – und Game Over. Mit Fahrschein bist du safe.
 
-Viel Spaß beim Feiern! 🎉
+## Technik
+
+- Reines HTML/JS, 3D mit **Three.js** – ein einziges File (`docs/index.html`).
+- Grafik aus einfachen Formen (Low-Poly-Berlin), Sound live im Browser
+  generiert (U-Bahn-Rumpeln, Jingles) plus deutsche Sprachausgabe der Sprüche.
+- Läuft offline im Browser, sobald einmal geladen.
+
+Viel Spaß am Kotti! 🐻
