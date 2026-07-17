@@ -72,9 +72,11 @@ Hindernisse** über den Gehweg, denen du ausweichen musst:
 Bänke, E-Scooter-Haufen oder Belohnungs-Bauten hindurch – alles blockt sauber ab.
 Und stellst du dich **auf die Fahrbahn**, während ein Auto kommt, wirst du
 **weggeschleudert** (in Fahrtrichtung, rauf auf den Gehweg) – „🚗 runter von der
-Straße!". Die **Hintergrund-Altbauten** haben jetzt echte **Fenster mit
-Sprossenkreuz, Fensterbänken, Blumenkästen** und ein **Erdgeschoss mit Ladentür &
-Schaufenstern (mit Markise)** statt kahler Wände.
+Straße!". Die **Altbauten** zeigen ihre **Fassade jetzt zur Straße** (vorher
+kahle Klötze): echte **Fenster mit Sprossenkreuz, Fensterbänken, Blumenkästen**
+und ein **Erdgeschoss mit Ladentür & Schaufenstern (mit Markise)** – gleich beim
+Rauskommen sieht der Kiez wohnlich aus. Die **Parkbänke** stehen ordentlich an
+der Häuserzeile (mit Blick zur Straße) statt mitten im Weg.
 
 ## 🎮 7 Minispiele (visuelle Szenen)
 
@@ -136,6 +138,9 @@ Animation (tanzen, Yoga, panisch rennen, meckern):
 - 🗽 **Lebende Statue** (bewegt sich nur gegen Münze)
 - 👟 **Flohmarkt-Verkäufer** mit genau einem Schuh
 - 🐦 **Tauben-Fütterer** (umringt von Tauben)
+- 🌿 **Görli-Dealer** – lehnt an der Ecke, macht **„psst-psst" wie ein
+  Meerschweinchen**, sobald du in die Nähe kommst, und will dir unauffällig
+  „Bio-Oregano" & Co. andrehen (satirisch). Höflich abwimmeln = Berlin-Moment.
 - 🚲 **Fixie-Hipster**, 📋 **Bürgeramt-Verzweifelte** (rennt panisch),
   💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp**,
   👴 **Mecker-Rentner**, 🧽 **Schwabe aus Stuttgart** („bei uns wär des saubrer!"),

@@ -672,7 +672,7 @@ function addPersonNPC(list,parent,def,x,z,rot,coll){
   const icon=makeFloatIcon(def.emoji,x,2.7,z,parent);
   const cobj={x,z,r:0.7};
   const n={mesh:p,icon,name:def.name,emoji:def.emoji,lines:def.lines,act:def.act||'idle',
-           verb:def.verb,special:def.special,wr:def.wr||5,
+           verb:def.verb,special:def.special,wr:def.wr||5,dealer:!!def.dealer,psstCool:1.5,
            collected:false,x,z,bx:x,phase:Math.random()*6,extra:null,coll:cobj};
   if(def.prop) n.extra=def.prop(p,parent,x,z);
   list.push(n); if(coll) coll.push(cobj);
@@ -786,8 +786,8 @@ function building(x,z,w,h,col,p){
   const floors=Math.max(3,Math.round(h/2.2)); const t=winTex(col,floors,Math.max(2,Math.round(w/2.2)));
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,4),new THREE.MeshStandardMaterial({color:col,roughness:0.9}));
   m.position.set(x,h/2,z); m.castShadow=true; m.receiveShadow=true; p.add(m);
-  const front=new THREE.Mesh(new THREE.PlaneGeometry(w-0.4,h-0.4),new THREE.MeshStandardMaterial({map:t}));
-  front.position.set(x,h/2,z-2.02); p.add(front);
+  const front=new THREE.Mesh(new THREE.PlaneGeometry(w-0.4,h-0.4),new THREE.MeshStandardMaterial({map:t,side:THREE.DoubleSide}));
+  front.position.set(x,h/2,z-2.03); front.rotation.y=Math.PI; p.add(front);   // Fassade zeigt zur Straße
   box(w,0.6,4.2,mat(0x3a3630),x,h+0.1,z,0,p); // Dachkante
   return m;
 }
@@ -892,14 +892,26 @@ const STREET_POOL={
    lines:["Weeßte, dit Leben is wie 'n Späti: teuer, aber immer da.","Wer is schon pünktlich? Die BVG etwa? Eben.","Pfandflasche is auch nur 'n Symbol, wa. Für alles."]},
  doenerman:{name:"Döner-Werbetyp",emoji:"🥙",act:'wave',build:'doener',
    lines:["Zwei Döner, einer gratis – ick lauf sogar hinterher!","Im Kostüm schwitzt man wie im Grill. Passt.","Vegan? Ham wa auch. Frag nich, wie."]},
+ dealer:{name:"Görli-Dealer",emoji:"🌿",act:'lean',verb:'abwimmeln 🤫',dealer:true,
+   look:{shirt:0x14161c,jacket:0x0e0f14,pants:0x181a20,beanie:0x22252c,skin:0xb98a63,face:'grin',glasses:true,backpack:0x2a2f38,h:1.04},
+   special:(n)=>{ if(!n.collected){ n.collected=true; momente++; updateMomente(); streetDone[stationIndex].add(n.name);
+       streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); beep(880,0.15,'triangle',0.15);
+       toast("🌟 Berlin-Moment: höflich abgewimmelt"); }
+     squeak(); n.talkUntil=clock.elapsedTime+2.4;
+     showDialogue(n.name, pick(["Psst… Gras, Tschick, Bio-Oregano? Freundschaftspreis, Digga.",
+       "Für dich Sonderangebot: drei Gummibärchen, eins gratis, ehrlich.",
+       "Nur gucken kost' nix. Alles andere aber schon, wa.",
+       "Ick hab auch Pfandbons. Ganz legal. Quasi.",
+       "Willste 'ne Tüte? Also… 'ne Papiertüte, versteht sich."])); },
+   lines:["Psst… psst… ey, komm ma her, Digga.","Alles da. Frag nich woher, frag wieviel.","Ick steh hier nur so rum. Rein zufällig. Den ganzen Tag."]},
 };
 
 const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma."];
 for(const d of Object.values(NPC_POOL)) d.lines=d.lines.concat(GENERIC);
 for(const d of Object.values(STREET_POOL)) if(d.lines) d.lines=d.lines.concat(GENERIC);
 const KIEZ=[
- {land:'kotti', pool:['fkk','dj','statue','philo','fixie','passant']},
- {land:'park',  pool:['dj','yogi','tauben','floh','raveoma','makler']},
+ {land:'kotti', pool:['fkk','dj','dealer','philo','fixie','passant']},
+ {land:'park',  pool:['dj','yogi','dealer','floh','raveoma','makler']},
  {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
@@ -1050,9 +1062,17 @@ function buildStreet(i){
   // E-Scooter-Haufen
   for(let k=0;k<4;k++) box(0.2,0.9,1.4,mat([0x22aa88,0xff5533,0x5533ff,0x22aa88][k]),34+k*0.15,0.45+k*0.05,6+k*0.2,0.3*k,streetGroup);
   streetColl.push({x:34.3,z:6.3,r:1.1});
-  // Bänke + Mülleimer
-  box(2.2,0.15,0.7,mat(0x3a6a3a),-2,0.55,7,0,streetGroup); box(2.2,0.5,0.12,mat(0x3a6a3a),-2,0.85,6.7,0,streetGroup); streetColl.push({x:-2,z:7,r:1.1});
-  box(0.5,0.9,0.5,mat(0xbf8f2f),4,0.45,2,0,streetGroup); streetColl.push({x:4,z:2,r:0.5});
+  // Parkbank – ordentlich an der Häuserzeile, mit Blick zur Straße (nicht mitten im Weg)
+  function bench(bx,bz){
+    box(2.2,0.12,0.66,mat(0x6b4a2a),bx,0.5,bz,0,streetGroup);       // Sitzfläche
+    box(2.2,0.5,0.1,mat(0x6b4a2a),bx,0.78,bz+0.28,0,streetGroup);   // Lehne (Nordseite → sitzt Richtung Straße)
+    for(const lx of [-0.9,0.9]){ box(0.1,0.5,0.5,mat(0x33383f),bx+lx,0.25,bz,0,streetGroup); } // Beine
+    streetColl.push({x:bx,z:bz,r:1.2});
+  }
+  bench(-16.5,15.6); bench(9,15.6);
+  // Mülleimer neben der Bank an der Häuserzeile
+  box(0.5,0.9,0.5,mat(0x2f6a3a),-13.6,0.45,15.6,0,streetGroup); box(0.5,0.14,0.5,mat(0x224a28),-13.6,0.95,15.6,0,streetGroup);
+  streetColl.push({x:-13.6,z:15.6,r:0.5});
   // Graffiti an Hauswand-Basis
   for(let k=0;k<5;k++) graffiti(-40+k*20,16.9,3,["#ff3b7b","#3bd1ff","#f3d000","#8bff5a","#ff8a3b"][k],["BERLIN","XBERG","ACAB♥","1UP","MATE"][k],streetGroup);
   // Weird Gestalten
@@ -1304,6 +1324,13 @@ function beep(f,dur,type,vol){ if(!audioCtx||!soundOn)return; const o=audioCtx.c
   o.type=type||'sine'; o.frequency.value=f; g.gain.value=vol||0.15;
   g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
 function jingle(){ beep(660,0.18,'square',0.12); setTimeout(()=>beep(880,0.28,'square',0.12),160); }
+function squeak(){ if(!audioCtx||!soundOn)return;   // „psst-psst" wie ein Meerschweinchen (Görli-Dealer)
+  for(let k=0;k<2;k++) setTimeout(()=>{ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(1700,audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(2700,audioCtx.currentTime+0.1);
+    o.frequency.exponentialRampToValueAtTime(1500,audioCtx.currentTime+0.18);
+    g.gain.value=0.05; g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);
+    o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.2); }, k*190); }
 function doorChime(){ beep(988,0.12,'sine',0.12); setTimeout(()=>beep(740,0.18,'sine',0.12),120); }
 function screech(){ if(!audioCtx||!soundOn)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type='sawtooth'; o.frequency.setValueAtTime(1200,audioCtx.currentTime);
@@ -1436,6 +1463,12 @@ function animate(){
 
     // NPC-Verhalten
     for(const n of npcs) animateNPC(n,t);
+    // Görli-Dealer: macht „psst-psst" (wie 'n Meerschweinchen) und will was verticken, wenn du nah dran bist
+    for(const n of npcs){ if(!n.dealer) continue; n.psstCool-=dt;
+      const dd=Math.hypot(P.x-n.x,P.z-n.z);
+      if(dd<7 && n.psstCool<=0){ n.psstCool=2.2+Math.random()*1.6;
+        squeak(); n.talkUntil=t+1.6; floatSay(n.x,2.55,n.z, pick(['🤫 psst-psst','psst… psst','🌿 Digga!','Ey, komm ma']));
+        if(dd<4.5) say(pick(["Psst. Gras? Tschick?","Alles da, Digga.","Komm ma her, ich hab wat für dich.","Bio-Oregano, ehrlich!"])); } }
     worldSayT-=dt;
     if(worldSayT<=0 && npcs.length){ worldSayT=2.2+Math.random()*3.2;
       const n=npcs[(Math.random()*npcs.length)|0];
