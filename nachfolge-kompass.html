@@ -6,31 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
-    --bg: #E9EDEF;
-    --surface: #FFFFFF;
-    --surface-2: #F2F5F6;
-    --surface-3: #E7ECEE;
-    --ink: #17242E;
-    --ink-soft: #51636E;
-    --ink-faint: #7E909B;
-    --line: #D4DCE1;
-    --line-strong: #C1CCD2;
-    --accent: #A8722E;
-    --accent-soft: #F0E3D0;
-    --accent-2: #2B6A62;
-    --accent-2-soft: #DCEAE7;
-    --violet: #6A4C8C;
-    --violet-soft: #E8E0F0;
-    --good: #2F7350;
-    --good-soft: #DDEBE1;
-    --warn: #A8791F;
-    --warn-soft: #F2E8CE;
-    --crit: #A64A31;
-    --crit-soft: #F1DDD5;
+    --bg: #E9EDEF; --surface: #FFFFFF; --surface-2: #F2F5F6; --surface-3: #E7ECEE;
+    --ink: #17242E; --ink-soft: #51636E; --ink-faint: #7E909B; --line: #D4DCE1; --line-strong: #C1CCD2;
+    --accent: #A8722E; --accent-soft: #F0E3D0; --accent-2: #2B6A62; --accent-2-soft: #DCEAE7;
+    --violet: #6A4C8C; --violet-soft: #E8E0F0;
+    --good: #2F7350; --good-soft: #DDEBE1; --warn: #A8791F; --warn-soft: #F2E8CE; --crit: #A64A31; --crit-soft: #F1DDD5;
     --shadow: 0 1px 2px rgba(23,36,46,.06), 0 8px 24px -12px rgba(23,36,46,.18);
     --shadow-lg: 0 2px 4px rgba(23,36,46,.08), 0 20px 48px -18px rgba(23,36,46,.28);
-    --radius: 14px;
-    --radius-sm: 9px;
+    --radius: 14px; --radius-sm: 9px;
     --mono: ui-monospace, "SF Mono", "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -94,7 +77,6 @@
 
   .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
 
-  /* profile */
   .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 4px; }
   .trait { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; }
   .trait .ti { width: 30px; height: 30px; border-radius: 8px; background: var(--violet-soft); color: var(--violet); display: flex; align-items: center; justify-content: center; }
@@ -110,15 +92,19 @@
   .preset[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   .weights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 30px; }
-  .weight.person label span:first-child { color: var(--violet); font-weight: 650; }
   .weight label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; font-weight: 550; margin-bottom: 5px; }
+  .weight.person label span:first-child { color: var(--violet); font-weight: 650; }
+  .weight.attract label span:first-child { color: var(--accent-2); font-weight: 650; }
   .weight .wval { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
   .weight.person .wval { color: var(--violet); }
+  .weight.attract .wval { color: var(--accent-2); }
   input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: var(--surface-3); border-radius: 999px; outline: none; cursor: pointer; margin: 3px 0 0; }
   input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; }
   input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; }
   .weight.person input[type="range"]::-webkit-slider-thumb { background: var(--violet); }
   .weight.person input[type="range"]::-moz-range-thumb { background: var(--violet); }
+  .weight.attract input[type="range"]::-webkit-slider-thumb { background: var(--accent-2); }
+  .weight.attract input[type="range"]::-moz-range-thumb { background: var(--accent-2); }
   input[type="range"]:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); }
 
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--line-strong); }
@@ -153,8 +139,15 @@
 
   .row-body { display: none; padding: 2px 16px 18px 16px; border-top: 1px solid var(--line); }
   .row.open .row-body { display: block; }
-  .why { color: var(--ink-soft); font-size: 14px; margin: 14px 0 16px; max-width: 68ch; }
+  .why { color: var(--ink-soft); font-size: 14px; margin: 14px 0 14px; max-width: 68ch; }
   .why b { color: var(--ink); font-weight: 600; }
+  .entry { background: var(--accent-2-soft); border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent); border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; font-size: 13.5px; color: var(--ink); max-width: 72ch; line-height: 1.5; }
+  .entry .el { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-2); font-weight: 600; display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .entry .el .stars { color: var(--accent-2); letter-spacing: 0; }
+  .entry b { font-weight: 650; }
+  .offer-btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; font-weight: 600; background: var(--accent); color: #fff; padding: 9px 14px; border-radius: 9px; margin-bottom: 16px; transition: filter .15s ease, transform .15s ease; }
+  .offer-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+  .offer-btn svg { flex-shrink: 0; }
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
   .fact { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
   .fact .fl { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
@@ -222,18 +215,18 @@
     <div>
       <span class="eyebrow">Persönliche Standortbestimmung · Unternehmensnachfolge</span>
       <h1>Dein Nachfolge&#8209;<em>Kompass</em></h1>
-      <p class="lead">26 Branchen, gewichtet nach dem, was <em>dir</em> wichtig ist &ndash; jetzt auch nach deiner <em>Persönlichkeit</em>. Grundlage: deine Branchen&#8209;Scorecard, dein Stimmungscheck (mit 5 neuen Ideen) und dein eigenes Profil.</p>
+      <p class="lead">26 Branchen, gewichtet nach deinen Prioritäten, deiner <em>Persönlichkeit</em> &ndash; und danach, wie <em>gefragt du als Quereinsteiger</em> dort bist. Grundlage: deine Scorecard, dein Stimmungscheck, dein Profil und Recherche zu Einstiegs&#8209;/Partnermodellen.</p>
       <div class="chips">
         <span class="chip"><b>IT &amp; Medieninformatik</b></span>
-        <span class="chip"><b>Vertrieb &amp; Sales</b></span>
-        <span class="chip"><b>Eigene Web&#8209;Agentur</b></span>
-        <span class="chip"><b>Innovation Manager</b></span>
-        <span class="chip"><b>Lehre · IU</b></span>
+        <span class="chip"><b>Wirtschaftsingenieur</b></span>
+        <span class="chip"><b>Online-Marketing</b></span>
+        <span class="chip"><b>KI-Kompetenz</b></span>
+        <span class="chip"><b>Vertrieb · Lehre</b></span>
       </div>
       <div class="hero-stats">
         <div class="hero-stat"><div class="n">26</div><div class="l">Branchen &ndash; inkl. 5 neuer Ideen aus deinem Stimmungscheck</div></div>
         <div class="hero-stat"><div class="n">2,4&#215;</div><div class="l">mehr Betriebe als Käufer &ndash; du bist gefragt</div></div>
-        <div class="hero-stat"><div class="n">9</div><div class="l">Kriterien inkl. Persönlichkeit, die du selbst gewichtest</div></div>
+        <div class="hero-stat"><div class="n">10</div><div class="l">Kriterien, die du selbst gewichtest &ndash; inkl. Quereinstieg</div></div>
       </div>
     </div>
     <div class="dial-wrap">
@@ -247,13 +240,13 @@
     <div class="wrap">
       <div class="sec-head">
         <span class="eyebrow">Wer du bist</span>
-        <h2>Dein Profil &ndash; die Basis für den Persönlichkeits&#8209;Regler</h2>
-        <p>Abgeleitet aus deinem Lebenslauf. Es entscheidet, wie der neue Regler &bdquo;Passt zu meiner Persönlichkeit&ldquo; jede Branche bewertet.</p>
+        <h2>Dein Profil &ndash; Basis für Persönlichkeit &amp; Quereinstieg</h2>
+        <p>Abgeleitet aus deinem Lebenslauf. Es steuert zwei Regler: wie eine Branche zu deinem Typ passt &ndash; und wie attraktiv du mit diesem Profil für die Verkäufer dieser Branche bist.</p>
       </div>
       <div class="panel">
         <div class="profile-grid" id="profileGrid"></div>
         <div class="profile-note">
-          <b>Was der Persönlichkeits&#8209;Regler misst:</b> Branchen, in denen <b>Aufbauen, Verkaufen, Digitalisieren und Gestalten</b> der Hebel sind, bekommen hohe Werte. Reines Handwerk am Objekt, stark regulierte oder emotional sehr fordernde Felder bekommen niedrigere &ndash; nicht weil sie schlecht sind, sondern weil sie weniger zu deinem Unternehmer&#8209;/Macher&#8209;Typ passen.
+          <b>Zwei profil-basierte Regler:</b> &bdquo;Passt zu meiner Persönlichkeit&ldquo; (violett) misst, ob dir das Geschäft liegt. &bdquo;Als Quereinsteiger/Partner gefragt&ldquo; (grün) misst das Gegenteil der Blickrichtung: Wie sehr wollen die Inhaber dort <b>genau dein Profil</b> &ndash; IT, Wirtschaftsingenieur, Medieninformatik, Online&#8209;Marketing, KI? In jeder Branche steht der konkrete Einstiegsweg dabei.
         </div>
       </div>
     </div>
@@ -264,7 +257,7 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 1 · Deine Prioritäten</span>
         <h2>Was ist dir wichtig?</h2>
-        <p>Verschiebe die Regler oder wähle eine fertige Sichtweise. Die Rangliste sortiert sich sofort neu. Der violette Regler ganz unten ist neu: <b>Persönlichkeit</b>.</p>
+        <p>Verschiebe die Regler oder wähle eine fertige Sichtweise. Die Rangliste sortiert sich sofort neu. Neu unten: <b style="color:var(--violet)">Persönlichkeit</b> und <b style="color:var(--accent-2)">Quereinstieg</b>.</p>
       </div>
       <div class="panel">
         <div class="panel-top"><span class="eyebrow" style="color:var(--ink-faint)">Fertige Sichtweisen</span></div>
@@ -272,9 +265,9 @@
         <div class="weights" id="weights"></div>
         <div class="filters" id="filters">
           <button class="filter" data-filter="neu" aria-pressed="false">Nur neue Ideen (outside the box)</button>
+          <button class="filter" data-filter="attract" aria-pressed="false">Wo ich stark gefragt bin</button>
           <button class="filter" data-filter="quer" aria-pressed="false">Nur ohne Meisterzwang</button>
           <button class="filter" data-filter="home" aria-pressed="false">Nur ortsunabhängig</button>
-          <button class="filter" data-filter="neben" aria-pressed="false">Nebenbei startbar</button>
           <button class="filter" data-filter="top" aria-pressed="false">Nur Top-Empfehlungen</button>
         </div>
       </div>
@@ -286,7 +279,7 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 2 · Deine Rangfolge</span>
         <h2>Branchen, sortiert nach deinem Profil</h2>
-        <p>Der <b>Match</b> ist dein persönlicher Passungswert. Das Etikett zeigt die Bewertung aus deiner Scorecard bzw. deinem Stimmungscheck. <span class="box-badge">Neue Idee</span> markiert die 5 Branchen, die bisher nicht im Kompass waren. Klick eine Zeile für Details.</p>
+        <p>Der <b>Match</b> ist dein Passungswert. Klick eine Zeile: du siehst die Begründung, <b>wie du als Quereinsteiger/Partner dort ankommst</b>, den konkreten Einstiegsweg, Zahlen und einen Direktlink zu <b>aktuellen Verkaufsangeboten</b>.</p>
       </div>
       <div class="rank-list" id="rankList"></div>
     </div>
@@ -297,16 +290,16 @@
       <div class="sec-head">
         <span class="eyebrow">Marktlage 2025/26 · Warum jetzt</span>
         <h2>Der Markt sucht dich &ndash; nicht umgekehrt</h2>
-        <p>Die Nachfolgelücke ist so groß wie nie. Für einen entscheidungsfähigen Quereinsteiger mit Vertriebs&#8209; und Führungskompetenz ist das der beste Zeitpunkt seit Jahren.</p>
+        <p>Die Nachfolgelücke ist so groß wie nie. Quereinsteiger mit kaufmännisch&#8209;digitalem Profil werden laut IHKs gezielt gesucht &ndash; besonders in IT, Online&#8209;Marketing, KI, Bildung und Sales.</p>
       </div>
       <div class="tiles">
         <div class="tile"><div class="big">9.600</div><div class="lab">abgabebereite Betriebe standen 2025 nur <b>~4.000 Interessenten</b> gegenüber (DIHK)</div></div>
         <div class="tile"><div class="big">~250.000</div><div class="lab">Unternehmen könnten bis 2035 <b>ohne Nachfolge schließen</b></div></div>
         <div class="tile"><div class="big">~8.000</div><div class="lab">aktuelle Inserate allein auf <b>nexxt&#8209;change</b>, filterbar nach Branche &amp; Region</div></div>
-        <div class="tile"><div class="big">23&#8202;%</div><div class="lab">der Nachfolger bringen die nötige Qualifikation mit &ndash; <b>Vorbereitung sticht</b></div></div>
+        <div class="tile"><div class="big">25–50&#8202;%</div><div class="lab"><b>Teilhabermodelle</b> sind im Mittelstand üblich &ndash; du musst nicht sofort 100 % kaufen</div></div>
       </div>
       <div class="callout">
-        <p><b>Das spielt dir in die Karten:</b> Die IHKs melden vermehrt Nachfolge&#8209;Interessenten aus der Industrie, die eine Alternative zum Angestelltenverhältnis suchen. Im Handwerk steigt die Zahl der Übergaben sogar &ndash; ein reifer Markt voller inhabergeführter Betriebe, deren Chefs 60+ sind und keinen Nachfolger haben.</p>
+        <p><b>Das spielt dir in die Karten:</b> Im Handwerk lässt sich die Meisterpflicht über einen angestellten Meister als Betriebsleiter oder §7b HwO lösen &ndash; und Betriebe suchen händeringend kaufmännisch&#8209;digitale Nachfolger. Selbst Physiotherapie&#8209;Praxen kannst du als Nicht&#8209;Therapeut übernehmen, wenn die fachliche Leitung ein zugelassener Therapeut trägt.</p>
       </div>
     </div>
   </section>
@@ -316,7 +309,7 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 3 · Wo du Angebote findest</span>
         <h2>Verkaufsangebote &amp; Nachfolgebörsen</h2>
-        <p>Die wichtigsten Plattformen für konkrete Verkaufsangebote &ndash; plus die Berliner Auftrags&#8209; und Ausschreibungsquellen aus deinem Reinigungs&#8209;Plan.</p>
+        <p>Jede Branche oben hat einen Direktlink zu aktuellen Angeboten. Hier die Plattformen als Ganzes &ndash; plus die Berliner Ausschreibungsquellen aus deinem Reinigungs&#8209;Plan.</p>
       </div>
       <div class="res-grid" id="resGrid"></div>
     </div>
@@ -327,13 +320,13 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 4 · So kommst du zur Entscheidung</span>
         <h2>Von 26 Branchen auf eine &ndash; in vier Zügen</h2>
-        <p>Entscheidungslähmung kommt fast immer von zu vielen offenen Optionen. Der Ausweg ist nicht &bdquo;die perfekte Branche finden&ldquo;, sondern <b>schnell auf 2&ndash;3 verengen und testen</b>.</p>
+        <p>Entscheidungslähmung kommt von zu vielen offenen Optionen. Der Ausweg: <b>schnell auf 2&ndash;3 verengen und testen</b>.</p>
       </div>
       <div class="steps">
-        <div class="step"><span class="sn"></span><div><h3>Shortlist auf 3 verengen</h3><p>Stell die Regler auf <b>&bdquo;Deine Stärken zuerst&ldquo;</b> und dann einmal auf <b>&bdquo;Bauchgefühl &amp; Persönlichkeit&ldquo;</b>. Welche Branchen tauchen in <b>beiden</b> Top&#8209;5 auf? Das ist deine Shortlist. Der Rest ist ab jetzt bewusst raus.</p></div></div>
-        <div class="step"><span class="sn"></span><div><h3>Je Branche 5 echte Angebote ansehen</h3><p>Öffne nexxt&#8209;change &amp; DUB, filtere nach deinen 3 Branchen und der Region. <b>Zahlen statt Vorstellung:</b> Kaufpreis, Umsatz, Mitarbeiter, Inhaberabhängigkeit. Oft klärt sich die Vorliebe erst an echten Objekten.</p></div></div>
-        <div class="step"><span class="sn"></span><div><h3>Ein Gespräch pro Branche führen</h3><p>Wie mit der Hausverwaltung: <b>ein ehrliches Gespräch pro Feld</b> mit einem Inhaber, Makler oder Berater sagt mehr als zehn Recherche&#8209;Stunden. Frag konkret nach dem, was dich abschreckt.</p></div></div>
-        <div class="step"><span class="sn"></span><div><h3>3&#8209;Monats&#8209;Testfenster setzen</h3><p>Leg ein Enddatum fest, bis zu dem du dich für <b>eine</b> Branche entscheidest. Ein Kompass zeigt die Richtung &ndash; laufen musst du selbst. Perfekte Sicherheit gibt es vorher nie.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>Shortlist über drei Brillen</h3><p>Schalte nacheinander <b>&bdquo;Deine Stärken zuerst&ldquo;</b>, <b>&bdquo;Bauchgefühl &amp; Persönlichkeit&ldquo;</b> und <b>&bdquo;Wo ich gefragt bin&ldquo;</b>. Welche Branchen tauchen in allen drei Top&#8209;5 auf? Das ist deine Shortlist.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>Je Branche 5 echte Angebote ansehen</h3><p>Nutz den <b>&bdquo;Aktuelle Verkaufsangebote&ldquo;</b>-Button in jeder Zeile. <b>Zahlen statt Vorstellung:</b> Kaufpreis, Umsatz, Mitarbeiter, Inhaberabhängigkeit. Oft klärt sich die Vorliebe erst an echten Objekten.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>Ein Gespräch pro Branche führen</h3><p>Wie mit der Hausverwaltung: <b>ein ehrliches Gespräch pro Feld</b> mit einem Inhaber, Makler oder Berater sagt mehr als zehn Recherche&#8209;Stunden. Sprich das Teilhabermodell aktiv an.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>3&#8209;Monats&#8209;Testfenster setzen</h3><p>Leg ein Enddatum fest, bis zu dem du dich für <b>eine</b> Branche entscheidest. Ein Kompass zeigt die Richtung &ndash; laufen musst du selbst.</p></div></div>
       </div>
     </div>
   </section>
@@ -341,7 +334,7 @@
 
 <footer>
   <div class="wrap">
-    <p><b>Datengrundlage:</b> deine Branchen&#8209;Scorecard &bdquo;Nachfolge&ldquo; (21 Branchen × 23 Kriterien), dein &bdquo;Stimmungscheck Branchen&ldquo; (20 Branchen inkl. der neuen Ideen: Rohrreinigung, Schädlingsbekämpfung, Med. Abrechnungsservice, Prüfgesellschaften, Weiterbildung), dein Reinigungs&#8209;Masterplan und dein Lebenslauf (profil.pdf) aus Google&nbsp;Drive; Marktzahlen aus dem DIHK&#8209;Report Unternehmensnachfolge 2025 und nexxt&#8209;change. Die 9&#8209;Kriterien&#8209;Bewertung je Branche ist aus diesen Quellen abgeleitet und auf 0&ndash;5 normiert &ndash; ein Orientierungsmodell, kein Gutachten.</p>
+    <p><b>Datengrundlage:</b> deine Branchen&#8209;Scorecard &bdquo;Nachfolge&ldquo;, dein &bdquo;Stimmungscheck Branchen&ldquo; (inkl. der neuen Ideen), dein Reinigungs&#8209;Masterplan und dein Lebenslauf (profil.pdf) aus Google&nbsp;Drive; Marktzahlen aus dem DIHK&#8209;Report Unternehmensnachfolge 2025 und nexxt&#8209;change; Einstiegs&#8209;/Partnermodelle aus Web&#8209;Recherche (u.&nbsp;a. §7b HwO / Teilhabermodell Handwerk, §34c/§34d GewO, Physiotherapie&#8209;Praxis ohne Therapeuten&#8209;Zulassung). Die 10&#8209;Kriterien&#8209;Bewertung je Branche ist daraus abgeleitet und auf 0&ndash;5 normiert &ndash; ein Orientierungsmodell, kein Gutachten. Die Angebots&#8209;Links öffnen eine Live&#8209;Suche über die gängigen Börsen; Verfügbarkeit &amp; Preise ändern sich laufend.</p>
     <p>Privat für dich erstellt. Passe die Gewichtung jederzeit an &ndash; die Rangfolge ist bewusst kein festes Urteil, sondern dein Denkwerkzeug.</p>
   </div>
 </footer>
@@ -351,8 +344,7 @@
   "use strict";
 
   var root = document.documentElement;
-  var tt = document.getElementById("themeToggle");
-  tt.addEventListener("click", function () {
+  document.getElementById("themeToggle").addEventListener("click", function () {
     var cur = root.getAttribute("data-theme");
     if (!cur) cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
@@ -363,7 +355,7 @@
   var TRAITS = [
     { t: "Unternehmer-DNA", d: "Eigene Web-Agentur (L1Website), Business Development, Future Innovation Manager." },
     { t: "Vertrieb & Menschen", d: "Telefon-Sales, Promotion, Sales/BD bei EMEC – Verkaufen ist dein roter Faden." },
-    { t: "Digital-nativ", d: "M.Sc. Medieninformatik, WordPress/Typo3, SEO/Adwords, etwas Java/Python." },
+    { t: "Digital & KI", d: "M.Sc. Medieninformatik, Online-Marketing (SEO/Adwords), starke KI-Kompetenz." },
     { t: "Ingenieur & Stratege", d: "B.Eng. Wirtschaftsingenieur, Fraunhofer Think-Tank / Strategie, CAD." },
     { t: "Ausdauer & Disziplin", d: "Marathonläufer – Durchhaltevermögen und langer Atem für den Aufbau." },
     { t: "International & neugierig", d: "Auslandsstudium Dublin, Workcamps Island/Malta/Australien, Reisen, Fotografie." },
@@ -388,132 +380,160 @@
     { k: "krise",    label: "Krisensicher" },
     { k: "zukunft",  label: "Zukunft & KI-Chance" },
     { k: "skalier",  label: "Läuft irgendwann ohne mich" },
-    { k: "person",   label: "Passt zu meiner Persönlichkeit" }
+    { k: "person",   label: "Passt zu meiner Persönlichkeit" },
+    { k: "attract",  label: "Als Quereinsteiger/Partner gefragt" }
   ];
   var WLABEL = ["egal", "wichtig", "sehr", "kritisch"];
 
-  /* ---------- DATA (0–5 je Kriterium, abgeleitet aus Scorecard + Stimmungscheck + Profil) ---------- */
+  /* ---------- DATA (0–5 je Kriterium; aus Scorecard + Stimmungscheck + Profil + Recherche) ---------- */
   var DATA = [
-    { name: "Hausverwaltung", verdict: "sehr gut", vclass: "sehr-gut",
-      s: { fit:4, kapital:5, quer:4, home:5, neben:4, krise:4, zukunft:5, skalier:4, person:4 },
+    { name: "Hausverwaltung", verdict: "sehr gut", vclass: "sehr-gut", offer: "Hausverwaltung",
+      s: { fit:4, kapital:5, quer:4, home:5, neben:4, krise:4, zukunft:5, skalier:4, person:4, attract:5 },
       facts: { "Betriebe DE":"~30.000", "Berlin":"~2.000", "Markt":"15,4 Mrd. €", "Marge":"5–10 % (b. 25 %)", "Bewertung":"150–460 Tsd. €", "Trend":"wachsend" },
-      why: "Deine <b>Nr.&nbsp;1 laut Scorecard</b> und nach dem Gespräch mit der Hausverwaltung umso relevanter. Niedriger Kapitalbedarf, kein Meisterzwang, remote steuerbar, stark digitalisierbar. Deine IT-, Vertriebs- und Organisationsstärke ist ein echter Hebel gegen den oft verstaubten Wettbewerb. <b>Im Auge behalten:</b> KI-Plattformen (Matera &amp; Co.) verändern die Buchhaltung – als digital-affiner Verwalter ist das eher deine Chance." },
-    { name: "Med. Abrechnungsservice", verdict: "sehr gut", vclass: "sehr-gut", box: true,
-      s: { fit:4, kapital:4, quer:4, home:5, neben:3, krise:5, zukunft:4, skalier:4, person:5 },
+      why: "Deine <b>Nr.&nbsp;1 laut Scorecard</b> und nach dem Gespräch mit der Hausverwaltung umso relevanter. Niedriger Kapitalbedarf, kein Meisterzwang, remote steuerbar, stark digitalisierbar. KI-Plattformen (Matera &amp; Co.) verändern die Buchhaltung – als digital-affiner Verwalter ist das deine Chance, nicht dein Risiko.",
+      entry: "Kein Abschluss nötig – nur §34c GewO + Weiterbildungspflicht (20 Std./3 J.). <b>Ausdrücklich quereinsteiger-offen</b>; Inhaber suchen genau deine kaufmännisch-digitale Kompetenz. KI/Automatisierung ist dein Differenzierer. Übernahme als Share- oder Asset-Deal." },
+    { name: "Med. Abrechnungsservice", verdict: "sehr gut", vclass: "sehr-gut", box: true, offer: "ärztliche Abrechnung Abrechnungsdienstleister",
+      s: { fit:4, kapital:4, quer:4, home:5, neben:3, krise:5, zukunft:4, skalier:4, person:5, attract:5 },
       facts: { "Betriebe DE":"~2.800", "Berlin":"~95", "Modell":"B2B / digital", "EBITDA":"5–10× (SaaS-nah)", "Ampel":"GRÜN ★★★★★", "Trend":"Wachstum" },
-      why: "Für dein Profil vielleicht der spannendste Fund: ein <b>digitales, ortsunabhängiges B2B-Dienstleistungsmodell</b> mit wiederkehrenden Umsätzen. Ärzte lagern die immer komplexere Abrechnung aus – struktureller Rückenwind durch Bürokratie im Gesundheitswesen. Kein Handwerk, keine Praxis: dein IT-/Digital-/Vertriebskern trägt hier direkt. Achte beim Kauf auf software- statt handgestützte Prozesse (das entscheidet über die Skalierbarkeit)." },
-    { name: "Rohrreinigung", verdict: "sehr gut", vclass: "sehr-gut", box: true,
-      s: { fit:3, kapital:2, quer:4, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
-      facts: { "Betriebe DE":"~3.500", "Berlin":"~120", "Markt":"CAGR +5,3 %", "EBITDA":"15–46 %", "Ampel":"GRÜN ★★★★★", "Trend":"krisenfest" },
-      why: "Der <b>Platz&nbsp;1 aus deinem Stimmungscheck</b>. Konjunkturunabhängige Grundversorgung – Rohre verstopfen in jeder Krise. EBITDA bis 46 % möglich (Schnitt 15–25 %), und du brauchst <b>keine eigenen technischen Kenntnisse, wenn ein Team da ist</b>. Berlins altes Leitungsnetz = Dauerbedarf, öffentliche Aufträge verfügbar. Große Player (Norva24) konsolidieren – wer sauber aufstellt, wird selbst zum Zukaufziel. Dein Part: aufbauen und verkaufen, nicht Monteur sein." },
-    { name: "IT-Systemhaus / MSP", verdict: "gut", vclass: "gut",
-      s: { fit:5, kapital:4, quer:4, home:4, neben:3, krise:4, zukunft:5, skalier:3, person:4 },
+      why: "Für dein Profil vielleicht der spannendste Fund: ein <b>digitales, ortsunabhängiges B2B-Modell</b> mit wiederkehrenden Umsätzen. Ärzte lagern die immer komplexere Abrechnung aus – struktureller Rückenwind durch Bürokratie im Gesundheitswesen. Achte auf software- statt handgestützte Prozesse (Skalierbarkeit).",
+      entry: "Keine Zulassung/kein Meister. <b>Dein IT-/Digital-/KI-Profil IST das Kernkapital</b> – ideal, um manuelle Prozesse zu digitalisieren und mit KI zu skalieren. Genau hier liegt dein größter Hebel und höchster Wertbeitrag für einen Verkäufer." },
+    { name: "IT-Systemhaus / MSP", verdict: "gut", vclass: "gut", offer: "IT Systemhaus MSP Managed Services",
+      s: { fit:5, kapital:4, quer:4, home:4, neben:3, krise:4, zukunft:5, skalier:3, person:4, attract:5 },
       facts: { "Betriebe DE":"~43.800", "Berlin":"~8.000", "Markt":"51 Mrd. € (IT-Serv.)", "EBITDA":"5–8×", "Marge":"5–12 %", "Trend":"Erholung" },
-      why: "Deine <b>Heimat-Branche</b> – höchster fachlicher Fit. Wiederkehrende Wartungs-/MSP-Umsätze, remote steuerbar, Cyber-Security boomt. KI ist Chance <b>und</b> Risiko: nur kaufen, wenn das Geschäftsmodell KI-resistent oder KI-kompatibel ist (MSP/Managed Services statt reiner Standard-Entwicklung). Herausforderung: Schlüsselpersonen – Entwickler dürfen nach der Übernahme nicht abspringen." },
-    { name: "Schädlingsbekämpfung", verdict: "sehr gut", vclass: "sehr-gut", box: true,
-      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
+      why: "Deine <b>Heimat-Branche</b> – höchster fachlicher Fit. Wiederkehrende Wartungs-/MSP-Umsätze, remote, Cyber-Security boomt. KI ist Chance <b>und</b> Risiko: nur kaufen, wenn das Modell KI-resistent/-kompatibel ist (MSP statt reiner Standard-Entwicklung).",
+      entry: "Kein Meister/keine Zulassung. Verkäufer achten aufs Halten der Entwickler – dein Vorteil: du sprichst Technik <b>und</b> Vertrieb. Deine KI-Kompetenz ist hier bares Geld (Automatisierung, neue Services); sehr attraktives Käuferprofil." },
+    { name: "Rohrreinigung", verdict: "sehr gut", vclass: "sehr-gut", box: true, offer: "Rohrreinigung Kanalreinigung",
+      s: { fit:3, kapital:2, quer:4, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4, attract:4 },
+      facts: { "Betriebe DE":"~3.500", "Berlin":"~120", "Markt":"CAGR +5,3 %", "EBITDA":"15–46 %", "Ampel":"GRÜN ★★★★★", "Trend":"krisenfest" },
+      why: "Der <b>Platz&nbsp;1 aus deinem Stimmungscheck</b>. Konjunkturunabhängige Grundversorgung – Rohre verstopfen in jeder Krise. EBITDA bis 46 % möglich, du brauchst <b>keine eigenen Technik-Kenntnisse, wenn ein Team da ist</b>. Große Player (Norva24) konsolidieren – wer sauber aufstellt, wird selbst zum Zukaufziel.",
+      entry: "Team-geführt, keine eigene Technik-Kenntnis nötig. Inhaber (oft 60+) suchen jemanden, der <b>Vertrieb, Marketing und Führung</b> übernimmt – dein Profil hebt einen verstaubten Betrieb sofort ab (KI für Disposition/Angebote)." },
+    { name: "Schädlingsbekämpfung", verdict: "sehr gut", vclass: "sehr-gut", box: true, offer: "Schädlingsbekämpfung",
+      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4, attract:4 },
       facts: { "Betriebe DE":"~1.200", "Berlin":"~80", "Weltmarkt":"24,2 Mrd. $", "EBITDA":"4–8×", "Ampel":"GRÜN ★★★★★", "Trend":"defensiv +" },
-      why: "Defensive Nische mit <b>Burggraben</b>. Konjunkturunabhängig, Klimawandel treibt die Nachfrage (Bettwanzen, Ratten), Stammkundenverträge mit Hausverwaltungen, Hotels und Lebensmittelbetrieben = planbare Umsätze. Zertifizierungen (biozidrechtliche Sachkunde) sind Markteintrittshürde – und damit dein Schutz. Konzerne (Rentokil, Anticimex) kaufen regionale Spezialisten. B2B-Vertrieb und Nischenaufbau sind dein Terrain. <b>Achtung:</b> Lizenzen sind nicht automatisch übertragbar." },
-    { name: "Prüfgesellschaften", verdict: "gut", vclass: "gut", box: true,
-      s: { fit:3, kapital:3, quer:2, home:3, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
+      why: "Defensive Nische mit <b>Burggraben</b>. Konjunkturunabhängig, Klimawandel treibt die Nachfrage, Stammkundenverträge mit Hausverwaltungen, Hotels und Lebensmittelbetrieben = planbare Umsätze. Konzerne (Rentokil, Anticimex) kaufen regionale Spezialisten.",
+      entry: "Biozid-Sachkunde nötig (nachholbar oder anstellbar), kein Meister. Inhaber suchen Nachfolger mit <b>Vertriebs- und Digitalisierungs-Drive</b>. <b>Achtung:</b> Lizenzen/Zertifikate sind nicht automatisch übertragbar – vor Kauf prüfen." },
+    { name: "Prüfgesellschaften", verdict: "gut", vclass: "gut", box: true, offer: "Prüfung Sachverständigenbüro Inspektion",
+      s: { fit:3, kapital:3, quer:2, home:3, neben:2, krise:5, zukunft:4, skalier:4, person:4, attract:3 },
       facts: { "Betriebe DE":"~4.500", "Berlin":"~180", "Weltmarkt":"36 Mrd. $ (2025)", "EBITDA":"6–10×", "Ampel":"GRÜN ★★★★", "Trend":"reguliert +" },
-      why: "Wiederkehrende Umsätze durch <b>gesetzlich vorgeschriebene Prüfungen</b> (DGUV, UVV, CE, Energieausweis, ESG). Regulatorischer Rückenwind, Markt kaum konsolidiert (Top 4 nur ~30 %). Dein Wirtschaftsingenieur-Hintergrund passt zum technisch-systematischen Charakter, Remote-Prüfungen nehmen zu. <b>Kritisch:</b> Akkreditierungen (DAkkS, ISO 17020) sind personen-/unternehmensgebunden – Due Diligence ist hier alles, sonst Wertverlust bei Übernahme." },
-    { name: "Versicherungsmakler", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:5, quer:3, home:5, neben:4, krise:4, zukunft:4, skalier:4, person:3 },
+      why: "Wiederkehrende Umsätze durch <b>gesetzlich vorgeschriebene Prüfungen</b> (DGUV, UVV, CE, Energieausweis, ESG). Regulatorischer Rückenwind, Markt kaum konsolidiert (Top 4 nur ~30 %). Remote-Prüfungen nehmen zu.",
+      entry: "<b>Kritisch:</b> Akkreditierungen (DAkkS, ISO 17020) sind personen-/betriebsgebunden – ein akkreditierter Partner/Angestellter ist Pflicht, Due Diligence essenziell. Dein Wirtschaftsingenieur-Hintergrund + Digitalisierung sind gefragt, der Einstieg aber gated." },
+    { name: "Versicherungsmakler", verdict: "gut", vclass: "gut", offer: "Versicherungsmakler Bestand",
+      s: { fit:3, kapital:5, quer:3, home:5, neben:4, krise:4, zukunft:4, skalier:4, person:3, attract:4 },
       facts: { "Betriebe DE":"~46.500", "Markt":"Courtage-basiert", "Marge":"gut (Courtage)", "Trend":"Überalterung / Bestandskäufe" },
-      why: "Ein <b>Bestand</b> zahlt laufende Courtage – planbar, ortsunabhängig, nebenberuflich aufbaubar und gut skalierbar. Zulassung §34d nötig, aber kein Studium. Wenn dich Provisionsvertrieb nicht abschreckt, ist das eines der ruhigsten, inhaberunabhängigsten Modelle." },
-    { name: "Elektrohandwerk", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:2, quer:1, home:1, neben:3, krise:3, zukunft:4, skalier:3, person:2 },
+      why: "Ein <b>Bestand</b> zahlt laufende Courtage – planbar, ortsunabhängig, nebenberuflich aufbaubar, gut skalierbar. Wenn dich Provisionsvertrieb nicht abschreckt, eines der ruhigsten, inhaberunabhängigsten Modelle.",
+      entry: "§34d-Zulassung nötig, aber klassischer Quereinsteiger-Weg (kein Studium). Bestandsübernahme; dein <b>Online-Marketing/Digitalvertrieb</b> hebt dich von der überalterten Konkurrenz ab – gutes Käuferprofil." },
+    { name: "Elektrohandwerk", verdict: "gut", vclass: "gut", offer: "Elektrobetrieb Elektroinstallation",
+      s: { fit:4, kapital:2, quer:1, home:1, neben:3, krise:3, zukunft:4, skalier:3, person:2, attract:4 },
       facts: { "Betriebe DE":"~48.180", "Markt":"84,3 Mrd. €", "Marge":"3–7 %", "Trend":"Elektrifizierung +" },
-      why: "Struktureller Rückenwind durch Elektrifizierung, PV und Wärmewende; sehr hoher Fachkräftemangel = volle Auftragsbücher. <b>Aber:</b> Meisterpflicht und Vor-Ort-Geschäft. Realistisch nur mit Meister im Team – dann übernimmst du die Unternehmer-, nicht die Monteursrolle." },
-    { name: "Physiotherapie", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:4, quer:2, home:3, neben:3, krise:4, zukunft:3, skalier:3, person:3 },
+      why: "Struktureller Rückenwind durch Elektrifizierung, PV und Wärmewende; hoher Fachkräftemangel = volle Auftragsbücher. Vor-Ort-Geschäft – du übernimmst die Unternehmer-, nicht die Monteursrolle.",
+      entry: "Meisterpflicht – lösbar über <b>Meister als Betriebsleiter oder §7b HwO</b>. Teilhabermodell (25–50 %) verbreitet. Betriebe suchen dringend Nachfolger; dein kaufmännisch-digitaler Input ist Gold wert." },
+    { name: "Physiotherapie", verdict: "gut", vclass: "gut", offer: "Physiotherapie Praxis",
+      s: { fit:4, kapital:4, quer:2, home:3, neben:3, krise:4, zukunft:3, skalier:3, person:3, attract:4 },
       facts: { "Betriebe DE":"~50.900", "Markt":"14 Mrd. €", "Marge":"~17 % (fallend)", "Trend":"wachsend" },
-      why: "Demografie-getrieben und krisensicher, überschaubarer Kapitalbedarf. Zulassung und extreme Personalabhängigkeit sind die Hürde. Als Betreiber führst du Praxis, Team und Abrechnung – deine Führungs- und Vertriebsstärke zählt mehr als die Behandlung selbst." },
-    { name: "Dachdeckerei", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:2, quer:1, home:2, neben:2, krise:3, zukunft:3, skalier:3, person:2 },
-      facts: { "Betriebe DE":"~15.300", "Markt":"13,2 Mrd. €", "Marge":"3–6 %", "Trend":"+2,4 % (PV/Sanierung)" },
-      why: "Photovoltaik und Sanierung treiben die Nachfrage, extremer Fachkräftemangel. Meisterpflicht und körperliches Vor-Ort-Geschäft – für dich nur als Inhaber mit Meister-Team sinnvoll." },
-    { name: "Garten- & Landschaftsbau", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:3, quer:4, home:2, neben:2, krise:4, zukunft:3, skalier:3, person:3 },
-      facts: { "Betriebe DE":"~19.600", "Markt":"10,65 Mrd. €", "Marge":"mittel", "Trend":"+3 % (15 J. Wachstum)" },
-      why: "15 Jahre ununterbrochenes Wachstum, kein zwingender Meister für den Einstieg, solide Margen. Geräteinvest und Saisonalität sind zu managen. Robustes, bodenständiges Geschäft mit klarer Nachfrage." },
-    { name: "Augenoptik", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:4, zukunft:3, skalier:3, person:3 },
-      facts: { "Betriebe DE":"~10.820", "Markt":"6,98 Mrd. €", "Marge":"gut", "Trend":"+3,2 % (Demografie)" },
-      why: "Demografie sichert die Nachfrage, gute Margen, hohe Krisensicherheit. Meisterpflicht und Ladenlokal binden Kapital und Ort. Einzelhandels-/Beratungsgeschäft – dein Vertrieb passt, die Fachkunde muss im Team sein." },
-    { name: "Weiterbildung (AZAV)", verdict: "mittel", vclass: "mittel", box: true,
-      s: { fit:4, kapital:4, quer:3, home:4, neben:3, krise:3, zukunft:3, skalier:3, person:5 },
+      why: "Demografie-getrieben und krisensicher, überschaubarer Kapitalbedarf. Als Betreiber führst du Praxis, Team und Abrechnung – deine Führungs- und Vertriebsstärke zählt mehr als die Behandlung selbst.",
+      entry: "Dein Beispiel: <b>Als Nicht-Therapeut kannst du eine Praxis besitzen</b>, wenn die fachliche Leitung ein zugelassener Therapeut übernimmt. Partner-/Stufenmodelle (auch 50 %) sind üblich – du bringst Betrieb, Marketing, Skalierung; der Therapeut die Zulassung." },
+    { name: "Weiterbildung (AZAV)", verdict: "mittel", vclass: "mittel", box: true, offer: "Bildungsträger Weiterbildung AZAV",
+      s: { fit:4, kapital:4, quer:3, home:4, neben:3, krise:3, zukunft:3, skalier:3, person:5, attract:5 },
       facts: { "Betriebe DE":"~8.500", "Berlin":"~400", "Bewertung":"1–3× EBIT", "Ampel":"GELB ★★", "Wachstum":"KI-Schulungen", "Trend":"gespalten" },
-      why: "Die Branche, die am direktesten an dein <b>Lehr-Ich</b> andockt (IU-Lehrkraft, Schulungen). Wachstumssegment: KI-Schulungen. Zweigeteilt: gefördertes Umschulungsgeschäft (AZAV, stabil aber bürokratisch) und Corporate Training (wächst bei KI-Themen, schrumpft bei Office-Klassikern). <b>Aber:</b> die AZAV-Zertifizierung geht bei Kauf nicht automatisch über und die BA-Förderung ist politisch. Nur mit AZAV + guten Jobcenter-Rahmenverträgen kaufen." },
-    { name: "Gebäudereinigung", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:5, quer:5, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:4 },
+      why: "Die Branche, die am direktesten an dein <b>Lehr-Ich</b> andockt (IU-Lehrkraft, Schulungen). Wachstumssegment: KI-Schulungen. Zweigeteilt: gefördertes Umschulungsgeschäft (AZAV, stabil, bürokratisch) und Corporate Training (wächst bei KI-Themen).",
+      entry: "Du bist bereits Trainer <b>und</b> KI-kompetent – maximaler Fit im wachsenden KI-Schulungsfeld. Kein Meister; aber die AZAV-Zertifizierung geht bei Kauf <b>nicht automatisch über</b> (neu beantragen). Nur mit AZAV + guten Jobcenter-Rahmenverträgen kaufen." },
+    { name: "Gebäudereinigung", verdict: "mittel", vclass: "mittel", offer: "Gebäudereinigung",
+      s: { fit:3, kapital:5, quer:5, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:4, attract:4 },
       facts: { "Betriebe DE":"~34.800", "Markt":"27+ Mrd. €", "Marge":"2–4 % (dünn)", "Trend":"wachsend" },
-      why: "Dein <b>am tiefsten ausgearbeitetes Szenario</b> (BauClean-Masterplan). Niedrigster Kapitalbedarf, kein Meister, sofort startbar. Margen sind dünn und alles steht und fällt mit Personalführung – genau deine Stärke. Scorecard sagt „mittel“, aber dein Vertriebs-/Führungs-Vorteil und die Marketing-Positionierung heben es faktisch nach oben." },
-    { name: "Immobilienmakler", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:5, quer:3, home:3, neben:3, krise:2, zukunft:3, skalier:3, person:4 },
+      why: "Dein <b>am tiefsten ausgearbeitetes Szenario</b> (BauClean-Masterplan). Niedrigster Kapitalbedarf, kein Meister, sofort startbar. Margen sind dünn und alles steht und fällt mit Personalführung – genau deine Stärke.",
+      entry: "Kein Meister, sofort startbar. Klassisches Feld, in dem <b>Marketing, Führung und Systematik</b> (dein Masterplan) den Unterschied machen – Inhaber suchen genau diesen Typ. Sehr niedrige Einstiegshürde." },
+    { name: "Immobilienmakler", verdict: "mittel", vclass: "mittel", offer: "Immobilienmakler",
+      s: { fit:4, kapital:5, quer:3, home:3, neben:3, krise:2, zukunft:3, skalier:3, person:4, attract:4 },
       facts: { "Betriebe DE":"~36.000", "Markt":"Courtage", "Marge":"mittel–hoch", "Trend":"+ (Courtage '24)" },
-      why: "Sehr niedriger Kapitalbedarf, §34c statt Studium, hoher Fit über deinen Verkaufskern. Aber zins-/konjunkturabhängig und stark personengebunden. Als Ergänzung zu einem anderen Standbein (z.&nbsp;B. Hausverwaltung) besonders interessant." },
-    { name: "Werbe- / Marketingagentur", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:5, quer:5, home:4, neben:3, krise:2, zukunft:2, skalier:2, person:5 },
+      why: "Sehr niedriger Kapitalbedarf, §34c statt Studium, hoher Fit über deinen Verkaufskern. Aber zins-/konjunkturabhängig und stark personengebunden. Als Ergänzung zu einem anderen Standbein besonders interessant.",
+      entry: "§34c-Zulassung, klassischer Quereinsteiger-Weg. Dein <b>Verkaufs- + Online-Marketing-Profil</b> ist im Maklergeschäft direkt monetarisierbar – gefragtes Käuferprofil." },
+    { name: "Werbe- / Marketingagentur", verdict: "mittel", vclass: "mittel", offer: "Werbeagentur Marketingagentur",
+      s: { fit:4, kapital:5, quer:5, home:4, neben:3, krise:2, zukunft:2, skalier:2, person:5, attract:4 },
       facts: { "Betriebe DE":"~23.600", "Markt":"~50 Mrd. € Werbemarkt", "Marge":"mittel", "Trend":"schwankend (−2,7 % '25)" },
-      why: "Kaum Kapital, kein Meister, ortsunabhängig – und du hast <b>selbst schon eine Web-Agentur geführt</b> (L1Website, SEO/Adwords). Höchster Persönlichkeits-Fit. <b>Großes Aber:</b> KI bedroht klassische Content-/Kreativleistung stark, das Geschäft ist zyklisch und kopfabhängig. Nur mit klarer KI-nativer Positionierung tragfähig." },
-    { name: "Sicherheitsdienst", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:5, quer:3, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:3 },
+      why: "Kaum Kapital, kein Meister, ortsunabhängig – und du hast <b>selbst schon eine Web-Agentur geführt</b> (L1Website, SEO/Adwords). Höchster Persönlichkeits-Fit. <b>Großes Aber:</b> KI bedroht klassische Kreativleistung stark, zyklisch, kopfabhängig.",
+      entry: "Dein natives Feld – als Käufer top. Kein Partner &bdquo;aus anderem Feld&ldquo; gesucht, sondern dein Können ist der Kern. Tragfähig nur mit <b>KI-nativer Neupositionierung</b>, die du selbst liefern kannst." },
+    { name: "Sicherheitsdienst", verdict: "gut", vclass: "gut", offer: "Sicherheitsdienst Bewachung",
+      s: { fit:3, kapital:5, quer:3, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:3, attract:4 },
       facts: { "Betriebe DE":"~5.800", "Berlin":"~380", "Markt":"~13–14 Mrd. €", "Ampel":"GRÜN ★★★★", "Trend":"+7,5 %" },
-      why: "Aus deinem Stimmungscheck als Top-5 gelistet: strukturelles Wachstum, Berlin ideal (Botschaften, Messen, Wohnungswirtschaft). Niedriger Kapitalbedarf, §34a statt Meister, gut über Leitstelle/Disposition steuerbar und skalierbar. Dünne Margen und Personalfluktuation sind der Preis – ein Führungs- und Organisationsgeschäft." },
-    { name: "Ambulante Pflege", verdict: "mittel", vclass: "mittel",
-      s: { fit:2, kapital:4, quer:2, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2 },
+      why: "Aus deinem Stimmungscheck als Top-5 gelistet: strukturelles Wachstum, Berlin ideal (Botschaften, Messen, Wohnungswirtschaft). Gut über Leitstelle/Disposition steuerbar und skalierbar. Dünne Margen und Personalfluktuation sind der Preis.",
+      entry: "§34a statt Meister. Owner-geführte Betriebe suchen jemanden für <b>Vertrieb und Digitalisierung</b> (Leitstelle, Einsatzplanung) – dein Profil passt als Unternehmer, nicht als Wachmann." },
+    { name: "Ambulante Pflege", verdict: "mittel", vclass: "mittel", offer: "ambulanter Pflegedienst",
+      s: { fit:2, kapital:4, quer:2, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2, attract:3 },
       facts: { "Betriebe DE":"~15.500", "Markt":"~35 Mrd. €", "Marge":"dünn", "Trend":"+2,2 %/J. (Demografie)" },
-      why: "Krisensicherster Megatrend überhaupt, hoher Bedarf. Aber: PDL/Zulassung nötig, extremer Pflegekräftemangel, dünne regulierte Margen und dein fachlicher Fit ist eher niedrig. Ein Führungs-, aber auch ein Regulierungsgeschäft." },
-    { name: "Kfz-Werkstatt", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
+      why: "Krisensicherster Megatrend, hoher Bedarf. Aber: PDL/Zulassung nötig, extremer Pflegekräftemangel, dünne regulierte Margen und dein fachlicher Fit ist eher niedrig.",
+      entry: "PDL (Pflegedienstleitung) ist Pflicht – als <b>kaufmännischer Partner mit angestellter PDL</b> machbar. Megatrend, aber stark reguliert; dein Beitrag: Organisation und Digitalisierung, nicht die Pflege selbst." },
+    { name: "Kfz-Werkstatt", verdict: "mittel", vclass: "mittel", offer: "Kfz-Werkstatt freie Werkstatt",
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2, attract:3 },
       facts: { "Betriebe DE":"~37.800", "Markt":"33,8 Mrd. €", "Marge":"mittel", "Trend":"leicht + (E-Auto-Risiko)" },
-      why: "Große, etablierte Branche, aber Meisterpflicht, hoher Werkstatt-Kapitalbedarf und E-Mobilität als strukturelles Risiko. Für dich nur als reiner Inhaber-Case mit Meister-Team denkbar." },
-    { name: "Sanitätshaus / OT", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2 },
+      why: "Große, etablierte Branche, aber Meisterpflicht, hoher Werkstatt-Kapitalbedarf und E-Mobilität als strukturelles Risiko. Für dich nur als reiner Inhaber-Case mit Meister-Team.",
+      entry: "Meisterpflicht (Meister im Team / §7b HwO), Teilhabermodell möglich. Sehr technisch; dein Marketing-/CRM-/Prozess-Input ist Zusatzwert, das E-Mobilität-Risiko bleibt aber." },
+    { name: "Sanitätshaus / OT", verdict: "mittel", vclass: "mittel", offer: "Sanitätshaus Orthopädietechnik",
+      s: { fit:3, kapital:2, quer:1, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2, attract:3 },
       facts: { "Betriebe DE":"~5.400", "Markt":"~12 Mrd. €", "Marge":"mittel", "Trend":"+6,2 %" },
-      why: "Sehr krisensicher und wachsend (Demografie). Hohe Hürde: Meister plus Kassenzulassung, kapitalintensiver Laden. Reguliertes Geschäft mit stabilen Erstattungen – aber schwerer Quereinstieg." },
-    { name: "Maler & Lackierer", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:4, quer:1, home:2, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
+      why: "Sehr krisensicher und wachsend (Demografie). Hohe Hürde: Meister plus Kassenzulassung, kapitalintensiver Laden. Reguliertes Geschäft mit stabilen Erstattungen.",
+      entry: "Meister + Kassenzulassung – hohe Hürde. Dein Digital-/Marketing-Beitrag ist wertvoll, der Einstieg aber stark reguliert; nur als Betreiber mit Fachteam denkbar." },
+    { name: "Maler & Lackierer", verdict: "mittel", vclass: "mittel", offer: "Malerbetrieb Maler Lackierer",
+      s: { fit:3, kapital:4, quer:1, home:2, neben:2, krise:3, zukunft:2, skalier:3, person:2, attract:3 },
       facts: { "Betriebe DE":"~38.700", "Markt":"—", "Marge":"3–6 % (dünn)", "Trend":"stabil" },
-      why: "Stabile Grundnachfrage, moderater Kapitalbedarf. Meisterpflicht und Vor-Ort-Handwerk begrenzen den Quereinstieg. Solide, aber wenig Differenzierungshebel für dein Profil." },
-    { name: "Spedition / Logistik", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:1, quer:4, home:3, neben:2, krise:3, zukunft:3, skalier:3, person:3 },
+      why: "Stabile Grundnachfrage, moderater Kapitalbedarf. Meisterpflicht und Vor-Ort-Handwerk begrenzen den Quereinstieg. Solide, aber wenig Differenzierungshebel für dein Profil.",
+      entry: "Meisterpflicht (Meister im Team / §7b HwO), Teilhabermodell möglich. Dein Differenzierungshebel ist begrenzt – aber Angebots-/Vertriebsprozess ist digitalisierbar." },
+    { name: "Spedition / Logistik", verdict: "mittel", vclass: "mittel", offer: "Spedition Logistik",
+      s: { fit:3, kapital:1, quer:4, home:3, neben:2, krise:3, zukunft:3, skalier:3, person:3, attract:3 },
       facts: { "Betriebe DE":"~14.185", "Markt":"331 Mrd. € (Logistik)", "Marge":"dünn", "Trend":"Übernahmen / Fahrermangel" },
-      why: "Kein Meisterzwang und dispositiv aus dem Büro steuerbar. Dagegen: sehr hoher Fuhrpark-Kapitalbedarf, dünne Margen und akuter Fahrermangel. Konsolidierungsmarkt – eher etwas für kapitalstarke Käufer." },
-    { name: "Bestattung", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:2, skalier:2, person:1 },
-      facts: { "Betriebe DE":"~6.800", "Markt":"3,6 Mrd. €", "Marge":"mittel, sinkend", "Trend":"+1 %/Jahr" },
-      why: "Maximal krisensicher und konjunkturunabhängig, kein Meisterzwang. Dafür 24/7-Verfügbarkeit, stark ruf-/vertrauensgebunden und emotional fordernd. Ein Geschäft, das man wollen muss – Zahlen allein tragen die Entscheidung nicht." },
-    { name: "Tischler / Schreiner", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
-      facts: { "Betriebe DE":"~28.000", "Markt":"28,2 Mrd. €", "Marge":"mittel (top Hw.)", "Trend":"leicht rückläufig" },
-      why: "Wertiges Handwerk mit guten Betrieben, aber Meisterpflicht, Werkstatt-Invest und Vor-Ort-Bindung. Wenig Hebel für deine digitalen/vertrieblichen Stärken." },
-    { name: "SHK (Sanitär/Heizung/Klima)", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:1, quer:1, home:1, neben:2, krise:3, zukunft:4, skalier:3, person:2 },
+      why: "Kein Meisterzwang und dispositiv aus dem Büro steuerbar. Dagegen: sehr hoher Fuhrpark-Kapitalbedarf, dünne Margen, akuter Fahrermangel. Konsolidierungsmarkt.",
+      entry: "Verkehrsleiter-Nachweis nötig (anstellbar), kein Meister. Dein <b>Wirtschaftsingenieur-Profil</b> passt zu Disposition/Prozessen/Optimierung – kapitalintensiv, aber prozessual dein Terrain." },
+    { name: "Garten- & Landschaftsbau", verdict: "gut", vclass: "gut", offer: "Garten Landschaftsbau GaLaBau",
+      s: { fit:3, kapital:3, quer:4, home:2, neben:2, krise:4, zukunft:3, skalier:3, person:3, attract:4 },
+      facts: { "Betriebe DE":"~19.600", "Markt":"10,65 Mrd. €", "Marge":"mittel", "Trend":"+3 % (15 J. Wachstum)" },
+      why: "15 Jahre ununterbrochenes Wachstum, kein zwingender Meister für den Einstieg, solide Margen. Geräteinvest und Saisonalität sind zu managen. Robustes, bodenständiges Geschäft.",
+      entry: "Für den Einstieg oft kein Meister nötig. Wachstumsbranche mit vielen abgabebereiten Inhabern; dein <b>kaufmännisch-digitaler Blick</b> (Angebote, Marketing, Tourenplanung) ist ein klares Plus." },
+    { name: "Augenoptik", verdict: "gut", vclass: "gut", offer: "Augenoptik Optiker Fachgeschäft",
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:4, zukunft:3, skalier:3, person:3, attract:3 },
+      facts: { "Betriebe DE":"~10.820", "Markt":"6,98 Mrd. €", "Marge":"gut", "Trend":"+3,2 % (Demografie)" },
+      why: "Demografie sichert die Nachfrage, gute Margen, hohe Krisensicherheit. Meisterpflicht und Ladenlokal binden Kapital und Ort. Einzelhandels-/Beratungsgeschäft.",
+      entry: "Meisterpflicht (Meister im Team möglich), Ladenlokal. Dein Online-Marketing / Terminierung / CRM hebt gegen Filialisten ab – als reiner Betreiber mit Optiker-Meister denkbar." },
+    { name: "Dachdeckerei", verdict: "gut", vclass: "gut", offer: "Dachdeckerei",
+      s: { fit:4, kapital:2, quer:1, home:2, neben:2, krise:3, zukunft:3, skalier:3, person:2, attract:4 },
+      facts: { "Betriebe DE":"~15.300", "Markt":"13,2 Mrd. €", "Marge":"3–6 %", "Trend":"+2,4 % (PV/Sanierung)" },
+      why: "Photovoltaik und Sanierung treiben die Nachfrage, extremer Fachkräftemangel. Meisterpflicht und körperliches Vor-Ort-Geschäft – für dich nur als Inhaber mit Meister-Team.",
+      entry: "Meisterpflicht via Meister im Team / §7b HwO lösbar; Teilhabermodell verbreitet. <b>PV-Boom + dein Marketing</b> = starke Kombination; Inhaber suchen kaufmännische Nachfolger." },
+    { name: "SHK (Sanitär/Heizung/Klima)", verdict: "mittel", vclass: "mittel", offer: "SHK Sanitär Heizung Klima",
+      s: { fit:4, kapital:1, quer:1, home:1, neben:2, krise:3, zukunft:4, skalier:3, person:2, attract:4 },
       facts: { "Betriebe DE":"~48.050", "Markt":"59 Mrd. €", "Marge":"3 % (gut 6–8 %)", "Trend":"Wärmewende +" },
-      why: "Wärmewende = massiver struktureller Rückenwind, Trendumkehr 2025, Auftragsreichweite in Berlin über 14 Wochen. <b>Aber:</b> höchster Kapitalbedarf im Feld, Meisterpflicht, reines Vor-Ort-Geschäft. Attraktiver Markt, schwerer Einstieg – nur mit starkem Meister-Team." },
-    { name: "Steuerberatung", verdict: "schwach für dich", vclass: "schwach",
-      s: { fit:1, kapital:4, quer:1, home:4, neben:1, krise:5, zukunft:4, skalier:3, person:2 },
+      why: "Wärmewende = massiver Rückenwind, Trendumkehr 2025, Auftragsreichweite in Berlin über 14 Wochen. <b>Aber:</b> höchster Kapitalbedarf im Feld, Meisterpflicht, reines Vor-Ort-Geschäft.",
+      entry: "Meisterpflicht (Meister im Team / §7b HwO). <b>Riesiger Nachfolgemangel</b> – Inhaber suchen dringend; dein kaufmännisch-digitaler Input (Wärmewende-Vertrieb, Angebotsprozess) ist stark gefragt." },
+    { name: "Bestattung", verdict: "mittel", vclass: "mittel", offer: "Bestattungsunternehmen",
+      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:2, skalier:2, person:1, attract:2 },
+      facts: { "Betriebe DE":"~6.800", "Markt":"3,6 Mrd. €", "Marge":"mittel, sinkend", "Trend":"+1 %/Jahr" },
+      why: "Maximal krisensicher und konjunkturunabhängig, kein Meisterzwang. Dafür 24/7-Verfügbarkeit, stark ruf-/vertrauensgebunden und emotional fordernd. Ein Geschäft, das man wollen muss.",
+      entry: "Kein Meister, aber stark <b>vertrauens- und traditionsgebunden</b> – weniger offen für branchenfremde Partner. Dein Profil hilft bei Digitalisierung/Marketing, überzeugt hier aber nicht allein." },
+    { name: "Tischler / Schreiner", verdict: "mittel", vclass: "mittel", offer: "Tischlerei Schreinerei",
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2, attract:3 },
+      facts: { "Betriebe DE":"~28.000", "Markt":"28,2 Mrd. €", "Marge":"mittel (top Hw.)", "Trend":"leicht rückläufig" },
+      why: "Wertiges Handwerk mit guten Betrieben, aber Meisterpflicht, Werkstatt-Invest und Vor-Ort-Bindung. Wenig Hebel für deine digitalen/vertrieblichen Stärken.",
+      entry: "Meisterpflicht (Meister im Team / §7b HwO). Handwerk mit begrenztem Digital-Hebel; als <b>kaufmännischer Teilhaber</b> mit Meister denkbar." },
+    { name: "Steuerberatung", verdict: "schwach für dich", vclass: "schwach", offer: "Steuerkanzlei Steuerberatung",
+      s: { fit:1, kapital:4, quer:1, home:4, neben:1, krise:5, zukunft:4, skalier:3, person:2, attract:2 },
       facts: { "Betriebe DE":"~53.800 Praxen", "Markt":"—", "Marge":"gut (hoch)", "Trend":"Überalterung / PE" },
-      why: "Wirtschaftlich top: krisensicher, gute Margen, überalterte Kanzleien suchen händeringend Nachfolger. <b>K.-o.-Kriterium für dich:</b> das Steuerberater-Examen ist Pflicht. Ohne diese Zulassung faktisch verschlossen – deshalb bewusst unten." }
+      why: "Wirtschaftlich top: krisensicher, gute Margen, überalterte Kanzleien suchen händeringend Nachfolger. <b>K.-o.-Kriterium für dich:</b> das Steuerberater-Examen ist Pflicht.",
+      entry: "Kanzlei-Eigentum ist an das <b>StB-Examen</b> gebunden – als reiner Quereinsteiger nicht führbar. Ohne Examen faktisch verschlossen, trotz hoher Nachfrage." }
   ];
 
   /* ---------- PRESETS ---------- */
   var PRESETS = [
-    { id:"staerken",  label:"Deine Stärken zuerst",         w:{ fit:3, kapital:2, quer:2, home:1, neben:1, krise:1, zukunft:2, skalier:1, person:2 } },
-    { id:"persoenlich", label:"Bauchgefühl & Persönlichkeit", w:{ fit:2, kapital:1, quer:1, home:1, neben:1, krise:1, zukunft:1, skalier:1, person:3 } },
-    { id:"risiko",    label:"Möglichst wenig Risiko",       w:{ fit:1, kapital:3, quer:3, home:1, neben:1, krise:3, zukunft:1, skalier:1, person:0 } },
-    { id:"nebenbei",  label:"Nebenbei starten",             w:{ fit:2, kapital:3, quer:2, home:3, neben:3, krise:1, zukunft:1, skalier:2, person:1 } },
-    { id:"zukunft",   label:"Zukunftssicher",               w:{ fit:2, kapital:1, quer:1, home:2, neben:1, krise:2, zukunft:3, skalier:3, person:1 } }
+    { id:"staerken",    label:"Deine Stärken zuerst",         w:{ fit:3, kapital:2, quer:2, home:1, neben:1, krise:1, zukunft:2, skalier:1, person:2, attract:2 } },
+    { id:"quereinst",   label:"Wo ich gefragt bin",           w:{ fit:2, kapital:1, quer:2, home:1, neben:1, krise:1, zukunft:1, skalier:1, person:1, attract:3 } },
+    { id:"persoenlich", label:"Bauchgefühl & Persönlichkeit", w:{ fit:2, kapital:1, quer:1, home:1, neben:1, krise:1, zukunft:1, skalier:1, person:3, attract:1 } },
+    { id:"risiko",      label:"Möglichst wenig Risiko",       w:{ fit:1, kapital:3, quer:3, home:1, neben:1, krise:3, zukunft:1, skalier:1, person:0, attract:1 } },
+    { id:"nebenbei",    label:"Nebenbei starten",             w:{ fit:2, kapital:3, quer:2, home:3, neben:3, krise:1, zukunft:1, skalier:2, person:1, attract:1 } },
+    { id:"zukunft",     label:"Zukunftssicher",               w:{ fit:2, kapital:1, quer:1, home:2, neben:1, krise:2, zukunft:3, skalier:3, person:1, attract:1 } }
   ];
 
   /* ---------- RESOURCES ---------- */
   var RES = [
     { t:"nexxt-change", d:"Offizielle Nachfolgebörse von BMWK, KfW, DIHK & ZDH. ~8.000 Angebote, filterbar nach Branche, Region, Umsatz & Größe.", meta:"nexxt-change.org", url:"https://www.nexxt-change.org" },
     { t:"DUB Unternehmensbörse", d:"Große private Nachfolge- & Verkaufsbörse mit vielen Dienstleistungs- und Mittelstandsangeboten.", meta:"dub.de", url:"https://www.dub.de/unternehmensboerse/" },
-    { t:"Firmenzukauf / KMU-Börsen", d:"Weitere Deal-Plattformen (firmenzukauf.de, unternehmenskaufmann, biz-trade) für zusätzliche Angebote.", meta:"firmenzukauf.de", url:"https://www.firmenzukauf.de" },
+    { t:"firmenzukaufen.de", d:"Deal-Plattform mit vielen KMU- und Handwerksangeboten, auch Teilhaber-/Beteiligungsgesuche.", meta:"firmenzukaufen.de", url:"https://www.firmenzukaufen.de" },
     { t:"DIHK-Report Nachfolge 2025", d:"Die aktuelle Datengrundlage zur Nachfolgelücke – Zahlen, Branchen, Trends zum Nachlesen.", meta:"dihk.de", url:"https://www.dihk.de/de/themen-und-positionen/wirtschaftspolitik/gruendung-und-nachfolge" },
     { t:"KfW ERP-Nachfolgekredit", d:"Finanzierung & Förderung für Übernahmen – ERP-Gründerkredit / Nachfolge. Über deine Hausbank.", meta:"kfw.de", url:"https://www.kfw.de/inlandsfoerderung/Unternehmen/Gr%C3%BCnden-Nachfolgen/" },
     { t:"IBB Berlin – Gründung & Mikrokredit", d:"Investitionsbank Berlin: Mikrodarlehen bis 25.000 € und Beratung – passend zu deinem Berlin-Fokus.", meta:"ibb.de", url:"https://www.ibb.de" },
@@ -540,7 +560,7 @@
   var weightsEl = document.getElementById("weights");
   DIMS.forEach(function (d) {
     var wrap = document.createElement("div");
-    wrap.className = "weight" + (d.k === "person" ? " person" : "");
+    wrap.className = "weight" + (d.k === "person" ? " person" : "") + (d.k === "attract" ? " attract" : "");
     var lab = document.createElement("label");
     lab.setAttribute("for", "w-" + d.k);
     var span = document.createElement("span"); span.textContent = d.label;
@@ -588,9 +608,9 @@
   }
   function passesFilters(item) {
     if (activeFilters.neu && !item.box) return false;
+    if (activeFilters.attract && item.s.attract < 4) return false;
     if (activeFilters.quer && item.s.quer < 3) return false;
     if (activeFilters.home && item.s.home < 3) return false;
-    if (activeFilters.neben && item.s.neben < 3) return false;
     if (activeFilters.top && !(item.vclass === "sehr-gut" || item.vclass === "gut")) return false;
     return true;
   }
@@ -599,6 +619,8 @@
   var listEl = document.getElementById("rankList");
   var built = false;
   var reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function stars(n) { return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
 
   function buildRows() {
     DATA.forEach(function (item, idx) {
@@ -609,11 +631,12 @@
       }).join("");
       var bars = DIMS.map(function (d) {
         var v = item.s[d.k];
-        var col = d.k === "person" ? "var(--violet)" : (v >= 4 ? "var(--good)" : v === 3 ? "var(--accent)" : "var(--crit)");
+        var col = d.k === "person" ? "var(--violet)" : d.k === "attract" ? "var(--accent-2)" : (v >= 4 ? "var(--good)" : v === 3 ? "var(--accent)" : "var(--crit)");
         return '<div><div class="bar-row"><span class="bl">' + d.label + '</span><span class="bv num">' + v + '/5</span></div>'
           + '<div class="bar-track"><i style="width:' + (v/5*100) + '%;background:' + col + '"></i></div></div>';
       }).join("");
       var badge = item.box ? ' <span class="box-badge">Neue Idee</span>' : '';
+      var offerUrl = "https://www.google.com/search?q=" + encodeURIComponent(item.offer + " Unternehmensnachfolge kaufen (nexxt-change OR dub.de OR firmenzukaufen.de)");
       row.innerHTML =
         '<button class="row-head" aria-expanded="false">'
         + '<span class="rank-no num"></span>'
@@ -625,6 +648,10 @@
         + '<svg class="caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
         + '</span></button>'
         + '<div class="row-body"><p class="why">' + item.why + '</p>'
+        + '<div class="entry"><span class="el">Als Quereinsteiger / Partner &nbsp;<span class="stars">' + stars(item.s.attract) + '</span></span>' + item.entry + '</div>'
+        + '<a class="offer-btn" href="' + offerUrl + '" target="_blank" rel="noopener noreferrer">'
+        + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'
+        + 'Aktuelle Verkaufsangebote ansehen</a>'
         + '<div class="facts">' + facts + '</div>'
         + '<div class="bars">' + bars + '</div></div>';
       var head = row.querySelector(".row-head");
