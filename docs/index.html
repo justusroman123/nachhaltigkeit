@@ -731,6 +731,34 @@ const POSTERS=[["BERGHAIN","Heute geöffnet: vielleicht.","#111111"],["SPÄTI","
   ["BVG","Wir kommen. Irgendwann.","#7a2b8e"],["CLUB MATE","Wach seit 2004.","#3a5a2a"],["WOHNUNG GESUCHT","Nur 40 Bewerber:innen.","#8a3a2a"],
   ["BÜRGERAMT","Termin frei: 2027!","#1a5fb4"],["FLUGHAFEN BER","Eröffnung: bald™.","#b23a2a"],["TECHNO","Sonntag = Montag.","#5a1a8a"],
   ["PFAND","Sammeln = Rente.","#2a6a6a"],["DÖNER 4€","Preis von 2009.","#c23a1a"],["MITTE","Ohne dich schöner.","#333333"]];
+// Große, beleuchtete U-Bahn-Werbetafeln an der Wand, wo der Zug einfährt – mit lustigen Sprüchen
+const AD_UG=[
+  {t:"100 % PÜNKTLICHKEIT",s:"…nich.",c:"#c2183a"},
+  {t:"WEIL WIR DICH LIEBEN",s:"*Liebe kann sich verspäten. — Deine BVG",c:"#7a2b8e"},
+  {t:"KLIMAFREUNDLICH UNTERWEGS",s:"Der Bus kommt eh nich.",c:"#2e7d32"},
+  {t:"NEU: DER AUFZUG",s:"Außer Betrieb seit 2019.",c:"#1a5fb4"},
+  {t:"ARM, ABER SEXY",s:"Vor allem arm.",c:"#2a2a2a"},
+  {t:"WG-ZIMMER FREI!",s:"900 € warm, Bad im Flur, nur 40 Bewerber.",c:"#8a3a2a"},
+  {t:"DEINE ZEIT IS UNS WICHTIG",s:"Drum nehm' wa dir so viel davon ab.",c:"#b26a00"},
+  {t:"SICHER IST SICHER",s:"Drum fahr'n wa lieber gar nich erst los.",c:"#106060"},
+  {t:"CURRYWURST",s:"Dein Grundnahrungsmittel seit 1949.",c:"#c0392b"},
+  {t:"SCHWARZFAHREN? MUTIG.",s:"60 €. Wir sehen uns. 👮",c:"#3a3a3a"},
+  {t:"AUFZUG DEFEKT",s:"Rolltreppe auch. Viel Erfolg mit'm Kinderwagen!",c:"#5a4a1a"},
+  {t:"BITTE ZURÜCKBLEIBEN",s:"Kommt eh nix. Aber sicher is sicher.",c:"#7a2b2b"},
+];
+function ugAdTex(ad){ const c=document.createElement('canvas'); c.width=512;c.height=256; const x=c.getContext('2d');
+  x.fillStyle=ad.c; x.fillRect(0,0,512,256); x.fillStyle='rgba(255,255,255,0.10)'; x.fillRect(0,0,512,84);
+  function wrap(t,cx,cy,mw,lh){ const w=t.split(' '); let l='',y=cy; for(const ww of w){ const tt=l+ww+' '; if(x.measureText(tt).width>mw){x.fillText(l,cx,y);l=ww+' ';y+=lh;}else l=tt;} x.fillText(l,cx,y); }
+  x.textAlign='center'; x.fillStyle='#fff'; x.font='900 50px Segoe UI, Arial'; wrap(ad.t,256,96,472,52);
+  x.font='700 30px Segoe UI, Arial'; x.fillStyle='rgba(255,255,255,0.94)'; wrap(ad.s,256,190,472,34);
+  x.strokeStyle='rgba(255,255,255,0.4)'; x.lineWidth=8; x.strokeRect(4,4,504,248);
+  return new THREE.CanvasTexture(c); }
+function ugAd(x,ad,parent){ const zw=-(HALF_Z+3.72);           // an der Wand hinter dem einfahrenden Zug
+  box(4.6,2.8,0.16,mat(0x05070c),x,4.3,zw-0.03,0,parent);       // Rahmen
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(4.3,2.5),new THREE.MeshBasicMaterial({map:ugAdTex(ad)}));
+  pl.position.set(x,4.3,zw+0.09); parent.add(pl);               // zeigt zum Bahnsteig (+z)
+  box(4.3,0.16,0.45,new THREE.MeshStandardMaterial({color:0xfff4d0,emissive:0xffe6a0,emissiveIntensity:0.65}),x,5.75,zw+0.12,0,parent); // Strahler
+}
 // Absurde Politiker-Wahlplakate (satirisch)
 const POLIT_ADS=[
   {party:"DIE VERSPRECHEN",slogan:"Ich verspreche Ihnen das Blau vom Himmel!",small:"*Himmel nicht inklusive. Farbe kann abweichen.",col:"#1a5fb4",face:"🤵"},
@@ -794,6 +822,8 @@ function loadStation(i){
   const tags=["KREUZBERG36","U1","BERLIN","XBERG","MATE","TÜPÜÜ","1UP"];
   for(let k=0;k<4;k++) graffiti(-24+k*16+(i*3),HALF_Z+3.7,2.4+((k+i)%2),["#ff3b7b","#3bd1ff","#f3d000","#8bff5a"][(k+i)%4],tags[(k+i)%tags.length],stationGroup);
   for(let k=0;k<3;k++){ const pp=POSTERS[(k+i)%POSTERS.length]; poster(-20+k*20,HALF_Z+3.72,pp[0],pp[1],pp[2],stationGroup); }
+  // Lustige Werbetafeln an der Wand, wo die U-Bahn einfährt (gut sichtbar über dem Zug)
+  for(let k=0;k<3;k++){ ugAd([-14,4,22][k], AD_UG[(k*4+i*3)%AD_UG.length], stationGroup); }
   const npcColl=[];
   st.npcs.forEach((key,idx)=>{ const def=NPC_POOL[key]; const spot=NPC_SPOTS[idx];
     addPersonNPC(npcs,stationGroup,def,spot.x,spot.z,spot.rot,npcColl); });
@@ -1230,8 +1260,8 @@ function buildStreet(i){
   for(const lx of [-26,-10,6,24]) streetlamp(lx,1.2,streetGroup);
   car(-40,-4.4,0x2a2a2a,Math.PI,streetGroup); car(42,-1.7,0x555b66,0,streetGroup); // geparkt
   buildTraffic();
-  // SEV-Bus am Straßenrand (gleich beim Rauskommen gut sichtbar); Interakt-Eintrag folgt in buildStreetExtras
-  sevBus(-10,4.2,streetGroup);
+  // SEV-Bus am Straßenrand (viel Abstand zu den Ständen); Interakt-Eintrag folgt in buildStreetExtras
+  sevBus(-30,4.6,streetGroup);
   // E-Scooter-Haufen
   for(let k=0;k<4;k++) box(0.2,0.9,1.4,mat([0x22aa88,0xff5533,0x5533ff,0x22aa88][k]),34+k*0.15,0.45+k*0.05,6+k*0.2,0.3*k,streetGroup);
   streetColl.push({x:34.3,z:6.3,r:1.1});
@@ -1820,7 +1850,7 @@ function buildStreetExtras(i){
     pr.position.set(px,0,pz); pr.rotation.y=Math.PI; pr.scale.set(0.95,0.95,0.95); streetGroup.add(pr); }
   makeFloatIcon("🏠",wx,4.0,wz-1.4,streetGroup); streetColl.push({x:wx,z:wz,r:2.6});
   streetInteract.push({x:wx,z:11.6,r:2.2,name:"Wohnungsbesichtigung",verb:"REIN",kind:'wohnung'});
-  const sx=30, sz=7;
+  const sx=28, sz=11;
   for(const cxx of [sx-0.5,sx+0.5]) cyl(0.02,0.34,0.7,mat(0xff7a1a),cxx,0.35,sz,streetGroup);
   const ssign=makeTextPlane("🛴 SLALOM",256,64,"#111111","#f3d000",44); ssign.scale.set(2.6,0.7,1);
   ssign.position.set(sx,1.7,sz); streetGroup.add(ssign);
@@ -1828,7 +1858,7 @@ function buildStreetExtras(i){
   streetColl.push({x:sx,z:sz,r:0.7});
   streetInteract.push({x:sx,z:sz,r:1.9,name:"Gehweg-Slalom",verb:"START",kind:'dodge'});
   // Länderfinanzausgleich-Stand
-  const fx=-26, fz=6;
+  const fx=-24, fz=7;
   box(1.6,1.0,1.0,mat(0x2a5a3a),fx,0.5,fz,0,streetGroup);
   for(let k=0;k<5;k++) box(0.22,0.22,0.22,new THREE.MeshStandardMaterial({color:0xf3c000,emissive:0x8a6a00,emissiveIntensity:0.4}),fx-0.5+k*0.25,1.12,fz,0,streetGroup);
   const fsign=makeTextPlane("💰 FINANZAUSGLEICH",256,64,"#111111","#f3c000",34); fsign.scale.set(2.9,0.72,1); fsign.position.set(fx,1.9,fz); streetGroup.add(fsign);
@@ -1836,42 +1866,42 @@ function buildStreetExtras(i){
   streetColl.push({x:fx,z:fz,r:1.0});
   streetInteract.push({x:fx,z:fz,r:1.9,name:"Länderfinanzausgleich",verb:"KLAUEN",kind:'finanz'});
   // Politiker-Schmieren-Stand (in JEDEM Kiez findbar)
-  const bxp=-12, bzp=8;
+  const bxp=-14, bzp=11;
   box(1.2,2.2,0.8,mat(0x14141f),bxp,1.1,bzp,0,streetGroup);
   const bsg=makeTextPlane("💼 POLITIKER",256,64,"#fff","#7a2b8e",34); bsg.scale.set(2.9,0.72,1); bsg.position.set(bxp,2.7,bzp-0.42); streetGroup.add(bsg);
   makeFloatIcon("💼",bxp,3.3,bzp,streetGroup);
   streetColl.push({x:bxp,z:bzp,r:0.8});
   streetInteract.push({x:bxp,z:bzp,r:1.4,name:"Politiker schmieren",verb:"SCHMIEREN",kind:'bribe'});
   // Görli bei Nacht – durch die Dealer schleichen (Fahrkartenkontrolle ist jetzt unten im U-Bahnhof!)
-  const kxp=8, kzp=9;
+  const kxp=8, kzp=11;
   box(1.0,1.6,0.6,mat(0x14261a),kxp,0.8,kzp,0,streetGroup);
   const ksg=makeTextPlane("🌙 GÖRLI NACHTS",256,64,"#fff","#1c7a3a",30); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
   makeFloatIcon("🌙",kxp,2.8,kzp,streetGroup);
   streetColl.push({x:kxp,z:kzp,r:0.7});
   streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Görli bei Nacht durchqueren",verb:"SCHLEICHEN",kind:'nightpark'});
   // Verspätungen würfeln (BVG-Leitstelle, auch draußen)
-  const vxp=18, vzp=8;
+  const vxp=18, vzp=7;
   box(1.1,1.5,0.6,mat(0x7a2b8e),vxp,0.75,vzp,0,streetGroup);
   const vsg=makeTextPlane("🎲 VERSPÄTUNG",256,64,"#fff","#f3a51a",32); vsg.scale.set(2.9,0.72,1); vsg.position.set(vxp,2.1,vzp-0.32); streetGroup.add(vsg);
   makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
   streetColl.push({x:vxp,z:vzp,r:0.7});
   streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
   // Bürgeramt – Bürokratie-Turm bauen
-  const uxp=-6, uzp=6;
+  const uxp=-4, uzp=7;
   box(1.2,1.7,0.7,mat(0x3a4a6a),uxp,0.85,uzp,0,streetGroup); box(0.9,0.6,0.05,mat(0xdfe6ee),uxp,1.4,uzp+0.37,0,streetGroup);
   const usg=makeTextPlane("📋 BÜRGERAMT",256,64,"#fff","#1a5fb4",32); usg.scale.set(2.9,0.72,1); usg.position.set(uxp,2.4,uzp-0.32); streetGroup.add(usg);
   makeFloatIcon("📋",uxp,3.0,uzp,streetGroup);
   streetColl.push({x:uxp,z:uzp,r:0.7});
   streetInteract.push({x:uxp,z:uzp,r:1.4,name:"Bürokratie-Turm bauen",verb:"STAPELN",kind:'buero'});
   // Berlin-Look – absurdes Outfit zusammenstellen
-  const oxp=26, ozp=10;
+  const oxp=40, ozp=8;
   box(0.9,2.0,0.5,mat(0x2a2f38),oxp,1.0,ozp,0,streetGroup); box(0.7,1.1,0.06,mat(0xff5aa0),oxp,1.5,ozp+0.28,0,streetGroup);
   const osg=makeTextPlane("🕶️ BERLIN-LOOK",256,64,"#111","#ff5aa0",30); osg.scale.set(2.9,0.72,1); osg.position.set(oxp,2.6,ozp-0.3); streetGroup.add(osg);
   makeFloatIcon("🕶️",oxp,3.2,ozp,streetGroup);
   streetColl.push({x:oxp,z:ozp,r:0.6});
   streetInteract.push({x:oxp,z:ozp,r:1.4,name:"Berlin-Look zusammenstellen",verb:"STYLEN",kind:'outfit'});
   // SEV-Bus (Mesh wird in buildStreet gebaut, hier nur der Einsteig-Punkt)
-  streetInteract.push({x:-10,z:4.2,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
+  streetInteract.push({x:-30,z:4.6,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
   // ===== Sichtbare Belohnungen =====
   const hx=40, hz=18;
   if(hasFlat){

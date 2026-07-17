@@ -206,7 +206,14 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 
 - **Realistischer U-Bahnhof**: **gekachelte Wände**, **Holzbänke** auf
   Metallgestell, neutrales Bahnhofslicht und der typische **gelbe Taststreifen**
-  an der Bahnsteigkante – kein „alles gelb" mehr.
+  an der Bahnsteigkante – kein „alles gelb" mehr. An der **Wand, wo die U-Bahn
+  einfährt**, hängen jetzt **beleuchtete Werbetafeln mit satirischen Sprüchen**
+  („100 % Pünktlichkeit. …nich.", „Weil wir dich lieben. *Liebe kann sich
+  verspäten.", „Neu: der Aufzug – außer Betrieb seit 2019.", „Arm, aber sexy.
+  Vor allem arm.").
+- **Aufgeräumte Straße**: die Minispiel-Stände stehen jetzt **großzügig verteilt**
+  (nichts klebt mehr aneinander), der SEV-Bus parkt mit viel Abstand am
+  Straßenrand – alles übersichtlicher und gut erreichbar.
 - **Absurde Wahlplakat-Billboards** an der Straße: „Ich verspreche Ihnen das Blau
   vom Himmel!", „Der BER wird fertig – versprochen²", „Bezahlbare Miete für alle
   (ab 2045)" … samt Kleingedrucktem zum Mitlesen.
