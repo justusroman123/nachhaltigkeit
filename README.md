@@ -137,9 +137,14 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 ## Details & Berlin-Feeling
 
 - **Echte U-Bahn**, die einfährt, hält, die Türen öffnet und mit dir losfährt.
-- **Hochhaus-Skyline** hinter der Straße (viele Türme mit beleuchteten Fenstern)
-  plus **natürlicherer Gehweg** (abwechslungsreiches Pflaster, Risse, Moos,
-  Gullideckel, Pfütze, Grasbüschel, Laub) und ein **roter Radweg** 🚲.
+- **Berlin-Panorama am Horizont**: ein Skydome mit **Fernsehturm, Reichstag,
+  Brandenburger Tor, Berliner Dom & Siegessäule** als Silhouette – kein leeres
+  Blau mehr. Davor eine **Hochhaus-Skyline** und **fahrender Verkehr** (Autos
+  fahren auf der Straße), ein **roter Radweg** 🚲 und ein **natürlicher Gehweg**
+  (abwechslungsreiches Pflaster, Risse, Moos, Gullideckel, Pfütze, Gras, Laub).
+- **Angefahren werden hat Folgen**: E-Scooter/Radfahrer nieten dich um → du
+  **stolperst/fällst**, der Bildschirm wackelt, „AUA!" – und sie rufen jedes Mal
+  **etwas anderes** und fahren **wechselnde Routen**.
 - **Deutlich unterschiedlichere Figuren**: verschiedene Größen, Bäuche, Bärte,
   Frisuren (Iro, Dutt, Glatze, Beanie, Cap), Brillen, Kleider, Rucksäcke,
   Props und komplette Kostüme (Bär, Döner-Spieß, Statue).
