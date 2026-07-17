@@ -78,19 +78,25 @@ und ein **Erdgeschoss mit Ladentür & Schaufenstern (mit Markise)** – gleich b
 Rauskommen sieht der Kiez wohnlich aus. Die **Parkbänke** stehen ordentlich an
 der Häuserzeile (mit Blick zur Straße) statt mitten im Weg.
 
-## 🎮 9 Minispiele (visuelle Szenen)
+## 🎮 11 Minispiele (visuelle Szenen)
 
 In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli bei
-Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich). Unten im
-**U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die 🎲 BVG-Leitstelle mit
-großer **Verspätungs-Anzeigetafel** und das 👁️ **Blickduell**. Die 👮
-**Fahrkartenkontrolle** ist – logischerweise – **unten im U-Bahnhof** (die
-Kontrolleure schnappen dich am Bahnsteig).
+Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich, 📋 Bürgeramt,
+🕶️ Berlin-Look). Unten im **U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die
+🎲 BVG-Leitstelle mit großer **Verspätungs-Anzeigetafel** und das 👁️
+**Blickduell**. Die 👮 **Fahrkartenkontrolle** ist – logischerweise – **unten im
+U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
 
-- 🌙 **Görli bei Nacht** (neu, Stealth): Nachts kommt keiner in Ruhe durch den
-  Görlitzer Park. Schleich zum Ausgang, ohne dass dich die **Dealer-Gruppe**
-  bemerkt – sie **scannen den Park** mit Sicht-Kegeln, rufen „psst-psst" und
-  **drehen sich zu dir**, wenn sie dich sehen. Zu nah = umzingelt.
+- 🌙 **Görli bei Nacht** (Stealth, überarbeitet – jetzt klar & fair): Bring
+  **🧍 DICH nach oben zum Ausgang**. Die **Dealer** leuchten ihren **Blick-Kegel**
+  ab (wird er **rot**, sehen sie dich); in den **🌳 Büschen bist du versteckt**.
+  Von Busch zu Busch nach oben schleichen. Steuerung: Pfeile/WASD oder ziehen.
+- 📋 **Bürokratie-Turm** (neu, Bürgeramt): Stapel Berliner Behörden-Formulare
+  (Anmeldung, Antrag A38, Wohnungsgeberbestätigung …) **bündig** zu einem
+  absurden **Aktenturm**. Überstand fällt ab – 8 Anträge hoch = Ehren-Beamter.
+- 🕶️ **Berlin-Look-Battle** (neu): Kombinier ein **so absurdes Outfit** wie
+  möglich (Bauchfrei-Netzhemd, Sandalen mit Socken, Taube auf der Schulter …).
+  Genug Absurditäts-Punkte = Ikone von Kreuzberg. „Is dit Kunst oder kann dit weg?"
 - 👁️ **Blickduell in der U-Bahn** (neu): In Berlin gilt **zu langer Blickkontakt
   = Aggression**. Starr den Fahrgast an, solange er **wegschaut** (😌), und
   **lös den Blick sofort**, wenn er **zurückschaut** (👀) – sonst steht er auf:
@@ -167,6 +173,12 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 
 ## Details & Berlin-Feeling
 
+- **Realistischer U-Bahnhof**: **gekachelte Wände**, **Holzbänke** auf
+  Metallgestell, neutrales Bahnhofslicht und der typische **gelbe Taststreifen**
+  an der Bahnsteigkante – kein „alles gelb" mehr.
+- **Absurde Wahlplakat-Billboards** an der Straße: „Ich verspreche Ihnen das Blau
+  vom Himmel!", „Der BER wird fertig – versprochen²", „Bezahlbare Miete für alle
+  (ab 2045)" … samt Kleingedrucktem zum Mitlesen.
 - **Echte U-Bahn**, die einfährt, hält, die Türen öffnet und mit dir losfährt.
 - **Berlin-Panorama am Horizont**: ein Skydome mit **Fernsehturm, Reichstag,
   Brandenburger Tor, Berliner Dom & Siegessäule** als Silhouette – kein leeres

@@ -447,9 +447,20 @@ function makeDoenerCostume(){
    UNTERGRUND (U-Bahnhof)
    ============================================================ */
 const ugStatic = new THREE.Group(); scene.add(ugStatic);
-const matPlatform=mat(0x8a8578), matEdge=mat(0xf3d000), matTileWall=mat(0xd9e5ea),
-      matDark=mat(0x141824), matSteel=new THREE.MeshStandardMaterial({color:0x51565f,metalness:0.6,roughness:0.4}),
-      matYellow=mat(0xf3d000);
+function stationTileTex(){ const c=document.createElement('canvas'); c.width=256;c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#dfe4e7'; x.fillRect(0,0,256,128);                    // Fugen (Grau)
+  const tiles=['#f6f8f9','#eef2f4','#e8eef1','#f1f4f5','#eaeff1'];
+  const tw=32, th=16;
+  for(let ry=0;ry<8;ry++){ const off=(ry%2)*tw/2; for(let rx=-1;rx<9;rx++){
+    x.fillStyle=tiles[(rx*2+ry*3)%tiles.length]; x.fillRect(rx*tw+off+1.4,ry*th+1.4,tw-2.8,th-2.8); } }
+  for(let k=0;k<44;k++){ x.fillStyle='rgba(70,80,80,'+(Math.random()*0.06).toFixed(3)+')'; x.fillRect(Math.random()*256,Math.random()*128,5+Math.random()*8,2+Math.random()*3); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(22,3); return t; }
+const matPlatform=mat(0x9a958a), matEdge=mat(0xf3c400),
+      matTileWall=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.85,map:stationTileTex()}),
+      matDark=mat(0x1a1e2a), matSteel=new THREE.MeshStandardMaterial({color:0x565b64,metalness:0.55,roughness:0.45}),
+      matYellow=mat(0xf3c400),
+      matWood=new THREE.MeshStandardMaterial({color:0x8a5a32,roughness:0.7}),
+      matBenchMetal=new THREE.MeshStandardMaterial({color:0x2b3038,metalness:0.5,roughness:0.5});
 
 box(HALF_X*2+2,0.4,HALF_Z*2+0.5,matPlatform,0,-0.2,0,0,ugStatic);
 box(HALF_X*2+2,0.06,0.5,matEdge,0,0.03,HALF_Z,0,ugStatic);
@@ -467,8 +478,8 @@ for(let y=1;y<=5;y+=1.3) for(const sz of [1,-1])
 
 const tubeLights=[];
 for(let x=-30;x<=30;x+=7.5){
-  const l=new THREE.PointLight(0xffe8b0,0.6,20,2); l.position.set(x,5.2,0); ugStatic.add(l); tubeLights.push(l);
-  box(4,0.15,0.5,mat(0xfff3d0),x,5.6,0,0,ugStatic).material.emissive=new THREE.Color(0xffe6a0);
+  const l=new THREE.PointLight(0xf6f4ee,0.7,22,2); l.position.set(x,5.2,0); ugStatic.add(l); tubeLights.push(l);   // neutral-weißes Bahnhofslicht
+  box(4,0.15,0.5,mat(0xfdfbf4),x,5.6,0,0,ugStatic).material.emissive=new THREE.Color(0xf4f0e6);
 }
 tubeLights.forEach(l=>{}); // (emissive gesetzt)
 ugStatic.children.forEach(m=>{ if(m.material&&m.geometry&&m.geometry.parameters&&m.geometry.parameters.height===0.15){m.material.emissiveIntensity=1.2;} });
@@ -478,7 +489,11 @@ for(let x=-28;x<=28;x+=9.33){
   box(1,6,1,matSteel,x,3,0,0,ugStatic); staticColliders.push({x,z:0,r:1.1});
   box(1.2,0.3,1.2,matSteel,x,5.7,0,0,ugStatic);
 }
-function bench(x,z,p){ box(2.2,0.15,0.7,matYellow,x,0.55,z,0,p); box(2.2,0.5,0.12,matYellow,x,0.85,z-0.3,0,p); staticColliders.push({x,z,r:1.2}); }
+function bench(x,z,p){ // Holz-Sitzlatten auf Metallgestell (wie echte U-Bahnbank)
+  for(let s=0;s<3;s++) box(2.2,0.08,0.18,matWood,x,0.52,z-0.24+s*0.22,0,p);
+  for(let s=0;s<3;s++) box(2.2,0.14,0.08,matWood,x,0.72+s*0.16,z-0.34,0,p);
+  box(0.12,0.5,0.6,matBenchMetal,x-1.0,0.26,z,0,p); box(0.12,0.5,0.6,matBenchMetal,x+1.0,0.26,z,0,p);
+  staticColliders.push({x,z,r:1.2}); }
 bench(-24,3.4,ugStatic); bench(-2,3.4,ugStatic); bench(22,-3.4,ugStatic);
 
 /* Fahrkartenautomat */
@@ -694,6 +709,32 @@ const POSTERS=[["BERGHAIN","Heute geöffnet: vielleicht.","#111111"],["SPÄTI","
   ["BVG","Wir kommen. Irgendwann.","#7a2b8e"],["CLUB MATE","Wach seit 2004.","#3a5a2a"],["WOHNUNG GESUCHT","Nur 40 Bewerber:innen.","#8a3a2a"],
   ["BÜRGERAMT","Termin frei: 2027!","#1a5fb4"],["FLUGHAFEN BER","Eröffnung: bald™.","#b23a2a"],["TECHNO","Sonntag = Montag.","#5a1a8a"],
   ["PFAND","Sammeln = Rente.","#2a6a6a"],["DÖNER 4€","Preis von 2009.","#c23a1a"],["MITTE","Ohne dich schöner.","#333333"]];
+// Absurde Politiker-Wahlplakate (satirisch)
+const POLIT_ADS=[
+  {party:"DIE VERSPRECHEN",slogan:"Ich verspreche Ihnen das Blau vom Himmel!",small:"*Himmel nicht inklusive. Farbe kann abweichen.",col:"#1a5fb4",face:"🤵"},
+  {party:"PARTEI FÜR BALD",slogan:"Der BER wird fertig – versprochen²",small:"*Jahr wird noch bekanntgegeben.",col:"#b23a2a",face:"🧑‍💼"},
+  {party:"WOHNRAUM JETZT",slogan:"Bezahlbare Miete für alle! (ab 2045)",small:"*Gilt nicht in bewohnten Gebieten.",col:"#2e7d32",face:"👩‍💼"},
+  {party:"NETTO-NETTO",slogan:"Mehr Netto vom Brutto vom Netto!",small:"*Rechenweg vertraulich.",col:"#7a2b8e",face:"🤵"},
+  {party:"DAGEGEN-UNION",slogan:"Gegen alles. Für irgendwas.",small:"*Programm folgt nach der Wahl.",col:"#444444",face:"🧓"},
+  {party:"BVG-PARTEI",slogan:"Pünktlichkeit ist auch nur 'ne Meinung.",small:"*Nächster Zug: irgendwann.",col:"#f3a51a",face:"🚇"},
+];
+function politTex(ad){ const c=document.createElement('canvas'); c.width=512;c.height=320; const x=c.getContext('2d');
+  x.fillStyle=ad.col; x.fillRect(0,0,512,320); x.fillStyle='rgba(255,255,255,0.12)'; x.fillRect(0,0,512,70);
+  x.fillStyle='#fff'; x.textAlign='left'; x.font='900 30px Segoe UI'; x.fillText(ad.party,20,46);
+  x.font='72px serif'; x.fillText(ad.face,415,58);
+  // Slogan (umbrochen)
+  x.font='800 34px Segoe UI'; const words=ad.slogan.split(' '); let line='',y=140;
+  for(const w of words){ const t=line+w+' '; if(x.measureText(t).width>472){ x.fillText(line,20,y); line=w+' '; y+=42; } else line=t; } x.fillText(line,20,y);
+  x.font='600 16px Segoe UI'; x.fillStyle='rgba(255,255,255,0.8)'; x.fillText(ad.small,20,300);
+  x.strokeStyle='rgba(255,255,255,0.35)'; x.lineWidth=6; x.strokeRect(3,3,506,314);
+  return new THREE.CanvasTexture(c); }
+function streetBillboard(x,z,rot,p){ const ad=pick(POLIT_ADS);
+  box(0.25,6,0.25,mat(0x2a2f38),x-2.2,3,z,0,p); box(0.25,6,0.25,mat(0x2a2f38),x+2.2,3,z,0,p);   // Pfosten
+  box(9.4,5.4,0.3,mat(0x11141b),x,6.2,z,rot||0,p);                                                // Rahmen
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(9.0,5.0),new THREE.MeshBasicMaterial({map:politTex(ad),side:THREE.DoubleSide}));
+  pl.position.set(x,6.2,z+(rot?-0.17:0.17)); if(rot)pl.rotation.y=rot; p.add(pl);
+  box(9.0,0.3,0.5,new THREE.MeshStandardMaterial({color:0xfff4d0,emissive:0xffe6a0,emissiveIntensity:0.5}),x,8.9,z+0.2,0,p); // Strahler
+}
 
 function addPersonNPC(list,parent,def,x,z,rot,coll){
   let p;
@@ -718,7 +759,8 @@ function loadStation(i){
   stationIndex=i; const st=STATIONS[i];
   clearGroup(stationGroup); npcs=[]; guards=[]; collected=0; stationTotal=st.npcs.length;
   elStation.textContent="🚇 "+st.name; elStation.style.background='#'+st.accent.toString(16).padStart(6,'0');
-  const WALLCOLS=[0xd9e5ea,0xdcead9,0xead9d9,0xdadfef], TUBECOLS=[0xffe8b0,0xe8ffd0,0xffd8c0,0xd8e6ff];
+  // dezente Wandfarbe je Station (Kacheln bleiben sichtbar), neutrales Licht
+  const WALLCOLS=[0xeef2f4,0xedf4ee,0xf4edee,0xedf0f6], TUBECOLS=[0xf6f4ee,0xf2f6ee,0xf6f0ee,0xeef2f8];
   matTileWall.color.setHex(WALLCOLS[i%4]); for(const _l of tubeLights) _l.color.setHex(TUBECOLS[i%4]);
   stationGroup.add(makeMural(st.mural));
   for(const sx of [-18,0,18]){
@@ -1118,6 +1160,9 @@ function buildStreet(i){
   // Häuserzeile (Altbau)
   const cols=[0xcaa66a,0xb98d5a,0xd9c39a,0x9a7a5a,0xc0a878,0xa88a6a];
   for(let x=-44;x<=44;x+=11){ if(x===0||x===33)continue; building(x,19.5,10.6,7+((x*13)%5)+2,cols[Math.abs(x/11|0)%cols.length],streetGroup); }
+  // Absurde Wahlplakat-Billboards füllen die Lücken in der Häuserzeile
+  streetBillboard(33,17.5,Math.PI,streetGroup); streetColl.push({x:33,z:17.5,r:2.4});
+  streetBillboard(0,18.5,Math.PI,streetGroup); streetColl.push({x:0,z:18.5,r:2.4});
   landmark(kz.land,streetGroup);
   // U-Bahn-Eingang
   uEntranceStreet(ST_ENTRANCE.x,ST_ENTRANCE.z,streetGroup);
@@ -1301,7 +1346,7 @@ function tryInteract(){
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='buero') miniBuero(); else if(nearSI.kind==='outfit') miniOutfit(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1705,6 +1750,20 @@ function buildStreetExtras(i){
   makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
   streetColl.push({x:vxp,z:vzp,r:0.7});
   streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
+  // Bürgeramt – Bürokratie-Turm bauen
+  const uxp=-6, uzp=6;
+  box(1.2,1.7,0.7,mat(0x3a4a6a),uxp,0.85,uzp,0,streetGroup); box(0.9,0.6,0.05,mat(0xdfe6ee),uxp,1.4,uzp+0.37,0,streetGroup);
+  const usg=makeTextPlane("📋 BÜRGERAMT",256,64,"#fff","#1a5fb4",32); usg.scale.set(2.9,0.72,1); usg.position.set(uxp,2.4,uzp-0.32); streetGroup.add(usg);
+  makeFloatIcon("📋",uxp,3.0,uzp,streetGroup);
+  streetColl.push({x:uxp,z:uzp,r:0.7});
+  streetInteract.push({x:uxp,z:uzp,r:1.4,name:"Bürokratie-Turm bauen",verb:"STAPELN",kind:'buero'});
+  // Berlin-Look – absurdes Outfit zusammenstellen
+  const oxp=26, ozp=10;
+  box(0.9,2.0,0.5,mat(0x2a2f38),oxp,1.0,ozp,0,streetGroup); box(0.7,1.1,0.06,mat(0xff5aa0),oxp,1.5,ozp+0.28,0,streetGroup);
+  const osg=makeTextPlane("🕶️ BERLIN-LOOK",256,64,"#111","#ff5aa0",30); osg.scale.set(2.9,0.72,1); osg.position.set(oxp,2.6,ozp-0.3); streetGroup.add(osg);
+  makeFloatIcon("🕶️",oxp,3.2,ozp,streetGroup);
+  streetColl.push({x:oxp,z:ozp,r:0.6});
+  streetInteract.push({x:oxp,z:ozp,r:1.4,name:"Berlin-Look zusammenstellen",verb:"STYLEN",kind:'outfit'});
   // ===== Sichtbare Belohnungen =====
   const hx=40, hz=18;
   if(hasFlat){
@@ -2132,83 +2191,87 @@ function miniVerspaetung(){
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die Anzeigetafel glüht. 🔥');}); }
 }
 
-/* ---------- MG8: Görli bei Nacht – durch die Dealer-Gruppe schleichen ---------- */
+/* ---------- MG8: Görli bei Nacht – an den Dealern vorbei zum Ausgang ---------- */
 function miniNightPark(){
   openMini();
   panelEl().innerHTML=`<h2>🌙 Görli bei Nacht</h2>
-    <div class="miniDesc">Nachts kommt keiner in Ruhe durch den Görli. Schleich hoch zum <b>Ausgang 🚪</b>, ohne dass dich die <b>Dealer</b> bemerken – sie <b>scannen den Park</b> und rufen „psst-psst". Bleib aus ihren <b>Sicht-Kegeln</b> und geh nicht zu nah. <b>Pfeile / WASD / ziehen.</b></div>
+    <div class="miniDesc">Bring <b>🧍 DICH</b> nach <b>oben zum 🚪 AUSGANG</b>. Die <b>Dealer 👤</b> drehen sich und leuchten ihren <b>Blick-Kegel</b> ab. <b>Bleib aus dem Kegel</b> – wird er <span style="color:#ff6b6b">rot</span>, sehen sie dich! In den <b>🌳 Büschen bist du versteckt</b>. Steuern: <b>Pfeile/WASD</b> oder <b>Finger auf dem Feld ziehen</b>.</div>
     <canvas id="mCanvas" width="360" height="470"></canvas>
-    <div class="mBar"><i id="hBar" style="background:#e0466a"></i><div class="lbl" id="hLbl">Aufmerksamkeit 0%</div></div>
-    <div id="miniResult">Nachts is keiner in Ruhe…</div>`;
+    <div class="mBar"><i id="hBar" style="background:#e0466a"></i><div class="lbl" id="hLbl">Entdeckung 0%</div></div>
+    <div id="miniResult">Warte auf 'ne Lücke…</div>`;
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const hBar=document.getElementById('hBar'),hLbl=document.getElementById('hLbl'),res=document.getElementById('miniResult');
-  const pl={x:W/2,y:H-22}; let heat=0, over=false, shake=0, sqCool=0;
-  const keys2={}, RANGE=94, CONE=0.55;
+  const pl={x:W/2,y:H-26}; let heat=0, over=false, shake=0, sqCool=0;
+  const keys2={}, RANGE=88, CONE=0.5;
   mOn(window,'keydown',e=>{const k=e.key.toLowerCase(); if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){e.preventDefault();keys2[k]=true;}});
   mOn(window,'keyup',e=>{keys2[e.key.toLowerCase()]=false;});
   let tgt=null;
   function setTgt(e){const r=cv.getBoundingClientRect(); tgt={x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
   mOn(cv,'pointerdown',setTgt); mOn(cv,'pointermove',e=>{if(tgt)setTgt(e);}); mOn(window,'pointerup',()=>{tgt=null;});
-  const EM=['🌿','🌳','🚴','🧢','🕶️','🥤','🧥','🎒'], SAY=['psst-psst','wheek!','ey Chef','Gras?','komm ma','bio!','na?','Digga'];
-  const layout=[[0.30,0.74],[0.70,0.74],[0.22,0.57],[0.52,0.57],[0.82,0.57],[0.38,0.40],[0.68,0.40],[0.50,0.24]];
-  const dealers=layout.map((L,i)=>({bx:W*L[0],x:W*L[0],y:H*L[1],ang:Math.random()*6.28,
-    spd:(i%2?1:-1)*(0.5+Math.random()*0.5),pat:Math.random()*6.28,
-    e:EM[i%EM.length],say:SAY[i%SAY.length],alert:0,saidCool:Math.random()*2}));
+  // 5 Dealer, klar verteilt mit Lücken dazwischen – jeder scannt hin und her
+  const dz=[{x:0.24,y:0.72},{x:0.74,y:0.68},{x:0.5,y:0.5},{x:0.24,y:0.32},{x:0.76,y:0.32}];
+  const EM=['👤','🧥','🚴','🧢','🕶️'], SAY=['psst-psst','wheek!','ey Chef','komm ma','na?'];
+  const dealers=dz.map((L,i)=>({x:W*L.x,y:H*L.y,baseAng:(L.x<0.5?-0.2:Math.PI+0.2),ang:0,
+    swing:0.8+Math.random()*0.3,phase:Math.random()*6,e:EM[i],say:SAY[i],see:0,saidCool:0}));
+  // Büsche = sichere Verstecke
+  const bushes=[{x:W*0.5,y:H*0.82,r:34},{x:W*0.5,y:H*0.6,r:30},{x:W*0.16,y:H*0.5,r:28},{x:W*0.84,y:H*0.5,r:28},{x:W*0.5,y:H*0.16,r:34}];
   let last=performance.now();
   function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    let hidden=false;
     if(!over){
-      // Bewegung
       let mx=0,my=0; if(keys2['arrowleft']||keys2['a'])mx-=1; if(keys2['arrowright']||keys2['d'])mx+=1;
       if(keys2['arrowup']||keys2['w'])my-=1; if(keys2['arrowdown']||keys2['s'])my+=1;
-      if(tgt){ mx=tgt.x-pl.x; my=tgt.y-pl.y; const m=Math.hypot(mx,my)||1; if(m<4){mx=0;my=0;}else{mx/=m;my/=m;} }
+      if(tgt){ mx=tgt.x-pl.x; my=tgt.y-pl.y; const m=Math.hypot(mx,my)||1; if(m<5){mx=0;my=0;}else{mx/=m;my/=m;} }
       else { const m=Math.hypot(mx,my); if(m>0){mx/=m;my/=m;} }
-      pl.x=Math.max(14,Math.min(W-14,pl.x+mx*128*dt)); pl.y=Math.max(14,Math.min(H-14,pl.y+my*128*dt));
+      pl.x=Math.max(14,Math.min(W-14,pl.x+mx*118*dt)); pl.y=Math.max(14,Math.min(H-14,pl.y+my*118*dt));
+      for(const bs of bushes) if(Math.hypot(pl.x-bs.x,pl.y-bs.y)<bs.r-6) hidden=true;
       if(sqCool>0)sqCool-=dt;
-      let anySpot=false;
-      for(const d of dealers){ d.pat+=dt*0.5; d.x=d.bx+Math.sin(d.pat)*16;
+      let seenNow=false;
+      for(const d of dealers){ d.phase+=dt*d.swing; d.ang=d.baseAng+Math.sin(d.phase)*0.9; // scannt hin und her
         const dx=pl.x-d.x, dy=pl.y-d.y, dist=Math.hypot(dx,dy), aTo=Math.atan2(dy,dx);
         let diff=aTo-d.ang; while(diff>Math.PI)diff-=6.283; while(diff<-Math.PI)diff+=6.283;
-        const spotted=(dist<RANGE&&Math.abs(diff)<CONE)||dist<36;
-        if(spotted){ anySpot=true; d.alert=Math.min(1,d.alert+dt*2.2); d.ang+=diff*0.12;   // dreht sich zu dir
-          heat=Math.min(100,heat+dt*(dist<36?58:40)); d.saidCool-=dt;
-          if(d.saidCool<=0){ d.saidCool=1.1; if(sqCool<=0){squeak(); sqCool=0.4;} }
-          if(dist<20){ heat=Math.min(100,heat+dt*40); shake=8; } }
-        else { d.alert=Math.max(0,d.alert-dt*1.1); d.ang+=d.spd*dt; }
+        const inView=!hidden && ((dist<RANGE&&Math.abs(diff)<CONE)||dist<28);
+        if(inView){ d.see=Math.min(1,d.see+dt*3.2); seenNow=true; d.saidCool-=dt;
+          if(d.saidCool<=0){ d.saidCool=1.0; if(sqCool<=0){squeak(); sqCool=0.45;} }
+          if(dist<24) shake=6; }
+        else d.see=Math.max(0,d.see-dt*2.2);
       }
-      if(!anySpot) heat=Math.max(0,heat-dt*16);
-      res.textContent = heat>66?'😰 Sie haben dich fast!' : anySpot?'🤫 Einer guckt – weg da!' : 'Weiter, leise…';
-      if(pl.y<=22){ over=true; return win(); }
+      const seeing=dealers.some(d=>d.see>0.34);
+      if(seeing) heat=Math.min(100,heat+dt*34); else heat=Math.max(0,heat-dt*26);
+      res.textContent = hidden?'🌳 Versteckt – gut!' : heat>60?'😰 Gleich haben sie dich!' : seeing?'👀 Einer sieht dich – weg!' : 'Schleich weiter…';
+      if(pl.y<=24){ over=true; return win(); }
       if(heat>=100){ over=true; return lose(); }
     }
-    hBar.style.width=heat+'%'; hLbl.textContent='Aufmerksamkeit '+(heat|0)+'%';
-    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*30; if(shake<0)shake=0;}
-    // Nacht-Park
-    ctx.fillStyle='#0c160f'; ctx.fillRect(0,0,W,H);
-    for(let k=0;k<26;k++){ ctx.fillStyle='rgba(120,160,120,0.05)'; ctx.fillRect((k*67)%W,(k*97)%H,3,3); }
+    hBar.style.width=heat+'%'; hLbl.textContent='Entdeckung '+(heat|0)+'%';
+    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*28; if(shake<0)shake=0;}
+    ctx.fillStyle='#0b140d'; ctx.fillRect(0,0,W,H);
+    // Wege (Kies) andeuten
+    ctx.strokeStyle='rgba(120,120,90,0.10)'; ctx.lineWidth=22; ctx.beginPath(); ctx.moveTo(W*0.5,H); ctx.lineTo(W*0.5,0); ctx.stroke();
     // Ausgang oben
-    ctx.fillStyle='#1c3a24'; ctx.fillRect(0,0,W,26); ctx.fillStyle='#7dffb0'; ctx.font='700 15px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🚪 RAUS AUS\'M PARK', W/2, 13);
-    ctx.textBaseline='alphabetic';
-    // Bäume als Deko
-    ctx.font='26px serif'; ctx.textAlign='center';
-    for(const tx of [30,W-30,W*0.5]) { ctx.globalAlpha=0.5; ctx.fillText('🌲',tx,H*0.5); ctx.globalAlpha=1; }
+    ctx.fillStyle='#1c5a30'; ctx.fillRect(0,0,W,30); ctx.fillStyle='#b6ffcf'; ctx.font='700 16px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🚪 AUSGANG — HIER HIN', W/2, 15);
+    // Büsche (Verstecke)
+    for(const bs of bushes){ ctx.beginPath(); ctx.arc(bs.x,bs.y,bs.r,0,7);
+      ctx.fillStyle='rgba(40,110,55,0.5)'; ctx.fill(); ctx.font='22px serif'; ctx.textBaseline='middle'; ctx.fillText('🌳',bs.x,bs.y); }
     // Dealer + Sichtkegel
     for(const d of dealers){ ctx.beginPath(); ctx.moveTo(d.x,d.y);
       ctx.arc(d.x,d.y,RANGE,d.ang-CONE,d.ang+CONE); ctx.closePath();
-      ctx.fillStyle=d.alert>0.4?'rgba(255,70,60,'+(0.10+d.alert*0.14)+')':'rgba(255,225,130,0.09)'; ctx.fill();
-      ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(d.e,d.x,d.y);
-      if(d.alert>0.5){ ctx.font='700 12px Segoe UI'; ctx.fillStyle='#ff9b8a'; ctx.fillText('🤫'+d.say,d.x,d.y-20); } }
-    // Spieler
-    ctx.font='26px serif'; ctx.textBaseline='middle'; ctx.fillText('🧍',pl.x,pl.y);
+      const seen=d.see>0.34; ctx.fillStyle=seen?'rgba(255,60,55,'+(0.12+d.see*0.18)+')':'rgba(255,235,150,0.10)'; ctx.fill();
+      ctx.font='24px serif'; ctx.textBaseline='middle'; ctx.fillText(d.e,d.x,d.y);
+      if(seen){ ctx.font='700 12px Segoe UI'; ctx.fillStyle='#ff9b8a'; ctx.fillText('🤫'+d.say,d.x,d.y-22); } }
+    // Spieler mit Ring + Label
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,15,0,7); ctx.strokeStyle=hidden?'#6bff9b':'#ffd23f'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.font='24px serif'; ctx.textBaseline='middle'; ctx.fillText('🧍',pl.x,pl.y);
+    ctx.font='700 11px Segoe UI'; ctx.fillStyle='#ffffff'; ctx.fillText('DU',pl.x,pl.y+20);
     ctx.restore();
-    if(heat>0){ ctx.fillStyle='rgba(255,50,40,'+(heat/100*0.22)+')'; ctx.fillRect(0,0,W,H); }
+    if(heat>0){ ctx.fillStyle='rgba(255,50,40,'+(heat/100*0.2)+')'; ctx.fillRect(0,0,W,H); }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
     panelEl().innerHTML=`<h2>🌙 Durchgekommen!</h2><div style="font-size:52px">🚪💨</div><div class="miniDesc">Unbemerkt durch die halbe Dealer-Innung geschlichen. Der Görli bei Nacht – überlebt. Respekt!</div><button class="mBtn big" id="ok">😮‍💨 Puh (+2 🌟)</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🌙 Görli bei Nacht gemeistert!');}); }
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(150,0.5,'sawtooth',0.2); say("Ey, komm ma her!");
-    panelEl().innerHTML=`<h2>🤫 Umzingelt!</h2><div style="font-size:52px">🌿🌿🌿😅</div><div class="miniDesc">Zu nah dran – jetzt reden alle gleichzeitig auf dich ein: „psst-psst, komm ma, Chef!". Kein Durchkommen mehr.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
+    panelEl().innerHTML=`<h2>🤫 Entdeckt!</h2><div style="font-size:52px">👤👤👤😅</div><div class="miniDesc">Sie haben dich gesehen – jetzt reden alle gleichzeitig auf dich ein: „psst-psst, komm ma, Chef!". Kein Durchkommen mehr. Nächstes Mal von Busch zu Busch!</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniNightPark();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
@@ -2266,6 +2329,113 @@ function miniEyeContact(){
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(160,0.5,'sawtooth',0.2); say("Ey, was guckst du?!");
     panelEl().innerHTML=`<h2>😤 „Was guckst du?!"</h2><div style="font-size:52px">🤬👊</div><div class="miniDesc">Zu lange in die Augen geschaut – als Aggression gewertet. Der Fahrgast steht auf. Klassiker.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Wegschauen</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniEyeContact();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+}
+
+/* ---------- MG10: Bürokratie-Turm bauen (Stapel-Spiel) ---------- */
+function miniBuero(){
+  openMini();
+  panelEl().innerHTML=`<h2>📋 Bürokratie-Turm</h2>
+    <div class="miniDesc">Baue den absurdesten <b>Behörden-Aktenturm</b> Berlins! Ein Formular schiebt hin und her – <b>tippe / Leertaste / Knopf</b>, um es <b>bündig aufzustapeln</b>. Überstand fällt ab (Turm wird schmaler). Stapel <b>${8} Anträge</b> hoch, ohne dass nix mehr übrig bleibt!</div>
+    <canvas id="mCanvas" width="360" height="430"></canvas>
+    <button class="mBtn big" id="dropBtn">📎 STAPELN!</button>
+    <div id="miniResult">Los, Amtsschimmel!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const res=document.getElementById('miniResult');
+  const LABELS=["Anmeldung","Antrag A38","Wohnungsgeberbestätigung","Gewerbeschein","Steuer-ID","Bürgeramt-Termin 2027","Beglaubigung","Zweitschrift","Aktenzeichen XY","Bearbeitungsgebühr","Widerspruch","Nachweis überm Nachweis"];
+  const COLS=["#e7c86a","#e59a5a","#d98d8d","#8fbcd9","#a6d99a","#c8a6e0","#e0c0a0","#9ad9c8"];
+  const BH=26, TARGET=8; let over=false;
+  const base={x:W*0.30,w:W*0.40}; const stack=[base];
+  let cur={x:0,w:base.w,dir:1,speed:118}, level=1;
+  function drop(){ if(over) return; const top=stack[stack.length-1];
+    const left=Math.max(cur.x,top.x), right=Math.min(cur.x+cur.w,top.x+top.w); const ov=right-left;
+    if(ov<=2){ over=true; beep(160,0.5,'sawtooth',0.2); return lose(); }
+    stack.push({x:left,w:ov,label:LABELS[(level-1)%LABELS.length]}); level++;
+    beep(420+level*40,0.07,'square',0.12);
+    if(level>TARGET){ over=true; return win(); }
+    cur={x:(level%2?0:W-ov),w:ov,dir:(level%2?1:-1),speed:Math.min(180,118+level*8)};
+    res.textContent='📎 '+(TARGET-level+1)+' Anträge noch…';
+  }
+  document.getElementById('dropBtn').addEventListener('click',drop);
+  mOn(cv,'pointerdown',drop);
+  mOn(window,'keydown',e=>{ if(e.code==='Space'){e.preventDefault();drop();} });
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){ cur.x+=cur.dir*cur.speed*dt; if(cur.x<4){cur.x=4;cur.dir=1;} if(cur.x+cur.w>W-4){cur.x=W-4-cur.w;cur.dir=-1;} }
+    const shownH=Math.min(stack.length+1, Math.floor((H-40)/BH));
+    const baseY=H-30, topLevel=stack.length;
+    ctx.fillStyle='#20242e'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#2b3140'; ctx.fillRect(0,H-30,W,30); // Amtstresen
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // Stapel (die obersten shownH zeichnen)
+    const startI=Math.max(0,stack.length-shownH);
+    for(let i=startI;i<stack.length;i++){ const b=stack[i]; const y=baseY-(i-startI)*BH-BH;
+      ctx.fillStyle=COLS[i%COLS.length]; ctx.fillRect(b.x,y,b.w,BH-3);
+      ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.strokeRect(b.x,y,b.w,BH-3);
+      if(b.label&&b.w>40){ ctx.fillStyle='#2a2118'; ctx.font='600 10px Segoe UI'; ctx.fillText(b.label.length>22?b.label.slice(0,21)+'…':b.label,b.x+b.w/2,y+BH/2-1); } }
+    // aktuelles Formular oben
+    if(!over){ const y=baseY-(stack.length-startI)*BH-BH;
+      ctx.fillStyle=COLS[stack.length%COLS.length]; ctx.fillRect(cur.x,y,cur.w,BH-3);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.strokeRect(cur.x,y,cur.w,BH-3);
+      ctx.fillStyle='#2a2118'; ctx.font='600 10px Segoe UI'; ctx.fillText('📄 '+LABELS[(level-1)%LABELS.length],cur.x+cur.w/2,y+BH/2-1); }
+    // HUD
+    ctx.fillStyle='#fff'; ctx.font='700 15px Segoe UI'; ctx.textAlign='left'; ctx.fillText('🗼 '+(stack.length-1)+'/'+ (TARGET) ,10,20);
+    ctx.textAlign='right'; ctx.fillText('Breite '+Math.round(cur.w)+'px',W-10,20);
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🗼 Aktenturm vollendet!</h2><div style="font-size:52px">📋📎🗼</div><div class="miniDesc">Ein Turm aus <b>${TARGET} Anträgen</b> – so kompliziert, dass ihn keiner mehr bearbeiten kann. Herzlichen Glückwunsch, du bist jetzt <b>Ehren-Sachbearbeiter:in</b>! (Termin zur Urkundenübergabe: 2029.)</div><button class="mBtn big" id="ok">🏆 Beamtet (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('📋 Bürokratie-Turm gebaut!');}); }
+  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
+    panelEl().innerHTML=`<h2>🌀 Turm eingestürzt!</h2><div style="font-size:52px">📄💨</div><div class="miniDesc">Ein Formular komplett danebengelegt – der ganze Aktenberg rutscht weg. „Dann müssen Se leider nochmal 'ne Nummer ziehen."</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBuero();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+}
+
+/* ---------- MG11: Berlin-Look zusammenstellen (absurdes Outfit) ---------- */
+function miniOutfit(){
+  openMini();
+  const SLOTS=[
+    {name:'Kopf', opts:[['schlichte Frisur',2,'#caa','—'],['Dutt mit Essstäbchen',18,'#8a5','🥢'],['3 Sonnenbrillen',20,'#333','🕶️'],['Beanie bei 30°C',13,'#933','🧢'],['Bauhelm zum Spaß',16,'#fc3','⛑️']]},
+    {name:'Oberteil', opts:[['normales T-Shirt',2,'#68a','👕'],['Bauchfrei-Netzhemd (Herren)',24,'#e79','🕸️'],['3 Jacken übereinander',18,'#654','🧥'],['Anzug + Badehose',20,'#224','🩳'],['Trikot von 1998',11,'#2a7','⚽']]},
+    {name:'Unterteil', opts:[['normale Jeans',2,'#456','👖'],['Jogginghose im Büro',16,'#888','🩳'],['Lederhose + Sandalen',18,'#742','🩴'],['Rock über Jeans',15,'#a4a','🌀'],['Cargo-Shorts im Winter',16,'#584','🧊']]},
+    {name:'Schuhe', opts:[['Sneaker (unauffällig)',2,'#ccc','👟'],['Sandalen mit Socken',22,'#caa','🧦'],['nur EIN Schuh (Flohmarkt)',18,'#963','👟'],['Gummistiefel',12,'#3a6','🥾'],['Latschen',8,'#987','🩴']]},
+    {name:'Extra', opts:[['nix',0,'#777','—'],['Jutebeutel ×5',16,'#7a5','🛍️'],['Bollerwagen',18,'#963','🛒'],['Taube auf der Schulter',22,'#99a','🐦'],['Currywurst als Deko',14,'#c52','🌭']]},
+  ];
+  const sel=[0,0,0,0,0];
+  panelEl().innerHTML=`<h2>🕶️ Berlin-Look-Battle</h2>
+    <div class="miniDesc">Kombinier ein Outfit, das <b>so absurd wie möglich</b> ist (echter Kreuzberg-Vibe 😎). Jedes Teil gibt <b>Absurditäts-Punkte</b>. Ab <b>80 %</b> bist du krass genug für die Straße!</div>
+    <canvas id="mCanvas" width="360" height="210"></canvas>
+    <div id="slots"></div>
+    <div class="mBar"><i id="aBar" style="background:#c8a6e0"></i><div class="lbl" id="aLbl">Absurdität 0%</div></div>
+    <button class="mBtn big" id="goBtn">🚶 Ab auf die Straße!</button>
+    <div id="miniResult">Mehr Chaos = besser.</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult'),slotsEl=document.getElementById('slots');
+  SLOTS.forEach((s,i)=>{ const b=document.createElement('button'); b.className='mBtn alt'; b.id='slot'+i; b.style.cssText='display:block;width:100%;margin:3px 0;text-align:left';
+    mOn(b,'click',()=>{ sel[i]=(sel[i]+1)%s.opts.length; render(); }); slotsEl.appendChild(b); });
+  function score(){ return SLOTS.reduce((a,s,i)=>a+s.opts[sel[i]][1],0); }
+  function render(){
+    SLOTS.forEach((s,i)=>{ const o=s.opts[sel[i]]; document.getElementById('slot'+i).innerHTML=`${o[3]} <b>${s.name}:</b> ${o[0]} <span style="opacity:.6">(+${o[1]})</span> ▸`; });
+    const sc=Math.min(100,score()); aBar.style.width=sc+'%'; aLbl.textContent='Absurdität '+sc+'%';
+    document.getElementById('goBtn').disabled = sc<80;
+    document.getElementById('goBtn').style.opacity = sc<80?0.5:1;
+    res.textContent = sc>=80?'😎 KRASS genug. Ab damit!' : sc>=55?'Fast! Noch schräger…' : sc>=30?'Geht so normal noch.' : 'Viel zu normal, das is Berlin!';
+    // Vorschau zeichnen
+    ctx.fillStyle='#1a2740'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
+    const cx=W/2;
+    ctx.fillStyle=SLOTS[2].opts[sel[2]][2]; ctx.fillRect(cx-15,120,12,60); ctx.fillRect(cx+3,120,12,60); // Beine
+    ctx.fillStyle=SLOTS[3].opts[sel[3]][2]; ctx.fillRect(cx-18,178,16,10); ctx.fillRect(cx+2,178,16,10);   // Schuhe
+    ctx.fillStyle=SLOTS[1].opts[sel[1]][2]; ctx.fillRect(cx-22,72,44,52);                                   // Oberteil
+    ctx.fillStyle='#e6b58a'; ctx.fillRect(cx-14,40,28,28); ctx.beginPath(); ctx.arc(cx,54,14,0,7); ctx.fill(); // Kopf
+    ctx.font='22px serif'; ctx.fillText(SLOTS[0].opts[sel[0]][3],cx,26);        // Kopf-Extra
+    ctx.font='26px serif'; ctx.fillText(SLOTS[4].opts[sel[4]][3],cx+52,150);    // Extra-Prop
+    ctx.font='700 13px Segoe UI'; ctx.fillStyle='#ffd23f'; ctx.fillText('DEIN LOOK',cx,H-12);
+  }
+  document.getElementById('goBtn').addEventListener('click',()=>{ if(score()<80)return; win(); });
+  render();
+  function win(){ momente+=2; updateMomente(); jingle();
+    const look=SLOTS.map((s,i)=>s.opts[sel[i]][0]).join(' + ');
+    panelEl().innerHTML=`<h2>😎 Ikone von Kreuzberg!</h2><div style="font-size:52px">🕶️🧥🩴</div><div class="miniDesc">Dein Look: <b>${look}</b>. So schräg, dass drei Touristen dich fotografiert haben und ein Galerist dich ausstellen will. <i>„Is dit Kunst oder kann dit weg?"</i></div><button class="mBtn big" id="ok">📸 Ikonisch (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🕶️ Berlin-Look: legendär!');}); }
 }
 
 </script>
