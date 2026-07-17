@@ -15,10 +15,12 @@
     --ink-faint: #7E909B;
     --line: #D4DCE1;
     --line-strong: #C1CCD2;
-    --accent: #A8722E;         /* Messing / Kompassnadel */
+    --accent: #A8722E;
     --accent-soft: #F0E3D0;
-    --accent-2: #2B6A62;       /* Verdigris */
+    --accent-2: #2B6A62;
     --accent-2-soft: #DCEAE7;
+    --violet: #6A4C8C;
+    --violet-soft: #E8E0F0;
     --good: #2F7350;
     --good-soft: #DDEBE1;
     --warn: #A8791F;
@@ -34,25 +36,11 @@
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0D151C;
-      --surface: #14212C;
-      --surface-2: #1A2A36;
-      --surface-3: #213340;
-      --ink: #E7EDF1;
-      --ink-soft: #9DAFBB;
-      --ink-faint: #6E828F;
-      --line: #263947;
-      --line-strong: #33495A;
-      --accent: #D39A50;
-      --accent-soft: #33291B;
-      --accent-2: #4EA093;
-      --accent-2-soft: #16302D;
-      --good: #5AB27F;
-      --good-soft: #16301F;
-      --warn: #D3A64A;
-      --warn-soft: #322813;
-      --crit: #D5765A;
-      --crit-soft: #34190F;
+      --bg: #0D151C; --surface: #14212C; --surface-2: #1A2A36; --surface-3: #213340;
+      --ink: #E7EDF1; --ink-soft: #9DAFBB; --ink-faint: #6E828F; --line: #263947; --line-strong: #33495A;
+      --accent: #D39A50; --accent-soft: #33291B; --accent-2: #4EA093; --accent-2-soft: #16302D;
+      --violet: #A88BC9; --violet-soft: #241A33;
+      --good: #5AB27F; --good-soft: #16301F; --warn: #D3A64A; --warn-soft: #322813; --crit: #D5765A; --crit-soft: #34190F;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
       --shadow-lg: 0 2px 6px rgba(0,0,0,.4), 0 24px 56px -20px rgba(0,0,0,.7);
     }
@@ -61,6 +49,7 @@
     --bg: #E9EDEF; --surface: #FFFFFF; --surface-2: #F2F5F6; --surface-3: #E7ECEE;
     --ink: #17242E; --ink-soft: #51636E; --ink-faint: #7E909B; --line: #D4DCE1; --line-strong: #C1CCD2;
     --accent: #A8722E; --accent-soft: #F0E3D0; --accent-2: #2B6A62; --accent-2-soft: #DCEAE7;
+    --violet: #6A4C8C; --violet-soft: #E8E0F0;
     --good: #2F7350; --good-soft: #DDEBE1; --warn: #A8791F; --warn-soft: #F2E8CE; --crit: #A64A31; --crit-soft: #F1DDD5;
     --shadow: 0 1px 2px rgba(23,36,46,.06), 0 8px 24px -12px rgba(23,36,46,.18);
     --shadow-lg: 0 2px 4px rgba(23,36,46,.08), 0 20px 48px -18px rgba(23,36,46,.28);
@@ -69,6 +58,7 @@
     --bg: #0D151C; --surface: #14212C; --surface-2: #1A2A36; --surface-3: #213340;
     --ink: #E7EDF1; --ink-soft: #9DAFBB; --ink-faint: #6E828F; --line: #263947; --line-strong: #33495A;
     --accent: #D39A50; --accent-soft: #33291B; --accent-2: #4EA093; --accent-2-soft: #16302D;
+    --violet: #A88BC9; --violet-soft: #241A33;
     --good: #5AB27F; --good-soft: #16301F; --warn: #D3A64A; --warn-soft: #322813; --crit: #D5765A; --crit-soft: #34190F;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -14px rgba(0,0,0,.6);
     --shadow-lg: 0 2px 6px rgba(0,0,0,.4), 0 24px 56px -20px rgba(0,0,0,.7);
@@ -76,152 +66,83 @@
 
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--ink);
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
+  body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
-  .eyebrow {
-    font-family: var(--mono);
-    font-size: 11.5px;
-    letter-spacing: .18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    font-weight: 600;
-  }
+  .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
   h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 700; letter-spacing: -0.02em; }
   a { color: inherit; }
   .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-  /* ---------- HERO ---------- */
-  header.hero {
-    position: relative;
-    overflow: hidden;
-    background:
-      radial-gradient(120% 90% at 85% -10%, var(--accent-soft) 0%, transparent 55%),
-      linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
-    border-bottom: 1px solid var(--line);
-  }
-  .hero-grid {
-    display: grid;
-    grid-template-columns: 1.4fr .9fr;
-    gap: 40px;
-    align-items: center;
-    padding: 46px 0 42px;
-  }
+  header.hero { position: relative; overflow: hidden; background: radial-gradient(120% 90% at 85% -10%, var(--accent-soft) 0%, transparent 55%), linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%); border-bottom: 1px solid var(--line); }
+  .hero-grid { display: grid; grid-template-columns: 1.4fr .9fr; gap: 40px; align-items: center; padding: 46px 0 42px; }
   .hero h1 { font-size: clamp(30px, 5.2vw, 50px); line-height: 1.04; margin: 14px 0 16px; }
   .hero h1 em { font-style: normal; color: var(--accent); }
   .hero p.lead { font-size: clamp(15px, 2vw, 18px); color: var(--ink-soft); max-width: 52ch; margin: 0 0 22px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip {
-    font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em;
-    background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft);
-    padding: 6px 11px; border-radius: 999px;
-  }
+  .chip { font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); padding: 6px 11px; border-radius: 999px; }
   .chip b { color: var(--ink); font-weight: 600; }
-
-  /* compass dial */
   .dial-wrap { display: flex; justify-content: center; }
   .dial { width: min(260px, 70vw); aspect-ratio: 1; display: block; }
-
   .hero-stats { display: flex; gap: 26px; margin-top: 26px; flex-wrap: wrap; }
   .hero-stat .n { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink); letter-spacing: -.02em; }
-  .hero-stat .l { font-size: 12.5px; color: var(--ink-faint); max-width: 22ch; }
+  .hero-stat .l { font-size: 12.5px; color: var(--ink-faint); max-width: 24ch; }
 
-  /* ---------- SECTIONS ---------- */
   section { padding: 40px 0; }
   .sec-head { margin-bottom: 22px; }
   .sec-head h2 { font-size: clamp(21px, 3vw, 27px); margin: 8px 0 6px; }
-  .sec-head p { color: var(--ink-soft); margin: 0; max-width: 62ch; font-size: 15px; }
+  .sec-head p { color: var(--ink-soft); margin: 0; max-width: 64ch; font-size: 15px; }
 
-  /* ---------- CONTROL PANEL ---------- */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 22px;
-  }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
+
+  /* profile */
+  .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 4px; }
+  .trait { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; }
+  .trait .ti { width: 30px; height: 30px; border-radius: 8px; background: var(--violet-soft); color: var(--violet); display: flex; align-items: center; justify-content: center; }
+  .trait h3 { font-size: 13.5px; margin-bottom: 2px; }
+  .trait p { margin: 0; font-size: 12px; color: var(--ink-faint); line-height: 1.4; }
+  .profile-note { margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); background: var(--violet-soft); border: 1px solid color-mix(in srgb, var(--violet) 28%, transparent); border-radius: 10px; padding: 13px 15px; }
+  .profile-note b { color: var(--violet); }
+
   .panel-top { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 22px; }
-  .preset {
-    font-family: var(--sans); font-size: 13px; font-weight: 550;
-    background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--ink-soft);
-    padding: 8px 13px; border-radius: 999px; cursor: pointer; transition: all .16s ease;
-  }
+  .preset { font-family: var(--sans); font-size: 13px; font-weight: 550; background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--ink-soft); padding: 8px 13px; border-radius: 999px; cursor: pointer; transition: all .16s ease; }
   .preset:hover { border-color: var(--accent); color: var(--ink); }
   .preset[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  :root[data-theme="dark"] .preset[aria-pressed="true"],
-  @media (prefers-color-scheme: dark) { }
-  .preset[aria-pressed="true"] { color: #fff; }
 
   .weights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 30px; }
+  .weight.person label span:first-child { color: var(--violet); font-weight: 650; }
   .weight label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; font-weight: 550; margin-bottom: 5px; }
   .weight .wval { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
-  input[type="range"] {
-    -webkit-appearance: none; appearance: none; width: 100%; height: 5px;
-    background: var(--surface-3); border-radius: 999px; outline: none; cursor: pointer; margin: 3px 0 0;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
-    background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer;
-  }
-  input[type="range"]::-moz-range-thumb {
-    width: 18px; height: 18px; border-radius: 50%; background: var(--accent);
-    border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer;
-  }
+  .weight.person .wval { color: var(--violet); }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: var(--surface-3); border-radius: 999px; outline: none; cursor: pointer; margin: 3px 0 0; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; }
+  input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.3); cursor: pointer; }
+  .weight.person input[type="range"]::-webkit-slider-thumb { background: var(--violet); }
+  .weight.person input[type="range"]::-moz-range-thumb { background: var(--violet); }
   input[type="range"]:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft); }
 
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--line-strong); }
-  .filter {
-    font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em;
-    background: transparent; border: 1px solid var(--line-strong); color: var(--ink-soft);
-    padding: 6px 11px; border-radius: 999px; cursor: pointer; transition: all .15s ease;
-  }
+  .filter { font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; background: transparent; border: 1px solid var(--line-strong); color: var(--ink-soft); padding: 6px 11px; border-radius: 999px; cursor: pointer; transition: all .15s ease; }
   .filter:hover { border-color: var(--accent-2); color: var(--ink); }
   .filter[aria-pressed="true"] { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+  .filter[data-filter="neu"][aria-pressed="true"] { background: var(--violet); border-color: var(--violet); }
 
-  /* ---------- RANKING ---------- */
   .rank-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-  .row {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: box-shadow .18s ease, border-color .18s ease;
-    will-change: transform;
-  }
+  .row { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: var(--shadow); overflow: hidden; transition: box-shadow .18s ease, border-color .18s ease; will-change: transform; }
   .row.top { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
   .row:hover { box-shadow: var(--shadow-lg); }
-  .row-head {
-    display: grid;
-    grid-template-columns: 34px 1fr auto;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    cursor: pointer;
-    width: 100%;
-    background: none; border: none; text-align: left; color: inherit; font: inherit;
-  }
+  .row-head { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; width: 100%; background: none; border: none; text-align: left; color: inherit; font: inherit; }
   .row-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .rank-no { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
   .row.top .rank-no { color: var(--accent); }
   .row-main { min-width: 0; }
   .row-name { font-size: 16px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-  .verdict {
-    font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    padding: 3px 7px; border-radius: 5px; white-space: nowrap;
-  }
+  .verdict { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 5px; white-space: nowrap; }
   .verdict.sehr-gut { background: var(--good-soft); color: var(--good); }
   .verdict.gut { background: var(--accent-2-soft); color: var(--accent-2); }
   .verdict.mittel { background: var(--warn-soft); color: var(--warn); }
   .verdict.schwach { background: var(--crit-soft); color: var(--crit); }
+  .box-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 5px; background: var(--violet-soft); color: var(--violet); white-space: nowrap; }
   .row-sub { font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
   .row-score { display: flex; align-items: center; gap: 12px; }
   .meter { width: 120px; height: 7px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
@@ -245,19 +166,14 @@
   .bar-track i { display: block; height: 100%; border-radius: 999px; }
   .bar-row .bv { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
 
-  /* ---------- STAT TILES ---------- */
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
   .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
   .tile .big { font-family: var(--mono); font-size: clamp(26px, 4vw, 34px); font-weight: 600; letter-spacing: -.02em; color: var(--accent); line-height: 1; }
   .tile .lab { font-size: 13.5px; color: var(--ink-soft); margin-top: 9px; }
   .tile .lab b { color: var(--ink); font-weight: 600; }
 
-  /* ---------- RESOURCES ---------- */
   .res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-  .res {
-    display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
-  }
+  .res { display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
   .res:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-lg); }
   .res .rt { font-size: 15.5px; font-weight: 650; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .res .rt .arr { color: var(--accent); transition: transform .16s ease; }
@@ -265,7 +181,6 @@
   .res .rd { font-size: 13px; color: var(--ink-soft); margin-top: 6px; }
   .res .rmeta { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-top: 10px; letter-spacing: .02em; }
 
-  /* ---------- STEPS ---------- */
   .steps { display: grid; gap: 12px; counter-reset: step; }
   .step { display: grid; grid-template-columns: 42px 1fr; gap: 16px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
   .step .sn { counter-increment: step; font-family: var(--mono); font-size: 15px; font-weight: 600; color: #fff; background: var(--accent); width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
@@ -279,14 +194,9 @@
   .callout p b { color: var(--accent-2); }
 
   footer { border-top: 1px solid var(--line); padding: 28px 0 44px; color: var(--ink-faint); font-size: 12.5px; }
-  footer p { margin: 0 0 6px; max-width: 74ch; }
+  footer p { margin: 0 0 6px; max-width: 78ch; }
 
-  .theme-toggle {
-    position: fixed; top: 14px; right: 14px; z-index: 20;
-    width: 38px; height: 38px; border-radius: 10px; cursor: pointer;
-    background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft);
-    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
-  }
+  .theme-toggle { position: fixed; top: 14px; right: 14px; z-index: 20; width: 38px; height: 38px; border-radius: 10px; cursor: pointer; background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
   .theme-toggle:hover { color: var(--ink); border-color: var(--accent); }
 
   @media (max-width: 780px) {
@@ -298,9 +208,7 @@
     .meter { display: none; }
     .row-sub { display: none; }
   }
-  @media (prefers-reduced-motion: reduce) {
-    * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 </style>
 
 </head>
@@ -314,18 +222,18 @@
     <div>
       <span class="eyebrow">Persönliche Standortbestimmung · Unternehmensnachfolge</span>
       <h1>Dein Nachfolge&#8209;<em>Kompass</em></h1>
-      <p class="lead">21 Branchen, gewichtet nach dem, was <em>dir</em> wichtig ist. Kein Bauchgefühl mehr, sondern eine Rangfolge, die sich verschiebt, sobald du deine Prioritäten änderst. Grundlage: deine eigene Branchen&#8209;Scorecard plus aktuelle Marktdaten 2025/26.</p>
+      <p class="lead">26 Branchen, gewichtet nach dem, was <em>dir</em> wichtig ist &ndash; jetzt auch nach deiner <em>Persönlichkeit</em>. Grundlage: deine Branchen&#8209;Scorecard, dein Stimmungscheck (mit 5 neuen Ideen) und dein eigenes Profil.</p>
       <div class="chips">
-        <span class="chip"><b>IT</b>&nbsp;· Herkunft</span>
-        <span class="chip"><b>Vertrieb &amp; Sales</b>&nbsp;· MC Prototyping</span>
-        <span class="chip"><b>Lehre &amp; Schulung</b>&nbsp;· IU</span>
-        <span class="chip"><b>Öffentl. Dienst</b>&nbsp;· Museum</span>
-        <span class="chip"><b>Führung &amp; Marketing</b></span>
+        <span class="chip"><b>IT &amp; Medieninformatik</b></span>
+        <span class="chip"><b>Vertrieb &amp; Sales</b></span>
+        <span class="chip"><b>Eigene Web&#8209;Agentur</b></span>
+        <span class="chip"><b>Innovation Manager</b></span>
+        <span class="chip"><b>Lehre · IU</b></span>
       </div>
       <div class="hero-stats">
-        <div class="hero-stat"><div class="n">21</div><div class="l">Branchen aus deiner Scorecard analysiert</div></div>
+        <div class="hero-stat"><div class="n">26</div><div class="l">Branchen &ndash; inkl. 5 neuer Ideen aus deinem Stimmungscheck</div></div>
         <div class="hero-stat"><div class="n">2,4&#215;</div><div class="l">mehr Betriebe als Käufer &ndash; du bist gefragt</div></div>
-        <div class="hero-stat"><div class="n">8</div><div class="l">Kriterien, die du selbst gewichtest</div></div>
+        <div class="hero-stat"><div class="n">9</div><div class="l">Kriterien inkl. Persönlichkeit, die du selbst gewichtest</div></div>
       </div>
     </div>
     <div class="dial-wrap">
@@ -335,20 +243,35 @@
 </header>
 
 <main>
-  <section>
+  <section style="padding-bottom:8px">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="eyebrow">Wer du bist</span>
+        <h2>Dein Profil &ndash; die Basis für den Persönlichkeits&#8209;Regler</h2>
+        <p>Abgeleitet aus deinem Lebenslauf. Es entscheidet, wie der neue Regler &bdquo;Passt zu meiner Persönlichkeit&ldquo; jede Branche bewertet.</p>
+      </div>
+      <div class="panel">
+        <div class="profile-grid" id="profileGrid"></div>
+        <div class="profile-note">
+          <b>Was der Persönlichkeits&#8209;Regler misst:</b> Branchen, in denen <b>Aufbauen, Verkaufen, Digitalisieren und Gestalten</b> der Hebel sind, bekommen hohe Werte. Reines Handwerk am Objekt, stark regulierte oder emotional sehr fordernde Felder bekommen niedrigere &ndash; nicht weil sie schlecht sind, sondern weil sie weniger zu deinem Unternehmer&#8209;/Macher&#8209;Typ passen.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:24px">
     <div class="wrap">
       <div class="sec-head">
         <span class="eyebrow">Schritt 1 · Deine Prioritäten</span>
         <h2>Was ist dir wichtig?</h2>
-        <p>Verschiebe die Regler oder wähle unten eine fertige Sichtweise. Die Rangliste sortiert sich sofort neu &ndash; so siehst du schwarz auf weiß, welche Branche zu welcher Prioritäten&#8209;Mischung passt.</p>
+        <p>Verschiebe die Regler oder wähle eine fertige Sichtweise. Die Rangliste sortiert sich sofort neu. Der violette Regler ganz unten ist neu: <b>Persönlichkeit</b>.</p>
       </div>
       <div class="panel">
-        <div class="panel-top">
-          <span class="eyebrow" style="color:var(--ink-faint)">Fertige Sichtweisen</span>
-        </div>
+        <div class="panel-top"><span class="eyebrow" style="color:var(--ink-faint)">Fertige Sichtweisen</span></div>
         <div class="presets" id="presets"></div>
         <div class="weights" id="weights"></div>
         <div class="filters" id="filters">
+          <button class="filter" data-filter="neu" aria-pressed="false">Nur neue Ideen (outside the box)</button>
           <button class="filter" data-filter="quer" aria-pressed="false">Nur ohne Meisterzwang</button>
           <button class="filter" data-filter="home" aria-pressed="false">Nur ortsunabhängig</button>
           <button class="filter" data-filter="neben" aria-pressed="false">Nebenbei startbar</button>
@@ -363,7 +286,7 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 2 · Deine Rangfolge</span>
         <h2>Branchen, sortiert nach deinem Profil</h2>
-        <p>Der <b>Match</b> ist dein persönlicher Passungswert. Das farbige Etikett zeigt zusätzlich die Gesamt&#8209;Bewertung aus deiner Scorecard. Klick eine Zeile für Details, Zahlen und die Begründung.</p>
+        <p>Der <b>Match</b> ist dein persönlicher Passungswert. Das Etikett zeigt die Bewertung aus deiner Scorecard bzw. deinem Stimmungscheck. <span class="box-badge">Neue Idee</span> markiert die 5 Branchen, die bisher nicht im Kompass waren. Klick eine Zeile für Details.</p>
       </div>
       <div class="rank-list" id="rankList"></div>
     </div>
@@ -374,7 +297,7 @@
       <div class="sec-head">
         <span class="eyebrow">Marktlage 2025/26 · Warum jetzt</span>
         <h2>Der Markt sucht dich &ndash; nicht umgekehrt</h2>
-        <p>Die Nachfolgelücke ist so groß wie nie. Für einen entscheidungsfähigen Quereinsteiger mit Vertriebs&#8209; und Führungskompetenz ist das kein Nachteil, sondern der beste Zeitpunkt seit Jahren.</p>
+        <p>Die Nachfolgelücke ist so groß wie nie. Für einen entscheidungsfähigen Quereinsteiger mit Vertriebs&#8209; und Führungskompetenz ist das der beste Zeitpunkt seit Jahren.</p>
       </div>
       <div class="tiles">
         <div class="tile"><div class="big">9.600</div><div class="lab">abgabebereite Betriebe standen 2025 nur <b>~4.000 Interessenten</b> gegenüber (DIHK)</div></div>
@@ -383,7 +306,7 @@
         <div class="tile"><div class="big">23&#8202;%</div><div class="lab">der Nachfolger bringen die nötige Qualifikation mit &ndash; <b>Vorbereitung sticht</b></div></div>
       </div>
       <div class="callout">
-        <p><b>Das spielt dir in die Karten:</b> Die IHKs melden gerade vermehrt Nachfolge&#8209;Interessenten aus der Industrie, die eine Alternative zum Angestelltenverhältnis suchen. Im Handwerk steigt die Zahl der Übergaben sogar &ndash; ein reifer Markt voller inhabergeführter Betriebe, deren Chefs 60+ sind und keinen Nachfolger haben.</p>
+        <p><b>Das spielt dir in die Karten:</b> Die IHKs melden vermehrt Nachfolge&#8209;Interessenten aus der Industrie, die eine Alternative zum Angestelltenverhältnis suchen. Im Handwerk steigt die Zahl der Übergaben sogar &ndash; ein reifer Markt voller inhabergeführter Betriebe, deren Chefs 60+ sind und keinen Nachfolger haben.</p>
       </div>
     </div>
   </section>
@@ -393,7 +316,7 @@
       <div class="sec-head">
         <span class="eyebrow">Schritt 3 · Wo du Angebote findest</span>
         <h2>Verkaufsangebote &amp; Nachfolgebörsen</h2>
-        <p>Die wichtigsten Plattformen für konkrete Verkaufsangebote &ndash; und, passend zu deinem Reinigungs&#8209;Masterplan, die Berliner Auftrags&#8209; und Ausschreibungsquellen.</p>
+        <p>Die wichtigsten Plattformen für konkrete Verkaufsangebote &ndash; plus die Berliner Auftrags&#8209; und Ausschreibungsquellen aus deinem Reinigungs&#8209;Plan.</p>
       </div>
       <div class="res-grid" id="resGrid"></div>
     </div>
@@ -403,13 +326,13 @@
     <div class="wrap">
       <div class="sec-head">
         <span class="eyebrow">Schritt 4 · So kommst du zur Entscheidung</span>
-        <h2>Von 21 Branchen auf eine &ndash; in vier Zügen</h2>
-        <p>Entscheidungslähmung kommt fast immer von zu vielen offenen Optionen gleichzeitig. Der Ausweg ist nicht &bdquo;die perfekte Branche finden&ldquo;, sondern <b>schnell auf 2&ndash;3 verengen und testen</b>.</p>
+        <h2>Von 26 Branchen auf eine &ndash; in vier Zügen</h2>
+        <p>Entscheidungslähmung kommt fast immer von zu vielen offenen Optionen. Der Ausweg ist nicht &bdquo;die perfekte Branche finden&ldquo;, sondern <b>schnell auf 2&ndash;3 verengen und testen</b>.</p>
       </div>
       <div class="steps">
-        <div class="step"><span class="sn"></span><div><h3>Shortlist auf 3 verengen</h3><p>Stell die Regler auf <b>&bdquo;Deine Stärken zuerst&ldquo;</b> und notier die Top&#8209;3. Alles darunter ist ab jetzt bewusst raus. Erlaubnis, den Rest zu ignorieren &ndash; das ist der eigentliche Befreiungsschritt.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>Shortlist auf 3 verengen</h3><p>Stell die Regler auf <b>&bdquo;Deine Stärken zuerst&ldquo;</b> und dann einmal auf <b>&bdquo;Bauchgefühl &amp; Persönlichkeit&ldquo;</b>. Welche Branchen tauchen in <b>beiden</b> Top&#8209;5 auf? Das ist deine Shortlist. Der Rest ist ab jetzt bewusst raus.</p></div></div>
         <div class="step"><span class="sn"></span><div><h3>Je Branche 5 echte Angebote ansehen</h3><p>Öffne nexxt&#8209;change &amp; DUB, filtere nach deinen 3 Branchen und der Region. <b>Zahlen statt Vorstellung:</b> Kaufpreis, Umsatz, Mitarbeiter, Inhaberabhängigkeit. Oft klärt sich die Vorliebe erst an echten Objekten.</p></div></div>
-        <div class="step"><span class="sn"></span><div><h3>Ein Gespräch pro Branche führen</h3><p>Wie heute mit der Hausverwaltung: <b>ein ehrliches Gespräch pro Feld</b> mit einem Inhaber, Makler oder Berater sagt mehr als zehn Recherche&#8209;Stunden. Frag konkret nach dem, was dich abschreckt.</p></div></div>
+        <div class="step"><span class="sn"></span><div><h3>Ein Gespräch pro Branche führen</h3><p>Wie mit der Hausverwaltung: <b>ein ehrliches Gespräch pro Feld</b> mit einem Inhaber, Makler oder Berater sagt mehr als zehn Recherche&#8209;Stunden. Frag konkret nach dem, was dich abschreckt.</p></div></div>
         <div class="step"><span class="sn"></span><div><h3>3&#8209;Monats&#8209;Testfenster setzen</h3><p>Leg ein Enddatum fest, bis zu dem du dich für <b>eine</b> Branche entscheidest. Ein Kompass zeigt die Richtung &ndash; laufen musst du selbst. Perfekte Sicherheit gibt es vorher nie.</p></div></div>
       </div>
     </div>
@@ -418,8 +341,8 @@
 
 <footer>
   <div class="wrap">
-    <p><b>Datengrundlage:</b> deine Branchen&#8209;Scorecard &bdquo;Nachfolge&ldquo; (21 Branchen × 23 Kriterien, Stand 2024/25) und dein Reinigungsunternehmen&#8209;Masterplan aus Google&nbsp;Drive; Marktzahlen aus dem DIHK&#8209;Report Unternehmensnachfolge 2025 und nexxt&#8209;change. Die 8&#8209;Kriterien&#8209;Bewertung je Branche ist aus deiner Scorecard abgeleitet und auf 0&ndash;5 normiert &ndash; ein Orientierungsmodell, kein Gutachten.</p>
-    <p>Privat für dich erstellt · nur über deinen Link erreichbar. Passe die Gewichtung jederzeit an &ndash; die Rangfolge ist bewusst kein festes Urteil, sondern dein Denkwerkzeug.</p>
+    <p><b>Datengrundlage:</b> deine Branchen&#8209;Scorecard &bdquo;Nachfolge&ldquo; (21 Branchen × 23 Kriterien), dein &bdquo;Stimmungscheck Branchen&ldquo; (20 Branchen inkl. der neuen Ideen: Rohrreinigung, Schädlingsbekämpfung, Med. Abrechnungsservice, Prüfgesellschaften, Weiterbildung), dein Reinigungs&#8209;Masterplan und dein Lebenslauf (profil.pdf) aus Google&nbsp;Drive; Marktzahlen aus dem DIHK&#8209;Report Unternehmensnachfolge 2025 und nexxt&#8209;change. Die 9&#8209;Kriterien&#8209;Bewertung je Branche ist aus diesen Quellen abgeleitet und auf 0&ndash;5 normiert &ndash; ein Orientierungsmodell, kein Gutachten.</p>
+    <p>Privat für dich erstellt. Passe die Gewichtung jederzeit an &ndash; die Rangfolge ist bewusst kein festes Urteil, sondern dein Denkwerkzeug.</p>
   </div>
 </footer>
 
@@ -427,7 +350,6 @@
 (function () {
   "use strict";
 
-  /* ---------- THEME ---------- */
   var root = document.documentElement;
   var tt = document.getElementById("themeToggle");
   tt.addEventListener("click", function () {
@@ -435,6 +357,25 @@
     if (!cur) cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
     drawDial();
+  });
+
+  /* ---------- PROFILE ---------- */
+  var TRAITS = [
+    { t: "Unternehmer-DNA", d: "Eigene Web-Agentur (L1Website), Business Development, Future Innovation Manager." },
+    { t: "Vertrieb & Menschen", d: "Telefon-Sales, Promotion, Sales/BD bei EMEC – Verkaufen ist dein roter Faden." },
+    { t: "Digital-nativ", d: "M.Sc. Medieninformatik, WordPress/Typo3, SEO/Adwords, etwas Java/Python." },
+    { t: "Ingenieur & Stratege", d: "B.Eng. Wirtschaftsingenieur, Fraunhofer Think-Tank / Strategie, CAD." },
+    { t: "Ausdauer & Disziplin", d: "Marathonläufer – Durchhaltevermögen und langer Atem für den Aufbau." },
+    { t: "International & neugierig", d: "Auslandsstudium Dublin, Workcamps Island/Malta/Australien, Reisen, Fotografie." },
+    { t: "Wissensvermittler", d: "Lehrkraft an der IU, Schulungen – du kannst erklären und andere befähigen." }
+  ];
+  var pg = document.getElementById("profileGrid");
+  TRAITS.forEach(function (x) {
+    var d = document.createElement("div");
+    d.className = "trait";
+    d.innerHTML = '<span class="ti"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>'
+      + '<div><h3>' + x.t + '</h3><p>' + x.d + '</p></div>';
+    pg.appendChild(d);
   });
 
   /* ---------- DIMENSIONS ---------- */
@@ -446,104 +387,126 @@
     { k: "neben",    label: "Nebenbei startbar" },
     { k: "krise",    label: "Krisensicher" },
     { k: "zukunft",  label: "Zukunft & KI-Chance" },
-    { k: "skalier",  label: "Läuft irgendwann ohne mich" }
+    { k: "skalier",  label: "Läuft irgendwann ohne mich" },
+    { k: "person",   label: "Passt zu meiner Persönlichkeit" }
   ];
   var WLABEL = ["egal", "wichtig", "sehr", "kritisch"];
 
-  /* ---------- DATA (0–5 je Kriterium, abgeleitet aus deiner Scorecard) ---------- */
+  /* ---------- DATA (0–5 je Kriterium, abgeleitet aus Scorecard + Stimmungscheck + Profil) ---------- */
   var DATA = [
     { name: "Hausverwaltung", verdict: "sehr gut", vclass: "sehr-gut",
-      s: { fit:4, kapital:5, quer:4, home:5, neben:4, krise:4, zukunft:5, skalier:4 },
-      facts: { "Betriebe DE":"~30.000", "Berlin":"~2.000", "Markt":"15,4 Mrd. €", "Marge":"5–10 % (b. 25 %)", "Trend":"wachsend" },
-      why: "Deine <b>Nr.&nbsp;1 laut Scorecard</b> – und nach deinem Gespräch mit der Hausverwaltung heute umso relevanter. Niedriger Kapitalbedarf, kein Meisterzwang, weitgehend vom Schreibtisch/remote steuerbar und stark digitalisierbar (KI-Chance sehr hoch). Deine IT-, Vertriebs- und Organisationsstärke ist hier ein echter Hebel gegen den oft verstaubten Wettbewerb." },
+      s: { fit:4, kapital:5, quer:4, home:5, neben:4, krise:4, zukunft:5, skalier:4, person:4 },
+      facts: { "Betriebe DE":"~30.000", "Berlin":"~2.000", "Markt":"15,4 Mrd. €", "Marge":"5–10 % (b. 25 %)", "Bewertung":"150–460 Tsd. €", "Trend":"wachsend" },
+      why: "Deine <b>Nr.&nbsp;1 laut Scorecard</b> und nach dem Gespräch mit der Hausverwaltung umso relevanter. Niedriger Kapitalbedarf, kein Meisterzwang, remote steuerbar, stark digitalisierbar. Deine IT-, Vertriebs- und Organisationsstärke ist ein echter Hebel gegen den oft verstaubten Wettbewerb. <b>Im Auge behalten:</b> KI-Plattformen (Matera &amp; Co.) verändern die Buchhaltung – als digital-affiner Verwalter ist das eher deine Chance." },
+    { name: "Med. Abrechnungsservice", verdict: "sehr gut", vclass: "sehr-gut", box: true,
+      s: { fit:4, kapital:4, quer:4, home:5, neben:3, krise:5, zukunft:4, skalier:4, person:5 },
+      facts: { "Betriebe DE":"~2.800", "Berlin":"~95", "Modell":"B2B / digital", "EBITDA":"5–10× (SaaS-nah)", "Ampel":"GRÜN ★★★★★", "Trend":"Wachstum" },
+      why: "Für dein Profil vielleicht der spannendste Fund: ein <b>digitales, ortsunabhängiges B2B-Dienstleistungsmodell</b> mit wiederkehrenden Umsätzen. Ärzte lagern die immer komplexere Abrechnung aus – struktureller Rückenwind durch Bürokratie im Gesundheitswesen. Kein Handwerk, keine Praxis: dein IT-/Digital-/Vertriebskern trägt hier direkt. Achte beim Kauf auf software- statt handgestützte Prozesse (das entscheidet über die Skalierbarkeit)." },
+    { name: "Rohrreinigung", verdict: "sehr gut", vclass: "sehr-gut", box: true,
+      s: { fit:3, kapital:2, quer:4, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
+      facts: { "Betriebe DE":"~3.500", "Berlin":"~120", "Markt":"CAGR +5,3 %", "EBITDA":"15–46 %", "Ampel":"GRÜN ★★★★★", "Trend":"krisenfest" },
+      why: "Der <b>Platz&nbsp;1 aus deinem Stimmungscheck</b>. Konjunkturunabhängige Grundversorgung – Rohre verstopfen in jeder Krise. EBITDA bis 46 % möglich (Schnitt 15–25 %), und du brauchst <b>keine eigenen technischen Kenntnisse, wenn ein Team da ist</b>. Berlins altes Leitungsnetz = Dauerbedarf, öffentliche Aufträge verfügbar. Große Player (Norva24) konsolidieren – wer sauber aufstellt, wird selbst zum Zukaufziel. Dein Part: aufbauen und verkaufen, nicht Monteur sein." },
     { name: "IT-Systemhaus / MSP", verdict: "gut", vclass: "gut",
-      s: { fit:5, kapital:4, quer:4, home:4, neben:3, krise:4, zukunft:5, skalier:3 },
-      facts: { "Betriebe DE":"~3.000+", "Markt":"51 Mrd. € (IT-Serv.)", "Marge":"5–12 %", "Trend":"wachsend/konsolidierend" },
-      why: "Deine <b>Heimat-Branche</b> – höchster fachlicher Fit. Wiederkehrende Wartungs-/MSP-Umsätze, remote steuerbar, KI ist Chance statt Bedrohung. Herausforderung ist der IT-Fachkräftemangel; dafür verkaufen viele altersbedingt und du sprichst die Sprache der Kunden und der Technik von Tag&nbsp;1." },
+      s: { fit:5, kapital:4, quer:4, home:4, neben:3, krise:4, zukunft:5, skalier:3, person:4 },
+      facts: { "Betriebe DE":"~43.800", "Berlin":"~8.000", "Markt":"51 Mrd. € (IT-Serv.)", "EBITDA":"5–8×", "Marge":"5–12 %", "Trend":"Erholung" },
+      why: "Deine <b>Heimat-Branche</b> – höchster fachlicher Fit. Wiederkehrende Wartungs-/MSP-Umsätze, remote steuerbar, Cyber-Security boomt. KI ist Chance <b>und</b> Risiko: nur kaufen, wenn das Geschäftsmodell KI-resistent oder KI-kompatibel ist (MSP/Managed Services statt reiner Standard-Entwicklung). Herausforderung: Schlüsselpersonen – Entwickler dürfen nach der Übernahme nicht abspringen." },
+    { name: "Schädlingsbekämpfung", verdict: "sehr gut", vclass: "sehr-gut", box: true,
+      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
+      facts: { "Betriebe DE":"~1.200", "Berlin":"~80", "Weltmarkt":"24,2 Mrd. $", "EBITDA":"4–8×", "Ampel":"GRÜN ★★★★★", "Trend":"defensiv +" },
+      why: "Defensive Nische mit <b>Burggraben</b>. Konjunkturunabhängig, Klimawandel treibt die Nachfrage (Bettwanzen, Ratten), Stammkundenverträge mit Hausverwaltungen, Hotels und Lebensmittelbetrieben = planbare Umsätze. Zertifizierungen (biozidrechtliche Sachkunde) sind Markteintrittshürde – und damit dein Schutz. Konzerne (Rentokil, Anticimex) kaufen regionale Spezialisten. B2B-Vertrieb und Nischenaufbau sind dein Terrain. <b>Achtung:</b> Lizenzen sind nicht automatisch übertragbar." },
+    { name: "Prüfgesellschaften", verdict: "gut", vclass: "gut", box: true,
+      s: { fit:3, kapital:3, quer:2, home:3, neben:2, krise:5, zukunft:4, skalier:4, person:4 },
+      facts: { "Betriebe DE":"~4.500", "Berlin":"~180", "Weltmarkt":"36 Mrd. $ (2025)", "EBITDA":"6–10×", "Ampel":"GRÜN ★★★★", "Trend":"reguliert +" },
+      why: "Wiederkehrende Umsätze durch <b>gesetzlich vorgeschriebene Prüfungen</b> (DGUV, UVV, CE, Energieausweis, ESG). Regulatorischer Rückenwind, Markt kaum konsolidiert (Top 4 nur ~30 %). Dein Wirtschaftsingenieur-Hintergrund passt zum technisch-systematischen Charakter, Remote-Prüfungen nehmen zu. <b>Kritisch:</b> Akkreditierungen (DAkkS, ISO 17020) sind personen-/unternehmensgebunden – Due Diligence ist hier alles, sonst Wertverlust bei Übernahme." },
     { name: "Versicherungsmakler", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:5, quer:3, home:5, neben:4, krise:4, zukunft:4, skalier:4 },
+      s: { fit:3, kapital:5, quer:3, home:5, neben:4, krise:4, zukunft:4, skalier:4, person:3 },
       facts: { "Betriebe DE":"~46.500", "Markt":"Courtage-basiert", "Marge":"gut (Courtage)", "Trend":"Überalterung / Bestandskäufe" },
       why: "Ein <b>Bestand</b> zahlt laufende Courtage – planbar, ortsunabhängig, nebenberuflich aufbaubar und gut skalierbar. Zulassung §34d nötig, aber kein Studium. Wenn dich Provisionsvertrieb nicht abschreckt, ist das eines der ruhigsten, inhaberunabhängigsten Modelle." },
     { name: "Elektrohandwerk", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:2, quer:1, home:1, neben:3, krise:3, zukunft:4, skalier:3 },
+      s: { fit:4, kapital:2, quer:1, home:1, neben:3, krise:3, zukunft:4, skalier:3, person:2 },
       facts: { "Betriebe DE":"~48.180", "Markt":"84,3 Mrd. €", "Marge":"3–7 %", "Trend":"Elektrifizierung +" },
-      why: "Struktureller Rückenwind durch Elektrifizierung, PV und Wärmewende; sehr hoher Fachkräftemangel = Auftragsbücher voll. <b>Aber:</b> Meisterpflicht und Vor-Ort-Geschäft. Realistisch nur mit Meister im Team – dann übernimmst du die Unternehmer-, nicht die Monteursrolle." },
+      why: "Struktureller Rückenwind durch Elektrifizierung, PV und Wärmewende; sehr hoher Fachkräftemangel = volle Auftragsbücher. <b>Aber:</b> Meisterpflicht und Vor-Ort-Geschäft. Realistisch nur mit Meister im Team – dann übernimmst du die Unternehmer-, nicht die Monteursrolle." },
     { name: "Physiotherapie", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:4, quer:2, home:3, neben:3, krise:4, zukunft:3, skalier:3 },
+      s: { fit:4, kapital:4, quer:2, home:3, neben:3, krise:4, zukunft:3, skalier:3, person:3 },
       facts: { "Betriebe DE":"~50.900", "Markt":"14 Mrd. €", "Marge":"~17 % (fallend)", "Trend":"wachsend" },
-      why: "Demografie-getrieben und krisensicher, überschaubarer Kapitalbedarf. Zulassung/Personal sind die Hürde. Als Betreiber führst du Praxis, Team und Abrechnung – deine Führungs- und Vertriebsstärke zählt mehr als die Behandlung selbst." },
+      why: "Demografie-getrieben und krisensicher, überschaubarer Kapitalbedarf. Zulassung und extreme Personalabhängigkeit sind die Hürde. Als Betreiber führst du Praxis, Team und Abrechnung – deine Führungs- und Vertriebsstärke zählt mehr als die Behandlung selbst." },
     { name: "Dachdeckerei", verdict: "gut", vclass: "gut",
-      s: { fit:4, kapital:2, quer:1, home:2, neben:2, krise:3, zukunft:3, skalier:3 },
+      s: { fit:4, kapital:2, quer:1, home:2, neben:2, krise:3, zukunft:3, skalier:3, person:2 },
       facts: { "Betriebe DE":"~15.300", "Markt":"13,2 Mrd. €", "Marge":"3–6 %", "Trend":"+2,4 % (PV/Sanierung)" },
-      why: "Photovoltaik und Sanierung treiben die Nachfrage, extremer Fachkräftemangel. Meisterpflicht und körperliches Vor-Ort-Geschäft – für dich nur als Inhaber mit Meister-Team sinnvoll. Starke Fit-Note wegen des PV-/Vertriebspotenzials." },
+      why: "Photovoltaik und Sanierung treiben die Nachfrage, extremer Fachkräftemangel. Meisterpflicht und körperliches Vor-Ort-Geschäft – für dich nur als Inhaber mit Meister-Team sinnvoll." },
     { name: "Garten- & Landschaftsbau", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:3, quer:4, home:2, neben:2, krise:4, zukunft:3, skalier:3 },
+      s: { fit:3, kapital:3, quer:4, home:2, neben:2, krise:4, zukunft:3, skalier:3, person:3 },
       facts: { "Betriebe DE":"~19.600", "Markt":"10,65 Mrd. €", "Marge":"mittel", "Trend":"+3 % (15 J. Wachstum)" },
       why: "15 Jahre ununterbrochenes Wachstum, kein zwingender Meister für den Einstieg, solide Margen. Geräteinvest und Saisonalität sind zu managen. Robustes, bodenständiges Geschäft mit klarer Nachfrage." },
     { name: "Augenoptik", verdict: "gut", vclass: "gut",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:4, zukunft:3, skalier:3 },
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:4, zukunft:3, skalier:3, person:3 },
       facts: { "Betriebe DE":"~10.820", "Markt":"6,98 Mrd. €", "Marge":"gut", "Trend":"+3,2 % (Demografie)" },
       why: "Demografie sichert die Nachfrage, gute Margen, hohe Krisensicherheit. Meisterpflicht und Ladenlokal binden Kapital und Ort. Einzelhandels-/Beratungsgeschäft – dein Vertrieb passt, die Fachkunde muss im Team sein." },
-    { name: "Sicherheitsdienst", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:5, quer:3, home:3, neben:3, krise:4, zukunft:3, skalier:4 },
-      facts: { "Betriebe DE":"~5.800", "Markt":"~13–14 Mrd. €", "Marge":"dünn", "Trend":"+7,5 % (Top 25)" },
-      why: "Niedriger Kapitalbedarf, §34a statt Meister, gut über Leitstelle/Disposition steuerbar und skalierbar. Dünne Margen und Personalintensität sind der Preis. Ein Führungs- und Organisationsgeschäft – nicht das Wachpersonal, sondern das System entscheidet." },
+    { name: "Weiterbildung (AZAV)", verdict: "mittel", vclass: "mittel", box: true,
+      s: { fit:4, kapital:4, quer:3, home:4, neben:3, krise:3, zukunft:3, skalier:3, person:5 },
+      facts: { "Betriebe DE":"~8.500", "Berlin":"~400", "Bewertung":"1–3× EBIT", "Ampel":"GELB ★★", "Wachstum":"KI-Schulungen", "Trend":"gespalten" },
+      why: "Die Branche, die am direktesten an dein <b>Lehr-Ich</b> andockt (IU-Lehrkraft, Schulungen). Wachstumssegment: KI-Schulungen. Zweigeteilt: gefördertes Umschulungsgeschäft (AZAV, stabil aber bürokratisch) und Corporate Training (wächst bei KI-Themen, schrumpft bei Office-Klassikern). <b>Aber:</b> die AZAV-Zertifizierung geht bei Kauf nicht automatisch über und die BA-Förderung ist politisch. Nur mit AZAV + guten Jobcenter-Rahmenverträgen kaufen." },
     { name: "Gebäudereinigung", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:5, quer:5, home:3, neben:3, krise:4, zukunft:3, skalier:4 },
+      s: { fit:3, kapital:5, quer:5, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:4 },
       facts: { "Betriebe DE":"~34.800", "Markt":"27+ Mrd. €", "Marge":"2–4 % (dünn)", "Trend":"wachsend" },
-      why: "Dein <b>am tiefsten ausgearbeitetes Szenario</b> (BauClean-Masterplan). Niedrigster Kapitalbedarf, kein Meister, sofort startbar. Margen sind dünn und alles steht und fällt mit Personalführung – genau deine Stärke. Scorecard sagt „mittel“, aber dein Vertriebs-/Führungs-Vorteil hebt es faktisch nach oben." },
+      why: "Dein <b>am tiefsten ausgearbeitetes Szenario</b> (BauClean-Masterplan). Niedrigster Kapitalbedarf, kein Meister, sofort startbar. Margen sind dünn und alles steht und fällt mit Personalführung – genau deine Stärke. Scorecard sagt „mittel“, aber dein Vertriebs-/Führungs-Vorteil und die Marketing-Positionierung heben es faktisch nach oben." },
     { name: "Immobilienmakler", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:5, quer:3, home:3, neben:3, krise:2, zukunft:3, skalier:3 },
+      s: { fit:4, kapital:5, quer:3, home:3, neben:3, krise:2, zukunft:3, skalier:3, person:4 },
       facts: { "Betriebe DE":"~36.000", "Markt":"Courtage", "Marge":"mittel–hoch", "Trend":"+ (Courtage '24)" },
       why: "Sehr niedriger Kapitalbedarf, §34c statt Studium, hoher Fit über deinen Verkaufskern. Aber zins-/konjunkturabhängig und stark personengebunden. Als Ergänzung zu einem anderen Standbein (z.&nbsp;B. Hausverwaltung) besonders interessant." },
     { name: "Werbe- / Marketingagentur", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:5, quer:5, home:4, neben:3, krise:2, zukunft:2, skalier:2 },
+      s: { fit:4, kapital:5, quer:5, home:4, neben:3, krise:2, zukunft:2, skalier:2, person:5 },
       facts: { "Betriebe DE":"~23.600", "Markt":"~50 Mrd. € Werbemarkt", "Marge":"mittel", "Trend":"schwankend (−2,7 % '25)" },
-      why: "Kaum Kapital, kein Meister, ortsunabhängig, hoher Fit über Marketing. <b>Großes Aber:</b> KI bedroht klassische Content-/Kreativleistung stark, das Geschäft ist zyklisch und kopfabhängig. Nur mit klarer KI-nativer Positionierung tragfähig." },
-    { name: "Sanitätshaus / OT", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:2, neben:2, krise:5, zukunft:3, skalier:3 },
-      facts: { "Betriebe DE":"~5.400", "Markt":"~12 Mrd. €", "Marge":"mittel", "Trend":"+6,2 %" },
-      why: "Sehr krisensicher und wachsend (Demografie). Hohe Hürde: Meister plus Kassenzulassung, kapitalintensiver Laden. Reguliertes Geschäft mit stabilen Erstattungen – aber schwerer Quereinstieg." },
-    { name: "Bestattung", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:2, skalier:2 },
-      facts: { "Betriebe DE":"~6.800", "Markt":"3,6 Mrd. €", "Marge":"mittel, sinkend", "Trend":"+1 %/Jahr" },
-      why: "Maximal krisensicher und konjunkturunabhängig, kein Meisterzwang. Dafür 24/7-Verfügbarkeit, stark ruf-/vertrauensgebunden und emotional fordernd. Ein Geschäft, das man wollen muss – Zahlen allein tragen die Entscheidung nicht." },
+      why: "Kaum Kapital, kein Meister, ortsunabhängig – und du hast <b>selbst schon eine Web-Agentur geführt</b> (L1Website, SEO/Adwords). Höchster Persönlichkeits-Fit. <b>Großes Aber:</b> KI bedroht klassische Content-/Kreativleistung stark, das Geschäft ist zyklisch und kopfabhängig. Nur mit klarer KI-nativer Positionierung tragfähig." },
+    { name: "Sicherheitsdienst", verdict: "gut", vclass: "gut",
+      s: { fit:3, kapital:5, quer:3, home:3, neben:3, krise:4, zukunft:3, skalier:4, person:3 },
+      facts: { "Betriebe DE":"~5.800", "Berlin":"~380", "Markt":"~13–14 Mrd. €", "Ampel":"GRÜN ★★★★", "Trend":"+7,5 %" },
+      why: "Aus deinem Stimmungscheck als Top-5 gelistet: strukturelles Wachstum, Berlin ideal (Botschaften, Messen, Wohnungswirtschaft). Niedriger Kapitalbedarf, §34a statt Meister, gut über Leitstelle/Disposition steuerbar und skalierbar. Dünne Margen und Personalfluktuation sind der Preis – ein Führungs- und Organisationsgeschäft." },
     { name: "Ambulante Pflege", verdict: "mittel", vclass: "mittel",
-      s: { fit:2, kapital:4, quer:2, home:2, neben:2, krise:5, zukunft:3, skalier:3 },
-      facts: { "Betriebe DE":"~15.500–17.800", "Markt":"~35 Mrd. €", "Marge":"dünn", "Trend":"+2,2 %/J. (Demografie)" },
+      s: { fit:2, kapital:4, quer:2, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2 },
+      facts: { "Betriebe DE":"~15.500", "Markt":"~35 Mrd. €", "Marge":"dünn", "Trend":"+2,2 %/J. (Demografie)" },
       why: "Krisensicherster Megatrend überhaupt, hoher Bedarf. Aber: PDL/Zulassung nötig, extremer Pflegekräftemangel, dünne regulierte Margen und dein fachlicher Fit ist eher niedrig. Ein Führungs-, aber auch ein Regulierungsgeschäft." },
-    { name: "Maler & Lackierer", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:4, quer:1, home:2, neben:2, krise:3, zukunft:2, skalier:3 },
-      facts: { "Betriebe DE":"~38.700", "Markt":"—", "Marge":"3–6 % (dünn)", "Trend":"stabil" },
-      why: "Stabile Grundnachfrage, moderater Kapitalbedarf. Meisterpflicht und Vor-Ort-Handwerk begrenzen den Quereinstieg. Solide, aber wenig Differenzierungshebel für dein Profil." },
     { name: "Kfz-Werkstatt", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3 },
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
       facts: { "Betriebe DE":"~37.800", "Markt":"33,8 Mrd. €", "Marge":"mittel", "Trend":"leicht + (E-Auto-Risiko)" },
       why: "Große, etablierte Branche, aber Meisterpflicht, hoher Werkstatt-Kapitalbedarf und E-Mobilität als strukturelles Risiko. Für dich nur als reiner Inhaber-Case mit Meister-Team denkbar." },
+    { name: "Sanitätshaus / OT", verdict: "mittel", vclass: "mittel",
+      s: { fit:3, kapital:2, quer:1, home:2, neben:2, krise:5, zukunft:3, skalier:3, person:2 },
+      facts: { "Betriebe DE":"~5.400", "Markt":"~12 Mrd. €", "Marge":"mittel", "Trend":"+6,2 %" },
+      why: "Sehr krisensicher und wachsend (Demografie). Hohe Hürde: Meister plus Kassenzulassung, kapitalintensiver Laden. Reguliertes Geschäft mit stabilen Erstattungen – aber schwerer Quereinstieg." },
+    { name: "Maler & Lackierer", verdict: "mittel", vclass: "mittel",
+      s: { fit:3, kapital:4, quer:1, home:2, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
+      facts: { "Betriebe DE":"~38.700", "Markt":"—", "Marge":"3–6 % (dünn)", "Trend":"stabil" },
+      why: "Stabile Grundnachfrage, moderater Kapitalbedarf. Meisterpflicht und Vor-Ort-Handwerk begrenzen den Quereinstieg. Solide, aber wenig Differenzierungshebel für dein Profil." },
+    { name: "Spedition / Logistik", verdict: "mittel", vclass: "mittel",
+      s: { fit:3, kapital:1, quer:4, home:3, neben:2, krise:3, zukunft:3, skalier:3, person:3 },
+      facts: { "Betriebe DE":"~14.185", "Markt":"331 Mrd. € (Logistik)", "Marge":"dünn", "Trend":"Übernahmen / Fahrermangel" },
+      why: "Kein Meisterzwang und dispositiv aus dem Büro steuerbar. Dagegen: sehr hoher Fuhrpark-Kapitalbedarf, dünne Margen und akuter Fahrermangel. Konsolidierungsmarkt – eher etwas für kapitalstarke Käufer." },
+    { name: "Bestattung", verdict: "mittel", vclass: "mittel",
+      s: { fit:3, kapital:3, quer:3, home:2, neben:2, krise:5, zukunft:2, skalier:2, person:1 },
+      facts: { "Betriebe DE":"~6.800", "Markt":"3,6 Mrd. €", "Marge":"mittel, sinkend", "Trend":"+1 %/Jahr" },
+      why: "Maximal krisensicher und konjunkturunabhängig, kein Meisterzwang. Dafür 24/7-Verfügbarkeit, stark ruf-/vertrauensgebunden und emotional fordernd. Ein Geschäft, das man wollen muss – Zahlen allein tragen die Entscheidung nicht." },
     { name: "Tischler / Schreiner", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3 },
+      s: { fit:3, kapital:2, quer:1, home:1, neben:2, krise:3, zukunft:2, skalier:3, person:2 },
       facts: { "Betriebe DE":"~28.000", "Markt":"28,2 Mrd. €", "Marge":"mittel (top Hw.)", "Trend":"leicht rückläufig" },
       why: "Wertiges Handwerk mit guten Betrieben, aber Meisterpflicht, Werkstatt-Invest und Vor-Ort-Bindung. Wenig Hebel für deine digitalen/vertrieblichen Stärken." },
     { name: "SHK (Sanitär/Heizung/Klima)", verdict: "mittel", vclass: "mittel",
-      s: { fit:4, kapital:1, quer:1, home:1, neben:2, krise:3, zukunft:4, skalier:3 },
+      s: { fit:4, kapital:1, quer:1, home:1, neben:2, krise:3, zukunft:4, skalier:3, person:2 },
       facts: { "Betriebe DE":"~48.050", "Markt":"59 Mrd. €", "Marge":"3 % (gut 6–8 %)", "Trend":"Wärmewende +" },
-      why: "Wärmewende = massiver struktureller Rückenwind, hoher Fit-Wert. <b>Aber:</b> höchster Kapitalbedarf im Feld, Meisterpflicht, reines Vor-Ort-Geschäft. Attraktiver Markt, schwerer Einstieg – nur mit starkem Meister-Team." },
-    { name: "Spedition / Logistik", verdict: "mittel", vclass: "mittel",
-      s: { fit:3, kapital:1, quer:4, home:3, neben:2, krise:3, zukunft:3, skalier:3 },
-      facts: { "Betriebe DE":"~14.185", "Markt":"331 Mrd. € (Logistik)", "Marge":"dünn", "Trend":"Übernahmen / Fahrermangel" },
-      why: "Kein Meisterzwang und dispositiv aus dem Büro steuerbar. Dagegen: sehr hoher Fuhrpark-Kapitalbedarf, dünne Margen und akuter Fahrermangel. Konsolidierungsmarkt – eher etwas für kapitalstarke Käufer." },
+      why: "Wärmewende = massiver struktureller Rückenwind, Trendumkehr 2025, Auftragsreichweite in Berlin über 14 Wochen. <b>Aber:</b> höchster Kapitalbedarf im Feld, Meisterpflicht, reines Vor-Ort-Geschäft. Attraktiver Markt, schwerer Einstieg – nur mit starkem Meister-Team." },
     { name: "Steuerberatung", verdict: "schwach für dich", vclass: "schwach",
-      s: { fit:1, kapital:4, quer:1, home:4, neben:1, krise:5, zukunft:4, skalier:3 },
+      s: { fit:1, kapital:4, quer:1, home:4, neben:1, krise:5, zukunft:4, skalier:3, person:2 },
       facts: { "Betriebe DE":"~53.800 Praxen", "Markt":"—", "Marge":"gut (hoch)", "Trend":"Überalterung / PE" },
       why: "Wirtschaftlich top: krisensicher, gute Margen, überalterte Kanzleien suchen händeringend Nachfolger. <b>K.-o.-Kriterium für dich:</b> das Steuerberater-Examen ist Pflicht. Ohne diese Zulassung faktisch verschlossen – deshalb bewusst unten." }
   ];
 
   /* ---------- PRESETS ---------- */
   var PRESETS = [
-    { id:"staerken", label:"Deine Stärken zuerst", w:{ fit:3, kapital:2, quer:2, home:1, neben:1, krise:1, zukunft:2, skalier:1 } },
-    { id:"risiko",   label:"Möglichst wenig Risiko", w:{ fit:1, kapital:3, quer:3, home:1, neben:1, krise:3, zukunft:1, skalier:1 } },
-    { id:"nebenbei", label:"Nebenbei starten",       w:{ fit:2, kapital:3, quer:2, home:3, neben:3, krise:1, zukunft:1, skalier:2 } },
-    { id:"zukunft",  label:"Zukunftssicher",         w:{ fit:2, kapital:1, quer:1, home:2, neben:1, krise:2, zukunft:3, skalier:3 } }
+    { id:"staerken",  label:"Deine Stärken zuerst",         w:{ fit:3, kapital:2, quer:2, home:1, neben:1, krise:1, zukunft:2, skalier:1, person:2 } },
+    { id:"persoenlich", label:"Bauchgefühl & Persönlichkeit", w:{ fit:2, kapital:1, quer:1, home:1, neben:1, krise:1, zukunft:1, skalier:1, person:3 } },
+    { id:"risiko",    label:"Möglichst wenig Risiko",       w:{ fit:1, kapital:3, quer:3, home:1, neben:1, krise:3, zukunft:1, skalier:1, person:0 } },
+    { id:"nebenbei",  label:"Nebenbei starten",             w:{ fit:2, kapital:3, quer:2, home:3, neben:3, krise:1, zukunft:1, skalier:2, person:1 } },
+    { id:"zukunft",   label:"Zukunftssicher",               w:{ fit:2, kapital:1, quer:1, home:2, neben:1, krise:2, zukunft:3, skalier:3, person:1 } }
   ];
 
   /* ---------- RESOURCES ---------- */
@@ -560,25 +523,24 @@
 
   /* ---------- STATE ---------- */
   var weights = {};
-  PRESETS[0].w && Object.keys(PRESETS[0].w).forEach(function (k) { weights[k] = PRESETS[0].w[k]; });
+  Object.keys(PRESETS[0].w).forEach(function (k) { weights[k] = PRESETS[0].w[k]; });
   var activeFilters = {};
 
-  /* ---------- BUILD CONTROLS ---------- */
+  /* ---------- CONTROLS ---------- */
   var presetsEl = document.getElementById("presets");
   PRESETS.forEach(function (p, i) {
     var b = document.createElement("button");
-    b.className = "preset";
-    b.textContent = p.label;
+    b.className = "preset"; b.textContent = p.label;
     b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
-    b.addEventListener("click", function () { applyPreset(p); });
     b.dataset.id = p.id;
+    b.addEventListener("click", function () { applyPreset(p); });
     presetsEl.appendChild(b);
   });
 
   var weightsEl = document.getElementById("weights");
   DIMS.forEach(function (d) {
     var wrap = document.createElement("div");
-    wrap.className = "weight";
+    wrap.className = "weight" + (d.k === "person" ? " person" : "");
     var lab = document.createElement("label");
     lab.setAttribute("for", "w-" + d.k);
     var span = document.createElement("span"); span.textContent = d.label;
@@ -589,33 +551,23 @@
     input.id = "w-" + d.k; input.value = weights[d.k];
     input.setAttribute("aria-label", d.label);
     input.addEventListener("input", function () {
-      weights[d.k] = +input.value;
-      updateWLabel(d.k);
-      clearPresetHighlight();
-      render();
+      weights[d.k] = +input.value; updateWLabel(d.k); clearPresetHighlight(); render();
     });
     wrap.appendChild(lab); wrap.appendChild(input);
     weightsEl.appendChild(wrap);
     updateWLabel(d.k);
   });
-
-  function updateWLabel(k) {
-    document.getElementById("wv-" + k).textContent = WLABEL[weights[k]];
-  }
+  function updateWLabel(k) { document.getElementById("wv-" + k).textContent = WLABEL[weights[k]]; }
   function applyPreset(p) {
     DIMS.forEach(function (d) {
       weights[d.k] = p.w[d.k];
       document.getElementById("w-" + d.k).value = p.w[d.k];
       updateWLabel(d.k);
     });
-    Array.prototype.forEach.call(presetsEl.children, function (c) {
-      c.setAttribute("aria-pressed", c.dataset.id === p.id ? "true" : "false");
-    });
+    Array.prototype.forEach.call(presetsEl.children, function (c) { c.setAttribute("aria-pressed", c.dataset.id === p.id ? "true" : "false"); });
     render();
   }
-  function clearPresetHighlight() {
-    Array.prototype.forEach.call(presetsEl.children, function (c) { c.setAttribute("aria-pressed", "false"); });
-  }
+  function clearPresetHighlight() { Array.prototype.forEach.call(presetsEl.children, function (c) { c.setAttribute("aria-pressed", "false"); }); }
 
   var filtersEl = document.getElementById("filters");
   Array.prototype.forEach.call(filtersEl.children, function (btn) {
@@ -630,15 +582,12 @@
   /* ---------- SCORING ---------- */
   function scoreOf(item) {
     var num = 0, den = 0;
-    DIMS.forEach(function (d) {
-      var w = weights[d.k];
-      num += w * item.s[d.k];
-      den += w * 5;
-    });
+    DIMS.forEach(function (d) { var w = weights[d.k]; num += w * item.s[d.k]; den += w * 5; });
     if (den === 0) return 0;
     return Math.round((num / den) * 100);
   }
   function passesFilters(item) {
+    if (activeFilters.neu && !item.box) return false;
     if (activeFilters.quer && item.s.quer < 3) return false;
     if (activeFilters.home && item.s.home < 3) return false;
     if (activeFilters.neben && item.s.neben < 3) return false;
@@ -646,7 +595,7 @@
     return true;
   }
 
-  /* ---------- RENDER (with FLIP reorder) ---------- */
+  /* ---------- RENDER (FLIP) ---------- */
   var listEl = document.getElementById("rankList");
   var built = false;
   var reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -654,22 +603,22 @@
   function buildRows() {
     DATA.forEach(function (item, idx) {
       var row = document.createElement("div");
-      row.className = "row";
-      row.dataset.idx = idx;
+      row.className = "row"; row.dataset.idx = idx;
       var facts = Object.keys(item.facts).map(function (fk) {
         return '<div class="fact"><div class="fl">' + fk + '</div><div class="fv">' + item.facts[fk] + '</div></div>';
       }).join("");
       var bars = DIMS.map(function (d) {
         var v = item.s[d.k];
-        var col = v >= 4 ? "var(--good)" : v === 3 ? "var(--accent)" : "var(--crit)";
+        var col = d.k === "person" ? "var(--violet)" : (v >= 4 ? "var(--good)" : v === 3 ? "var(--accent)" : "var(--crit)");
         return '<div><div class="bar-row"><span class="bl">' + d.label + '</span><span class="bv num">' + v + '/5</span></div>'
           + '<div class="bar-track"><i style="width:' + (v/5*100) + '%;background:' + col + '"></i></div></div>';
       }).join("");
+      var badge = item.box ? ' <span class="box-badge">Neue Idee</span>' : '';
       row.innerHTML =
         '<button class="row-head" aria-expanded="false">'
         + '<span class="rank-no num"></span>'
         + '<span class="row-main"><span class="row-name">' + item.name
-        + ' <span class="verdict ' + item.vclass + '">' + item.verdict + '</span></span>'
+        + ' <span class="verdict ' + item.vclass + '">' + item.verdict + '</span>' + badge + '</span>'
         + '<span class="row-sub"></span></span>'
         + '<span class="row-score"><span class="meter"><i></i></span>'
         + '<span class="score-val num"></span>'
@@ -691,39 +640,26 @@
 
   function render() {
     if (!built) buildRows();
-
     var ranked = DATA.map(function (it) { return { it: it, sc: scoreOf(it), ok: passesFilters(it) }; });
-    ranked.sort(function (a, b) {
-      if (b.sc !== a.sc) return b.sc - a.sc;
-      return a.it.name.localeCompare(b.it.name, "de");
-    });
+    ranked.sort(function (a, b) { if (b.sc !== a.sc) return b.sc - a.sc; return a.it.name.localeCompare(b.it.name, "de"); });
 
-    // FLIP: record first positions
     var first = {};
-    if (!reduceMotion) {
-      DATA.forEach(function (it) { first[it.name] = it._el.getBoundingClientRect().top; });
-    }
+    if (!reduceMotion) { DATA.forEach(function (it) { first[it.name] = it._el.getBoundingClientRect().top; }); }
 
     var visRank = 0;
     ranked.forEach(function (r) {
       var el = r.it._el;
       if (r.ok) {
-        el.style.display = "";
-        visRank++;
+        el.style.display = ""; visRank++;
         el.querySelector(".rank-no").textContent = String(visRank).padStart(2, "0");
         el.querySelector(".score-val").textContent = r.sc;
         el.querySelector(".meter i").style.width = r.sc + "%";
         el.classList.toggle("top", visRank <= 3);
-        el.querySelector(".row-sub").textContent =
-          "Match " + r.sc + " · " + (r.it.facts["Markt"] ? "Markt " + r.it.facts["Markt"] : "") ;
-      } else {
-        el.style.display = "none";
-        el.classList.remove("top");
-      }
-      listEl.appendChild(el); // reorder in DOM
+        el.querySelector(".row-sub").textContent = "Match " + r.sc + (r.it.facts["Markt"] ? " · Markt " + r.it.facts["Markt"] : "");
+      } else { el.style.display = "none"; el.classList.remove("top"); }
+      listEl.appendChild(el);
     });
 
-    // FLIP: animate from first to last
     if (!reduceMotion) {
       DATA.forEach(function (it) {
         var el = it._el;
@@ -748,8 +684,7 @@
     var a = document.createElement("a");
     a.className = "res"; a.href = r.url; a.target = "_blank"; a.rel = "noopener noreferrer";
     a.innerHTML = '<div class="rt">' + r.t + ' <span class="arr">&#8599;</span></div>'
-      + '<div class="rd">' + r.d + '</div>'
-      + '<div class="rmeta">' + r.meta + '</div>';
+      + '<div class="rd">' + r.d + '</div><div class="rmeta">' + r.meta + '</div>';
     resEl.appendChild(a);
   });
 
@@ -761,11 +696,9 @@
     var W = canvas.width, H = canvas.height, cx = W/2, cy = H/2, R = W*0.44;
     ctx.clearRect(0,0,W,H);
     var ink = css("--ink"), soft = css("--ink-faint"), acc = css("--accent"), acc2 = css("--accent-2"), line = css("--line-strong"), surf = css("--surface");
-    // outer ring
     ctx.lineWidth = 2; ctx.strokeStyle = line;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, R*0.82, 0, Math.PI*2); ctx.stroke();
-    // ticks
     for (var i=0; i<72; i++) {
       var a = (i/72)*Math.PI*2 - Math.PI/2;
       var major = (i % 9 === 0);
@@ -773,40 +706,30 @@
       ctx.beginPath();
       ctx.moveTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1);
       ctx.lineTo(cx+Math.cos(a)*r2, cy+Math.sin(a)*r2);
-      ctx.lineWidth = major ? 2.5 : 1; ctx.strokeStyle = major ? soft : line;
-      ctx.stroke();
+      ctx.lineWidth = major ? 2.5 : 1; ctx.strokeStyle = major ? soft : line; ctx.stroke();
     }
-    // cardinal letters
     ctx.fillStyle = soft; ctx.font = "600 " + (R*0.11) + "px ui-monospace, monospace";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    var card = [["N",-Math.PI/2],["O",0],["S",Math.PI/2],["W",Math.PI]];
-    card.forEach(function (c) {
-      var rr = R*0.60;
-      ctx.fillText(c[0], cx+Math.cos(c[1])*rr, cy+Math.sin(c[1])*rr);
+    [["N",-Math.PI/2],["O",0],["S",Math.PI/2],["W",Math.PI]].forEach(function (c) {
+      var rr = R*0.60; ctx.fillText(c[0], cx+Math.cos(c[1])*rr, cy+Math.sin(c[1])*rr);
     });
-    // needle (pointing N, brass), slightly rotated
-    var ang = -Math.PI/2 + 0.10;
-    var len = R*0.66;
-    // north half
+    var ang = -Math.PI/2 + 0.10, len = R*0.66;
     ctx.beginPath();
     ctx.moveTo(cx+Math.cos(ang)*len, cy+Math.sin(ang)*len);
     ctx.lineTo(cx+Math.cos(ang+Math.PI/2)*R*0.09, cy+Math.sin(ang+Math.PI/2)*R*0.09);
     ctx.lineTo(cx+Math.cos(ang-Math.PI/2)*R*0.09, cy+Math.sin(ang-Math.PI/2)*R*0.09);
     ctx.closePath(); ctx.fillStyle = acc; ctx.fill();
-    // south half
     var sang = ang + Math.PI;
     ctx.beginPath();
     ctx.moveTo(cx+Math.cos(sang)*len, cy+Math.sin(sang)*len);
     ctx.lineTo(cx+Math.cos(sang+Math.PI/2)*R*0.09, cy+Math.sin(sang+Math.PI/2)*R*0.09);
     ctx.lineTo(cx+Math.cos(sang-Math.PI/2)*R*0.09, cy+Math.sin(sang-Math.PI/2)*R*0.09);
     ctx.closePath(); ctx.fillStyle = acc2; ctx.fill();
-    // hub
     ctx.beginPath(); ctx.arc(cx, cy, R*0.075, 0, Math.PI*2); ctx.fillStyle = surf; ctx.fill();
     ctx.lineWidth = 2.5; ctx.strokeStyle = ink; ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, R*0.022, 0, Math.PI*2); ctx.fillStyle = ink; ctx.fill();
   }
 
-  /* ---------- INIT ---------- */
   drawDial();
   render();
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { drawDial(); });
