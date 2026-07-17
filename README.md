@@ -40,17 +40,40 @@ Vergiss an der ersten Station den 🎫 **Fahrschein am Automaten** nicht: Ab
 Görlitzer Bahnhof patrouillieren **BVG-Kontrolleure** 👮. Erwischen sie dich
 ohne Fahrschein, gibt's **60 € erhöhtes Beförderungsentgelt** – und Game Over.
 
+## 🚪 Raus an die Oberfläche!
+
+An jeder Station kannst du über den **Ausgang 🚪 nach oben** an die Straße –
+die ganze Umgebung wechselt von U-Bahnhof zu **Berliner Kiez bei Tageslicht**
+(Himmel, Altbauten, Späti, Currywurst-Imbiss, Autos, Bäume, U-Bahn-Eingang).
+Jeder Kiez sieht anders aus (Fernsehturm, Oberbaumbrücke, Görli-Park …).
+
+Dort triffst du die **schrägsten Gestalten Berlins**, die alle was Seltsames
+machen – jede mit eigenem Look und eigener Animation:
+
+- 🩲 **FKK-Sonnenanbeter** (im November, sonnt sich trotzdem)
+- 🔊 **Bollerwagen-DJ** (mobiler Rave, tanzt)
+- 🐻 **Berliner Bär** im Kostüm (winkt)
+- 🧘 **Straßen-Yogi** (Sonnengruß Richtung Späti)
+- 🗽 **Lebende Statue** (bewegt sich nur gegen Münze)
+- 👟 **Flohmarkt-Verkäufer** mit genau einem Schuh
+- 🐦 **Tauben-Fütterer** (umringt von Tauben)
+- 🚲 **Fixie-Hipster**, 📋 **Bürgeramt-Verzweifelte** (rennt panisch),
+  💃 **Rave-Oma**, 🍺 **Späti-Philosoph**, 🥙 **Döner-Werbetyp** …
+
+Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
+🌟 **Berlin-Moment** (Zähler oben links).
+
 ## Details & Berlin-Feeling
 
 - **Echte U-Bahn**, die einfährt, hält, die Türen öffnet und mit dir losfährt.
-- **Vorbeirauschende Züge** auf dem Gegengleis.
-- **Zugzielanzeiger**, der die nächste Station und „einfahrend / Türen offen"
-  anzeigt.
-- **Zufällige BVG-Durchsagen** („Signalstörung", „Der Aufzug ist außer Betrieb")
-  – gesprochen auf Deutsch.
-- **Deko**: Graffiti-Tags, Werbeplakate (Berghain, Späti, Club Mate), Skyline-
-  Murals (Fernsehturm am Alex, Oberbaumbrücke, Görli-Park), Mülleimer,
-  Pfandflaschen, eine 🐀 Ratte auf den Gleisen und eine hüpfende Taube.
+- **Deutlich unterschiedlichere Figuren**: verschiedene Größen, Bäuche, Bärte,
+  Frisuren (Iro, Dutt, Glatze, Beanie, Cap), Brillen, Kleider, Rucksäcke,
+  Props und komplette Kostüme (Bär, Döner-Spieß, Statue).
+- **Vorbeirauschende Züge** auf dem Gegengleis, **Zugzielanzeiger** an der Decke.
+- **Zufällige gesprochene Durchsagen** – unten BVG („Signalstörung"), oben
+  Straßen-Geräusche.
+- **Deko**: Graffiti, Werbeplakate, Skyline-Murals, Mülleimer, Pfandflaschen,
+  Ratte 🐀, Tauben, E-Scooter-Haufen, Litfaßsäule, Bäume, Autos, Streetart.
 - **Linien-Anzeige** unten zeigt deinen Fortschritt über die 4 Stationen.
 
 ## Technik
