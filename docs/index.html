@@ -1427,7 +1427,7 @@ function endGame(win,title,sub,text){ ended=true;
   document.getElementById('endCard').className='card '+(win?'win':'lose');
   document.getElementById('endTitle').textContent=title; document.getElementById('endSub').textContent=sub;
   document.getElementById('endText').textContent=text; document.getElementById('endScreen').classList.remove('fadehide');
-  if(win) jingle(); else beep(200,0.5,'sawtooth',0.2); }
+  if(win){ fanfare(); cheer(); setTimeout(fanfare,450); } else { boo(); beep(160,0.6,'sawtooth',0.18); } }
 function winGame(){ const bonus=ticketBought?"Und mit gültigem Fahrschein – vorbildlich!":"Ganz ohne Fahrschein durch – mutig. Sehr berlinerisch.";
   say("Endstation Alexanderplatz. Alles aussteigen bitte!");
   endGame(true,"🏙️ Endstation Alex!","„Alles aussteigen, bitte!“",
@@ -1501,7 +1501,7 @@ function initAudio(){ if(audioCtx) return;
 function beep(f,dur,type,vol){ if(!audioCtx||!soundOn)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type=type||'sine'; o.frequency.value=f; g.gain.value=vol||0.15;
   g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
-function jingle(){ beep(660,0.18,'square',0.12); setTimeout(()=>beep(880,0.28,'square',0.12),160); }
+function jingle(){ melody([[659,110],[784,110],[988,110],[1319,300]],'square',0.11); }
 function squeak(){ if(!audioCtx||!soundOn)return;   // „psst-psst" wie ein Meerschweinchen (Görli-Dealer)
   for(let k=0;k<2;k++) setTimeout(()=>{ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
     o.type='sawtooth'; o.frequency.setValueAtTime(1700,audioCtx.currentTime);
@@ -1510,6 +1510,32 @@ function squeak(){ if(!audioCtx||!soundOn)return;   // „psst-psst" wie ein Mee
     g.gain.value=0.05; g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);
     o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.2); }, k*190); }
 function doorChime(){ beep(988,0.12,'sine',0.12); setTimeout(()=>beep(740,0.18,'sine',0.12),120); }
+/* ---- erweitertes Sound-Set für die Minispiele ---- */
+function noiseBurst(dur,vol,hp){ if(!audioCtx||!soundOn)return; const n=Math.max(1,Math.floor(audioCtx.sampleRate*dur));
+  const buf=audioCtx.createBuffer(1,n,audioCtx.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const src=audioCtx.createBufferSource(); src.buffer=buf; const g=audioCtx.createGain(); g.gain.value=vol||0.15;
+  let node=src; if(hp){ const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp; src.connect(f); node=f; }
+  node.connect(g).connect(audioCtx.destination); src.start(); }
+function horn(){ if(!audioCtx||!soundOn)return; const t=audioCtx.currentTime;
+  [210,168].forEach(f=>{ const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.13,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.42);
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t+0.45); }); }
+function ding(){ beep(1568,0.12,'sine',0.12); setTimeout(()=>beep(2093,0.14,'sine',0.1),90); }
+function coin(){ beep(1319,0.05,'square',0.09); setTimeout(()=>beep(1760,0.12,'square',0.09),55); }
+function boo(){ if(!audioCtx||!soundOn)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type='sawtooth';
+  o.frequency.setValueAtTime(230,audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(85,audioCtx.currentTime+0.5);
+  g.gain.value=0.1; g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.55); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.55); }
+function cheer(){ noiseBurst(0.5,0.11,1400); for(let k=0;k<3;k++) setTimeout(()=>beep(740+k*180,0.1,'square',0.06),k*70); }
+function clack(){ noiseBurst(0.05,0.2,2600); }
+function melody(notes,type,vol){ let d=0; for(const nt of notes){ const f=nt[0],ms=nt[1]; setTimeout(()=>{ if(f)beep(f,Math.max(0.1,ms/1000*0.9),type||'square',vol||0.12); },d); d+=ms; } }
+function fanfare(){ melody([[523,120],[659,120],[784,120],[1047,260]],'square',0.11); }
+function engineStart(){ if(!audioCtx||!soundOn)return null; const o=audioCtx.createOscillator(),g=audioCtx.createGain(),lp=audioCtx.createBiquadFilter();
+  o.type='sawtooth'; o.frequency.value=62; lp.type='lowpass'; lp.frequency.value=210; g.gain.value=0.055;
+  o.connect(lp).connect(g).connect(audioCtx.destination); o.start();
+  return { set(s){ try{o.frequency.setTargetAtTime(52+s*46,audioCtx.currentTime,0.12);}catch(e){} },
+    rev(){ try{o.frequency.setTargetAtTime(150,audioCtx.currentTime,0.02); o.frequency.setTargetAtTime(70,audioCtx.currentTime+0.15,0.2);}catch(e){} },
+    stop(){ try{ g.gain.setTargetAtTime(0.0001,audioCtx.currentTime,0.06); o.stop(audioCtx.currentTime+0.35);}catch(e){} } }; }
 function screech(){ if(!audioCtx||!soundOn)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type='sawtooth'; o.frequency.setValueAtTime(1200,audioCtx.currentTime);
   o.frequency.exponentialRampToValueAtTime(260,audioCtx.currentTime+0.9); g.gain.value=0.05;
@@ -2002,7 +2028,7 @@ function miniDodge(){
         obs.push({lane:ln,y:-30,k:KINDS[(Math.random()*KINDS.length)|0],v:140+diff*7,say:Math.random()<0.4,rot:(Math.random()-.5)}); }
       for(const o of obs){ o.y+=o.v*dt; o.rot+=dt*2; }
       if(iFrame>0)iFrame-=dt;
-      for(const o of obs){ if(o.lane===lane&&o.y>H-92&&o.y<H-40&&iFrame<=0){ iFrame=1; lives--; shake=11; beep(180,0.2,'sawtooth',0.16);
+      for(const o of obs){ if(o.lane===lane&&o.y>H-92&&o.y<H-40&&iFrame<=0){ iFrame=1; lives--; shake=11; beep(180,0.2,'sawtooth',0.16); boo();
         res.textContent='💥 '+o.k.n+' erwischt dich!'; if(lives<=0){over=true;return lose();} } }
       obs=obs.filter(o=>{ if(o.y>H-30&&o.lane!==lane&&!o.counted){o.counted=true;dodged++;} return o.y<H+40; });
     }
@@ -2119,7 +2145,7 @@ function miniFinanz(){
       for(const it of items) it.y+=it.v*dt;
       for(const it of items){ if(!it.done && it.lane===lane && it.y>H-70 && it.y<H-24){ it.done=true;
         if(it.kind==='buro'){ taler=Math.max(0,taler-2); flash=1; beep(160,0.15,'sawtooth',0.14); res.style.color='#ff9db0'; res.textContent='📄 Bürokratie! -2 (zurückzahlen!)'; }
-        else { const g=it.kind==='euro'?3:1; taler+=g; beep(it.kind==='euro'?1500:1050,0.07,'square',0.12);
+        else { const g=it.kind==='euro'?3:1; taler+=g; coin(); if(it.kind==='euro')setTimeout(coin,60);
           floaters.push({t:(it.kind==='euro'?'+3 💶':'+1 🪙'),x:lanes[it.lane],y:H-60,life:1});
           if(Math.random()<0.25) floaters.push({t:THANKS[(Math.random()*THANKS.length)|0],x:lanes[it.lane],y:H-90,life:1.2}); }
       } }
@@ -2231,7 +2257,7 @@ function miniVerspaetung(){
   const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult');
   const FACE=['','⚀','⚁','⚂','⚃','⚄','⚅'], REACT=['😐','😕','😠','😤','🤬'];
   const GAG=['„Wo bleibt die Bahn?!"','„Schon wieder!"','„Ick beschwer mich!"','„30 Minuten?!"','„Zu meiner Zeit…"','„Ersatzverkehr, klar."','„Ich komm zu spät zur Arbeit!"','„Das Ticket war teuer genug!"','„Gibt kein Netz zum Meckern!"','„Nächste Bahn: irgendwann."','„Ich nehm nie wieder die U8."','„Skandal!"'];
-  function roll(){ if(over||rolling>0)return; rolling=0.55; }
+  function roll(){ if(over||rolling>0)return; rolling=0.55; clack(); setTimeout(clack,120); setTimeout(clack,260); }
   document.getElementById('rollBtn').addEventListener('click',roll);
   mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();roll();}});
   let last=performance.now();
@@ -2430,9 +2456,9 @@ function miniBuero(){
   let cur={x:0,w:base.w,dir:1,speed:118}, level=1;
   function drop(){ if(over) return; const top=stack[stack.length-1];
     const left=Math.max(cur.x,top.x), right=Math.min(cur.x+cur.w,top.x+top.w); const ov=right-left;
-    if(ov<=2){ over=true; beep(160,0.5,'sawtooth',0.2); return lose(); }
+    if(ov<=2){ over=true; clack(); boo(); return lose(); }
     stack.push({x:left,w:ov,label:LABELS[(level-1)%LABELS.length]}); level++;
-    beep(420+level*40,0.07,'square',0.12);
+    clack(); beep(360+level*55,0.09,'square',0.11);   // Stempel-Klack + steigender Ton
     if(level>TARGET){ over=true; return win(); }
     cur={x:(level%2?0:W-ov),w:ov,dir:(level%2?1:-1),speed:Math.min(180,118+level*8)};
     res.textContent='📎 '+(TARGET-level+1)+' Anträge noch…';
@@ -2493,7 +2519,7 @@ function miniOutfit(){
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult'),slotsEl=document.getElementById('slots');
   SLOTS.forEach((s,i)=>{ const b=document.createElement('button'); b.className='mBtn alt'; b.id='slot'+i; b.style.cssText='display:block;width:100%;margin:3px 0;text-align:left';
-    mOn(b,'click',()=>{ sel[i]=(sel[i]+1)%s.opts.length; render(); }); slotsEl.appendChild(b); });
+    mOn(b,'click',()=>{ sel[i]=(sel[i]+1)%s.opts.length; beep(520+s.opts[sel[i]][1]*12,0.05,'square',0.09); render(); }); slotsEl.appendChild(b); });
   function score(){ return SLOTS.reduce((a,s,i)=>a+s.opts[sel[i]][1],0); }
   function render(){
     SLOTS.forEach((s,i)=>{ const o=s.opts[sel[i]]; document.getElementById('slot'+i).innerHTML=`${o[3]} <b>${s.name}:</b> ${o[0]} <span style="opacity:.6">(+${o[1]})</span> ▸`; });
@@ -2520,106 +2546,150 @@ function miniOutfit(){
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🕶️ Berlin-Look: legendär!');}); }
 }
 
-/* ---------- MG12: SEV-Bus durch das Chaos lenken ---------- */
+/* ---------- MG12: SEV-Bus-Schicht (Lenken + Hupen + Haltestellen + Events) ---------- */
 function miniBus(){
   openMini();
   panelEl().innerHTML=`<h2>🚌 Schienenersatzverkehr</h2>
-    <div class="miniDesc">Die U1 fällt aus – <b>du fährst den SEV-Bus</b> quer durch Berlin zum Alex! Lenke mit <b>◀ ▶ / A D</b> oder <b>Bildschirmseiten tippen/ziehen</b> um Baustellen 🚧, Radler 🚴, Staus 🚗 und Umleitungen herum. Bring die <b>Fahrgäste zum Alex</b>, bevor die Karosserie hin ist!</div>
+    <div class="miniDesc"><b>Fahr den SEV-Bus zum Alex!</b> <b>Lenken:</b> ◀ ▶ / A D / ziehen. <b>Hupen:</b> Leertaste / 📣-Knopf – scheucht Radler 🚴 & Fußgänger 🚶 weg (nervt aber die Fahrgäste 😤). Halt an den <b>🚏 Haltestellen</b> (auf die richtige Seite lenken!) und nimm Leute mit. Baustellen 🚧, Staus 🚗 & Schlaglöcher 🕳️ nur ausweichen!</div>
     <canvas id="mCanvas" width="360" height="470"></canvas>
     <div class="mBar"><i id="pBar" style="background:#4ea1ff"></i><div class="lbl" id="pLbl">Route zum Alex 0%</div></div>
+    <button class="mBtn big" id="hupBtn">📣 HUPEN</button>
     <div id="miniResult">„Alle einsteigen – wird eng!"</div>`;
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const pBar=document.getElementById('pBar'),pLbl=document.getElementById('pLbl'),res=document.getElementById('miniResult');
-  let busX=W/2, dur=30, tLeft=dur, karo=3, mood=70, over=false, shake=0, iFrame=0;
-  let obs=[], spawnT=0.6, roadY=0, quoteT=1.5, moanT=3;
-  const OBST=[{e:'🚧',n:'Baustelle'},{e:'🚴',n:'Radler'},{e:'🚗',n:'Stau'},{e:'🚸',n:'Umleitung'},{e:'🛴',n:'Scooter'},{e:'🚌',n:'Gegenbus'},{e:'🕳️',n:'Schlagloch'}];
-  const PICK=[{e:'🎫',n:'Fahrgast',good:true},{e:'☕',n:'Käffchen',good:true}];
-  const DRIVER=["„Der Bus endet hier. Warum? Weeß ick ooch nich.","„Schienenersatz – Betonung auf Ersatz.","„Bitte durchrücken! Hinten is noch Platz!","„Nächster Halt: ungefähr da vorne.","„Ick fahr nach Gefühl, nich nach Fahrplan.","„Umleitung wegen der Umleitung.","„Anschnallen? Wir ham nich mal Sitze genug.","„Tür geht auf, wenn se will."];
-  const PAX=["„Fahrn Se ma zackiger!","„FARIKAAARTE!","„Mir is schlecht…","„Das is nich meine Haltestelle!","„Ick wollt zum Alex, nich nach Spandau!","„Können Se ma anhalten?!","„Hält der überhaupt irgendwo?","„Is das der 42er?? – Nee."];
-  let driverQuote=DRIVER[0], paxQuote='';
-  const lanes=[W*0.22,W*0.4,W*0.6,W*0.78];
+  const by=H-64;
+  let busX=W/2, lean=0, tLeft=34, dur=34, karo=3, mood=78, over=false, shake=0, iFrame=0, combo=0, comboT=0;
+  let obs=[], stops=[], roadY=0, spawnT=0.8, stopT=3.0, honkCool=0, puff=0, dayT=0, bonus=0;
+  let quoteT=1.6, moanT=3.4, driverQuote='', paxQuote='', eventBanner='', eventT=0, evTimer=7;
+  const eng=engineStart();
+  const OB=[
+    {t:'baustelle',e:'🚧',honk:false,v:1.0},
+    {t:'stau',e:'🚗',honk:false,v:0.85,drift:0.25},
+    {t:'radler',e:'🚴',honk:true,v:1.15,drift:0.9},
+    {t:'fuss',e:'🚶',honk:true,v:0.9},
+    {t:'scooter',e:'🛴',honk:true,v:1.4},
+    {t:'loch',e:'🕳️',honk:false,v:1.0},
+    {t:'gegenbus',e:'🚌',honk:false,v:1.25},
+  ];
+  const GOOD=[{e:'🎫'},{e:'☕'},{e:'🥨'}];
+  const DRIVER=["Der Bus endet hier. Warum? Weeß ick ooch nich.","Schienenersatz – Betonung auf Ersatz.","Bitte durchrücken! Hinten is noch Platz!","Nächster Halt: ungefähr da vorne.","Ick fahr nach Gefühl, nich nach Fahrplan.","Umleitung wegen der Umleitung.","Anschnallen? Wir ham nich mal Sitze genug.","Tür geht auf, wenn se will.","Willkommen im schnellsten Stau Berlins."];
+  const PAX=["Fahrn Se ma zackiger!","FARIKAAARTE!","Mir is schlecht…","Das is nich meine Haltestelle!","Ick wollt zum Alex, nich nach Spandau!","Können Se ma anhalten?!","Hält der überhaupt irgendwo?","Is das der 42er?? – Nee.","Nich so wild hupen!","Mehr Bass, Herr Busfahrer!"];
+  const EVENTS=[
+    {b:'🚧 UMLEITUNG!',fx:()=>{ for(let k=0;k<3;k++) spawn('baustelle', 40+k*(W-80)/2); }, s:()=>beep(300,0.3,'sawtooth',0.14)},
+    {b:'✊ DEMO auf der Straße!',fx:()=>{ for(let k=0;k<4;k++) spawn('fuss', 40+Math.random()*(W-80)); }, s:()=>melody([[196,150],[196,150],[262,300]],'square',0.1)},
+    {b:'🥳 Karneval der Kulturen!',fx:()=>{ for(let k=0;k<3;k++) spawn(Math.random()<0.5?'fuss':'radler', 40+Math.random()*(W-80)); }, s:()=>melody([[523,120],[659,120],[784,120],[659,120],[784,240]],'square',0.09)},
+    {b:'🚦 Ampel kaputt – alle gleichzeitig!',fx:()=>{ for(const o of obs) o.v2*=1.5; }, s:()=>{beep(880,0.1,'square',0.12);setTimeout(()=>beep(660,0.15,'square',0.12),120);}},
+    {b:'🐻 Bär winkt vom Gehweg!',fx:()=>{ spawnGood(); mood=Math.min(100,mood+4); }, s:()=>coin()},
+  ];
   let keys2={}, tgt=null;
-  mOn(window,'keydown',e=>{const k=e.key.toLowerCase(); if(['arrowleft','arrowright','a','d'].includes(k)){e.preventDefault();keys2[k]=true;}});
+  function spawn(type,x){ const def=OB.find(o=>o.t===type)||OB[(Math.random()*OB.length)|0];
+    obs.push({x:x!==undefined?x:40+Math.random()*(W-80),y:-30,def,v2:(150+(dur-tLeft)*7)*def.v,rot:(Math.random()-0.5),drift:def.drift?((Math.random()<0.5?-1:1)*def.drift):0,fled:0,hit:false}); }
+  function spawnGood(){ obs.push({x:40+Math.random()*(W-80),y:-30,def:{e:GOOD[(Math.random()*GOOD.length)|0].e,good:true},v2:150,rot:0,drift:0,fled:0,hit:false}); }
+  function spawnStop(){ const side=Math.random()<0.5?0:1; stops.push({x:side?W-22:22,y:-40,side,pax:1+((Math.random()*3)|0),boarded:false,missed:false}); }
+  function honk(){ if(over||honkCool>0)return; honkCool=0.5; horn(); if(eng)eng.rev(); puff=1;
+    let scared=0; for(const o of obs){ if(o.def.honk&&!o.fled&&!o.hit&&o.y>by-190&&o.y<by+24&&Math.abs(o.x-busX)<84){ o.fled=(o.x<busX?-1:1); scared++; } }
+    if(scared){ combo+=scared; comboT=2.4; bonus+=scared; coin(); mood=Math.max(0,mood-2.0);
+      res.textContent='📣 '+scared+' verscheucht! Combo ×'+combo; if(Math.random()<0.5)paxQuote=PAX[8]; }
+    else { mood=Math.max(0,mood-0.8); res.textContent='📣 …ins Leere gehupt. Klassisch.'; } }
+  mOn(window,'keydown',e=>{const k=e.key.toLowerCase(); if(['arrowleft','arrowright','a','d'].includes(k)){e.preventDefault();keys2[k]=true;} if(e.code==='Space'){e.preventDefault();honk();}});
   mOn(window,'keyup',e=>{keys2[e.key.toLowerCase()]=false;});
   function setTgt(e){const r=cv.getBoundingClientRect(); tgt=(e.clientX-r.left)*W/r.width;}
   mOn(cv,'pointerdown',setTgt); mOn(cv,'pointermove',e=>{if(tgt!==null)setTgt(e);}); mOn(window,'pointerup',()=>{tgt=null;});
+  document.getElementById('hupBtn').addEventListener('click',honk);
+  driverQuote=DRIVER[0];
   let last=performance.now();
-  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+  function loop(now){ if(!miniActive){ if(eng)eng.stop(); return; } let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
     if(!over){
-      tLeft-=dt; const prog=Math.min(100,(1-tLeft/dur)*100);
-      roadY=(roadY+dt*260)%60;
+      tLeft-=dt; dayT+=dt; const prog=Math.min(100,((1-tLeft/dur)*100)+bonus*0.6);
+      const spd=1+(dur-tLeft)/dur; roadY=(roadY+dt*230*spd)%60; if(eng)eng.set(spd-1);
+      if(honkCool>0)honkCool-=dt; if(comboT>0){comboT-=dt; if(comboT<=0)combo=0;} if(puff>0)puff-=dt*2.5;
       // Lenken
       let dir=0; if(keys2['arrowleft']||keys2['a'])dir-=1; if(keys2['arrowright']||keys2['d'])dir+=1;
       if(tgt!==null){ const d=tgt-busX; dir=Math.abs(d)<6?0:(d>0?1:-1); }
-      busX=Math.max(34,Math.min(W-34,busX+dir*205*dt));
+      busX=Math.max(34,Math.min(W-34,busX+dir*210*dt)); lean+=(dir*0.35-lean)*Math.min(1,dt*10);
       if(iFrame>0)iFrame-=dt;
+      // Events
+      evTimer-=dt; if(evTimer<=0){ evTimer=6.5+Math.random()*3.5; const E=EVENTS[(Math.random()*EVENTS.length)|0];
+        eventBanner=E.b; eventT=2.4; try{E.fx();}catch(e){} try{E.s();}catch(e){} if(soundOn&&Math.random()<0.6)say(E.b.replace(/[^A-Za-zÄÖÜäöüß !?]/g,'')); }
+      if(eventT>0)eventT-=dt;
       // Spawnen
       spawnT-=dt; const diff=dur-tLeft;
-      if(spawnT<=0){ spawnT=Math.max(0.42,0.95-diff*0.016);
-        const good=Math.random()<0.18;
-        const lane=(Math.random()*lanes.length)|0;
-        obs.push({x:lanes[lane]+(Math.random()*24-12),y:-30,v:150+diff*7,rot:(Math.random()-0.5),
-          good, k: good?PICK[(Math.random()*PICK.length)|0]:OBST[(Math.random()*OBST.length)|0]}); }
-      for(const o of obs){ o.y+=o.v*dt; o.rot+=dt*2; }
-      // Kollision
-      for(const o of obs){ if(o.hit)continue; if(o.y>H-96&&o.y<H-40&&Math.abs(o.x-busX)<34){
-        o.hit=true;
-        if(o.good){ mood=Math.min(100,mood+8); res.textContent='😀 '+o.k.n+' mitgenommen! +Laune'; beep(880,0.08,'square',0.12); }
-        else if(iFrame<=0){ iFrame=0.9; karo--; mood=Math.max(0,mood-14); shake=12;
-          res.textContent='💥 '+o.k.n+'! Karosserie ächzt…'; beep(150,0.25,'sawtooth',0.18);
-          paxQuote=PAX[(Math.random()*PAX.length)|0];
-          if(karo<=0){ over=true; return lose(); } } } }
-      obs=obs.filter(o=>o.y<H+40);
-      mood=Math.max(0,mood-dt*0.9);   // Fahrgäste werden mit der Zeit unruhig
+      if(spawnT<=0){ spawnT=Math.max(0.45,1.0-diff*0.016); if(Math.random()<0.16)spawnGood(); else spawn(); }
+      stopT-=dt; if(stopT<=0){ stopT=4.5+Math.random()*3; spawnStop(); }
+      // Update Hindernisse
+      for(const o of obs){ o.y+=o.v2*dt; o.rot+=dt*2;
+        if(o.fled){ o.x+=o.fled*260*dt; o.y+=40*dt; }
+        else if(o.drift){ o.x+=Math.sin(o.y/40)*o.drift*60*dt; } }
+      // Kollision Hindernisse/Pickups
+      for(const o of obs){ if(o.hit||o.fled)continue;
+        if(o.y>by-30&&o.y<by+30&&Math.abs(o.x-busX)<32){ o.hit=true;
+          if(o.def.good){ mood=Math.min(100,mood+7); bonus+=1; coin(); res.textContent='😀 mitgenommen! +Laune'; }
+          else if(iFrame<=0){ iFrame=0.9; karo--; mood=Math.max(0,mood-13); shake=13; combo=0; boo(); if(eng)eng.rev();
+            res.textContent='💥 '+o.def.t+'! Karosserie ächzt…'; paxQuote=PAX[(Math.random()*8)|0];
+            if(karo<=0){ over=true; return lose(); } } } }
+      obs=obs.filter(o=>o.y<H+50 && o.x>-40 && o.x<W+40);
+      // Haltestellen
+      for(const s of stops){ s.y+=(150+diff*6)*dt;
+        if(!s.boarded&&!s.missed){ if(s.y>by-46&&s.y<by+34&&Math.abs(busX-s.x)<78){ s.boarded=true; mood=Math.min(100,mood+9); bonus+=s.pax*1.4; tLeft-=0.6; ding();
+            res.textContent='🚏 '+s.pax+' Fahrgäste rein! Endlich einer, der hält.'; paxQuote='Na endlich!'; }
+          else if(s.y>H-24){ s.missed=true; mood=Math.max(0,mood-6); boo(); res.textContent='🚏 verpasst! „Der hält nich!!"'; } } }
+      stops=stops.filter(s=>s.y<H+60);
+      mood=Math.max(0,mood-dt*0.85);
       if(mood<=0){ over=true; return loseMood(); }
       // Sprüche
-      quoteT-=dt; if(quoteT<=0){ quoteT=3.5+Math.random()*2.5; driverQuote=DRIVER[(Math.random()*DRIVER.length)|0]; if(soundOn&&Math.random()<0.5)say(driverQuote.replace(/[„"]/g,'')); }
-      moanT-=dt; if(moanT<=0){ moanT=2.6+Math.random()*2.4; paxQuote=PAX[(Math.random()*PAX.length)|0]; }
-      pBar.style.width=prog+'%'; pLbl.textContent='Route zum Alex '+(prog|0)+'%';
+      quoteT-=dt; if(quoteT<=0){ quoteT=3.6+Math.random()*2.6; driverQuote=DRIVER[(Math.random()*DRIVER.length)|0]; if(soundOn&&Math.random()<0.45)say(driverQuote); }
+      moanT-=dt; if(moanT<=0){ moanT=2.8+Math.random()*2.6; paxQuote=PAX[(Math.random()*PAX.length)|0]; if(soundOn&&Math.random()<0.3)say(paxQuote); }
+      pBar.style.width=Math.min(100,prog)+'%'; pLbl.textContent='Route zum Alex '+(Math.min(100,prog)|0)+'%';
       if(prog>=100){ over=true; return win(); }
     }
-    // Zeichnen
-    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*40; if(shake<0)shake=0;}
-    ctx.fillStyle='#3a3d43'; ctx.fillRect(0,0,W,H);                       // Asphalt
-    ctx.fillStyle='#2c2e33'; ctx.fillRect(0,0,16,H); ctx.fillRect(W-16,0,16,H); // Ränder
+    // ===== Zeichnen =====
+    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*42; if(shake<0)shake=0;}
+    // Himmelstreifen (Tag/Abend)
+    const dayk=(Math.sin(dayT*0.25)*0.5+0.5);
+    const sky=ctx.createLinearGradient(0,0,0,60); sky.addColorStop(0,`rgb(${90+dayk*80},${140+dayk*60},${190+dayk*40})`); sky.addColorStop(1,'#3a3d43');
+    ctx.fillStyle='#3a3d43'; ctx.fillRect(0,0,W,H); ctx.fillStyle=sky; ctx.fillRect(0,0,W,44);
+    ctx.fillStyle='#2c2e33'; ctx.fillRect(0,0,16,H); ctx.fillRect(W-16,0,16,H);
     ctx.strokeStyle='#e8c83a'; ctx.lineWidth=4; ctx.setLineDash([26,22]);
     for(const lx of [W*0.31,W*0.5,W*0.69]){ ctx.beginPath(); for(let y=roadY-60;y<H;y+=60){ ctx.moveTo(lx,y); ctx.lineTo(lx,y+26);} ctx.stroke(); }
     ctx.setLineDash([]);
-    // Hindernisse / Pickups
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    for(const o of obs){ ctx.save(); ctx.translate(o.x,o.y); ctx.rotate(Math.sin(o.rot)*0.12); ctx.font='30px serif'; ctx.fillText(o.k.e,0,0); ctx.restore(); }
-    // Bus (von hinten), wackelt leicht
-    const by=H-64, bob=Math.sin(now/90)*2;
-    ctx.save(); ctx.translate(busX, by+bob);
+    // Haltestellen
+    for(const s of stops){ ctx.font='26px serif'; ctx.fillText('🚏',s.x,s.y);
+      if(!s.boarded){ ctx.font='700 12px Segoe UI'; ctx.fillStyle='#ffe9a8'; ctx.fillText('🧍'.repeat(s.pax),s.x,s.y-22); }
+      else { ctx.font='700 12px Segoe UI'; ctx.fillStyle='#7dffb0'; ctx.fillText('✅',s.x,s.y-22); } }
+    // Hindernisse / Pickups
+    for(const o of obs){ ctx.save(); ctx.translate(o.x,o.y); ctx.rotate(Math.sin(o.rot)*(o.fled?0.4:0.12)); ctx.font='30px serif'; ctx.fillText(o.def.e,0,0); ctx.restore(); }
+    // Bus (mit Neigung, Abgaswolke, Fahrgästen)
+    if(puff>0){ ctx.globalAlpha=puff*0.6; ctx.font=(18+puff*10)+'px serif'; ctx.fillText('💨',busX-30,by+30); ctx.globalAlpha=1; }
+    ctx.save(); ctx.translate(busX,by+Math.sin(now/90)*2); ctx.rotate(lean*0.12);
     ctx.fillStyle='#f3c400'; ctx.fillRect(-26,-40,52,72); ctx.fillStyle='#c0392b'; ctx.fillRect(-26,18,52,8);
-    ctx.fillStyle='#1a2530'; ctx.fillRect(-22,-34,44,20);                 // Heckscheibe
-    // Fahrgäste hinten (animiert)
-    const faces=['🧍','🧓','🧑','👩','🧔','👵'];
-    for(let i=0;i<3;i++){ ctx.font='16px serif'; ctx.fillText(faces[(i+((now/500|0)%3))%faces.length], -14+i*14, -24+Math.sin(now/160+i)*2); }
-    ctx.fillStyle=iFrame>0&&Math.floor(now/70)%2?'rgba(255,60,60,.5)':'#0d0d0d';
-    ctx.fillRect(-20,30,10,8); ctx.fillRect(10,30,10,8);                  // Räder
+    ctx.fillStyle='#1a2530'; ctx.fillRect(-22,-34,44,20);
+    const faces=['🧍','🧓','🧑','👩','🧔','👵','🧕'];
+    for(let i=0;i<3;i++){ ctx.font='16px serif'; ctx.fillText(faces[(i+((now/500|0)))%faces.length], -14+i*14, -24+Math.sin(now/150+i)*2); }
+    ctx.fillStyle=(iFrame>0&&Math.floor(now/70)%2)?'rgba(255,60,60,.6)':'#0d0d0d'; ctx.fillRect(-20,30,10,8); ctx.fillRect(10,30,10,8);
     ctx.restore();
-    // Blinkende Warnleuchte
-    if(Math.floor(now/300)%2){ ctx.fillStyle='rgba(255,180,0,.5)'; ctx.beginPath(); ctx.arc(busX,by-42,6,0,7); ctx.fill(); }
+    if(Math.floor(now/280)%2){ ctx.fillStyle='rgba(255,180,0,.55)'; ctx.beginPath(); ctx.arc(busX,by-42,6,0,7); ctx.fill(); }
     ctx.restore();
-    // HUD: Karosserie + Sprüche
+    // HUD
     ctx.textAlign='left'; ctx.font='700 15px Segoe UI'; ctx.fillStyle='#fff'; ctx.fillText('🔧 '+'🟩'.repeat(Math.max(0,karo)),8,20);
-    ctx.textAlign='right'; ctx.fillStyle=mood<30?'#ff6b8a':'#7dffb0'; ctx.fillText('😊 Laune '+(mood|0)+'%',W-8,20);
-    // Fahrer-Spruch oben, Fahrgast-Spruch als Blase am Bus
-    ctx.textAlign='center'; ctx.font='700 13px Segoe UI'; ctx.fillStyle='#ffe9a8';
-    wrapText(ctx,'🎙️ '+driverQuote.replace(/^„/,''),W/2,40,W-30,16);
-    if(paxQuote){ ctx.fillStyle='#cfe0ff'; ctx.font='700 12px Segoe UI'; ctx.fillText('🗣️ '+paxQuote.replace(/^„/,''),busX,by-58); }
+    ctx.textAlign='right'; ctx.fillStyle=mood<30?'#ff6b8a':'#7dffb0'; ctx.fillText('😊 '+(mood|0)+'%',W-8,20);
+    if(combo>1){ ctx.textAlign='center'; ctx.fillStyle='#ffd23f'; ctx.font='800 16px Segoe UI'; ctx.fillText('🔥 COMBO ×'+combo, W/2, 60); }
+    ctx.textAlign='center'; ctx.font='700 12px Segoe UI'; ctx.fillStyle='#ffe9a8'; wrapBus(ctx,'🎙️ '+driverQuote,W/2,combo>1?78:60,W-30,15);
+    if(paxQuote){ ctx.fillStyle='#cfe0ff'; ctx.font='700 12px Segoe UI'; ctx.fillText('🗣️ '+paxQuote,busX,by-58); }
+    if(eventT>0){ ctx.globalAlpha=Math.min(1,eventT*1.6); ctx.fillStyle='rgba(20,20,30,.75)'; ctx.fillRect(W*0.08,H*0.42,W*0.84,44);
+      ctx.fillStyle='#ffd23f'; ctx.font='800 17px Segoe UI'; ctx.fillText(eventBanner,W/2,H*0.42+22); ctx.globalAlpha=1; }
     miniRAF=requestAnimationFrame(loop); }
-  function wrapText(c,t,x,y,maxw,lh){ const words=t.split(' '); let line='',yy=y; for(const w of words){ const tt=line+w+' '; if(c.measureText(tt).width>maxw){ c.fillText(line,x,yy); line=w+' '; yy+=lh; } else line=tt; } c.fillText(line,x,yy); }
+  function wrapBus(c,t,x,y,maxw,lh){ const words=t.split(' '); let line='',yy=y; for(const w of words){ const tt=line+w+' '; if(c.measureText(tt).width>maxw){ c.fillText(line,x,yy); line=w+' '; yy+=lh; } else line=tt; } c.fillText(line,x,yy); }
   miniRAF=requestAnimationFrame(loop);
-  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle(); say("Endstation Alexanderplatz. Ausnahmsweise pünktlich unpünktlich.");
-    panelEl().innerHTML=`<h2>🚌 Am Alex angekommen!</h2><div style="font-size:52px">🚌🏙️✅</div><div class="miniDesc">Trotz Baustellen, Umleitung und „FARIKAAARTE!"-Rufen hast du den SEV-Bus heil zum <b>Alexanderplatz</b> gebracht. Die Fahrgäste sind fast zufrieden – berlinerisch gesehen ein Triumph!</div><button class="mBtn big" id="ok">🏁 Feierabend (+2 🌟)</button>`;
+  function stopEng(){ if(eng)eng.stop(); }
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} stopEng(); momente+=2; updateMomente(); fanfare(); cheer(); say("Endstation Alexanderplatz. Ausnahmsweise pünktlich unpünktlich.");
+    panelEl().innerHTML=`<h2>🚌 Am Alex angekommen!</h2><div style="font-size:52px">🚌🏙️✅</div><div class="miniDesc">Trotz Baustellen, Demo und „FARIKAAARTE!"-Rufen hast du den SEV-Bus heil zum <b>Alexanderplatz</b> gebracht${bonus>4?' – und dabei ordentlich Combo gehupt 📣':''}. Die Fahrgäste sind fast zufrieden – berlinerisch gesehen ein Triumph!</div><button class="mBtn big" id="ok">🏁 Feierabend (+2 🌟)</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🚌 SEV zum Alex gebracht!');}); }
-  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(150,0.5,'sawtooth',0.2); say("Wagen defekt. Ersatz für den Ersatzverkehr kommt. Irgendwann.");
+  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} stopEng(); beep(150,0.5,'sawtooth',0.2); say("Wagen defekt. Ersatz für den Ersatzverkehr kommt. Irgendwann.");
     panelEl().innerHTML=`<h2>🔧 Bus im Eimer!</h2><div style="font-size:52px">🚌💥🔧</div><div class="miniDesc">Zu viel Chaos gerammt – die Karosserie macht schlapp. „Ersatzverkehr für den Ersatzverkehr folgt in Kürze." (Also nie.)</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBus();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
-  function loseMood(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2); say("Fahrgastaufstand. Bitte alle aussteigen.");
-    panelEl().innerHTML=`<h2>😤 Fahrgast-Aufstand!</h2><div style="font-size:52px">🧍😤🚌</div><div class="miniDesc">Zu lahm, zu ruckelig – das Berliner Publikum meutert: „FARIKAAARTE!" und „Können Se ma anhalten?!". Alle steigen aus und laufen. Zu Fuß is eh schneller.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
+  function loseMood(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} stopEng(); boo(); say("Fahrgastaufstand. Bitte alle aussteigen.");
+    panelEl().innerHTML=`<h2>😤 Fahrgast-Aufstand!</h2><div style="font-size:52px">🧍😤🚌</div><div class="miniDesc">Zu lahm, zu ruckelig, zu viel gehupt – das Berliner Publikum meutert: „FARIKAAARTE!" und „Können Se ma anhalten?!". Alle steigen aus und laufen. Zu Fuß is eh schneller.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBus();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 

@@ -100,13 +100,20 @@ In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli
 Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich, 📋 Bürgeramt,
 🕶️ Berlin-Look) plus den **🚌 SEV-Bus** am Straßenrand.
 
-- 🚌 **Schienenersatzverkehr** (neu): Die U1 fällt aus – **du fährst den gelben
-  SEV-Bus** quer durch Berlin zum Alex! Der Bus steht **gut sichtbar am
-  Straßenrand**; steig ein und **lenke** (◀ ▶ / A D / Seiten tippen) um
-  **Baustellen 🚧, Radler 🚴, Staus 🚗, Umleitungen 🚸 und Schlaglöcher 🕳️** herum.
-  Sammel 🎫-Fahrgäste für gute Laune, pass auf die **Karosserie** auf – und
-  genieße die **echten Busfahrer-Sprüche** („Der Bus endet hier. Warum? Weeß ick
-  ooch nich.") samt meuterndem **Berliner Publikum** hinten drin („FARIKAAARTE!"). Unten im **U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die
+- 🚌 **Schienenersatzverkehr** (überarbeitet – jetzt echtes Gameplay): Die U1
+  fällt aus – **du fährst den gelben SEV-Bus** zum Alex. Drei Mechaniken
+  greifen ineinander: **Lenken** (◀ ▶ / A D / ziehen) um Baustellen 🚧, Staus
+  🚗 & Schlaglöcher 🕳️, **📣 Hupen** (Leertaste/Knopf) scheucht Radler 🚴 &
+  Fußgänger 🚶 weg und baut **Combos** – nervt aber die Fahrgäste, und an den
+  **🚏 Haltestellen** musst du auf die richtige Seite lenken, um Leute
+  mitzunehmen. Dazu **Zufalls-Events** mit dicken Bannern (🚧 Umleitung, ✊ Demo,
+  🥳 Karneval, 🚦 Ampel kaputt), **Motorsound & Hupe**, wackelnder Bus mit
+  Fahrgästen und die echten Busfahrer-Sprüche samt meuterndem Publikum
+  („FARIKAAARTE!").
+
+Alle Minispiele haben jetzt **mehr Sound & Musik** – Motorbrummen, Hupe,
+Stempel-Klacken (Bürokratie), Münz-Blings (Finanzausgleich), Würfel-Klackern,
+Buh-Rufe bei Fehlern und kleine **Siegs-Fanfaren mit Applaus**. Unten im **U-Bahnhof** gibt's zusätzlich den 🔧 Automaten, die
 🎲 BVG-Leitstelle mit großer **Verspätungs-Anzeigetafel** und das 👁️
 **Blickduell**. Die 👮 **Fahrkartenkontrolle** ist – logischerweise – **unten im
 U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
