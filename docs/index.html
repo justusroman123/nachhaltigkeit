@@ -207,20 +207,20 @@
     <p style="font-size:15px;line-height:1.5;color:#d7ddf7;margin:0 0 6px">
       Fahr die <b>U1</b> von <b>Kottbusser Tor</b> bis <b>Alexanderplatz</b>:
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
-      einfahrende U-Bahn 🚇. Die <b>Kamera folgt dir automatisch</b> – „vor" ist
-      immer in den Bildschirm. Nimm den <b>🚪 Ausgang nach oben</b> an die Straße:
-      dort warten <b>4 Minispiele</b> (🔧 Automat reparieren, 💶 Politiker
-      schmieren, 🛴 Gehweg-Slalom, 🏠 Wohnungsbesichtigung), schräge Gestalten
-      und rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
+      einfahrende U-Bahn 🚇. <b>Dreh die Ansicht</b> mit Maus/Wisch – „vor" ist
+      immer in den Bildschirm hinein. Nimm den <b>🚪 Ausgang nach oben</b> an die
+      Straße: dort warten <b>5 Minispiele</b> (🔧 Automat, 💶 Politiker schmieren,
+      🛴 Slalom, 🏠 Wohnung, 💰 Länderfinanzausgleich), schräge Gestalten und
+      rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
     </p>
     <div class="csLabel">Wähle deine Figur:</div>
     <div class="charsel" id="charsel"></div>
     <div class="keys" id="deskKeys">
-      <span class="kbd">W / ↑ = vor</span><span class="kbd">S / ↓ = zurück</span>
-      <span class="kbd">A D / ← → = drehen</span><span class="kbd">E = reden</span><span class="kbd">Shift = rennen</span>
+      <span class="kbd">W A S D / Pfeile = laufen</span><span class="kbd">Maus ziehen = Ansicht drehen</span>
+      <span class="kbd">E = reden</span><span class="kbd">Shift = rennen</span>
     </div>
     <div class="keys" id="touchKeys" style="display:none">
-      <span class="kbd">Stick hoch = vor</span><span class="kbd">Stick links/rechts = drehen</span>
+      <span class="kbd">Linker Stick = laufen</span><span class="kbd">Rechts wischen = Ansicht drehen</span>
       <span class="kbd">Aktions-Knopf</span>
     </div>
     <button class="btn" id="startBtn" style="margin-top:14px">▶ Losfahren</button>
@@ -248,6 +248,7 @@
 
 </script>
 <script>
+
 
 
 
@@ -644,7 +645,9 @@ function poster(x,z,title,sub,col,p){
   m.position.set(x,2.3,z); m.rotation.y=(z>0?Math.PI:0); (p||scene).add(m);
 }
 const POSTERS=[["BERGHAIN","Heute geöffnet: vielleicht.","#111111"],["SPÄTI","Dein zweites Wohnzimmer.","#2b6b3a"],
-  ["BVG","Weil wir müssen.","#7a2b8e"],["CLUB MATE","Wach seit 2004.","#3a5a2a"],["WOHNUNG GESUCHT","Nur 40 Bewerber:innen.","#8a3a2a"]];
+  ["BVG","Wir kommen. Irgendwann.","#7a2b8e"],["CLUB MATE","Wach seit 2004.","#3a5a2a"],["WOHNUNG GESUCHT","Nur 40 Bewerber:innen.","#8a3a2a"],
+  ["BÜRGERAMT","Termin frei: 2027!","#1a5fb4"],["FLUGHAFEN BER","Eröffnung: bald™.","#b23a2a"],["TECHNO","Sonntag = Montag.","#5a1a8a"],
+  ["PFAND","Sammeln = Rente.","#2a6a6a"],["DÖNER 4€","Preis von 2009.","#c23a1a"],["MITTE","Ohne dich schöner.","#333333"]];
 
 function addPersonNPC(list,parent,def,x,z,rot,coll){
   let p;
@@ -1034,7 +1037,7 @@ function tryInteract(){
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1144,8 +1147,8 @@ addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 let dragging=false,lastX=0,lastY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{ if(IS_TOUCH)return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
 addEventListener('pointerup',()=>dragging=false);
-addEventListener('pointermove',e=>{ if(IS_TOUCH||!dragging)return; camPitch+=(e.clientY-lastY)*0.004;
-  camPitch=Math.max(0.02,Math.min(0.7,camPitch)); lastX=e.clientX; lastY=e.clientY; });
+addEventListener('pointermove',e=>{ if(IS_TOUCH||!dragging)return; camYaw-=(e.clientX-lastX)*0.006; camPitch+=(e.clientY-lastY)*0.004;
+  camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lastX=e.clientX; lastY=e.clientY; });
 addEventListener('wheel',e=>{ camDist=Math.max(3.5,Math.min(9,camDist+e.deltaY*0.01)); },{passive:true});
 const touchUI=document.getElementById('touch'), stick=document.getElementById('stick'),
       nub=stick.querySelector('.nub'), looklayer=document.getElementById('looklayer');
@@ -1162,7 +1165,7 @@ if(IS_TOUCH){ touchUI.style.display='block';
   let lid=null,lx=0,ly=0;
   looklayer.addEventListener('touchstart',e=>{const t=e.changedTouches[0]; lid=t.identifier; lx=t.clientX; ly=t.clientY; e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchmove',e=>{for(const t of e.changedTouches){ if(t.identifier!==lid)continue;
-    camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(0.02,Math.min(0.7,camPitch)); lx=t.clientX; ly=t.clientY;} e.preventDefault();},{passive:false});
+    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(0.05,Math.min(0.7,camPitch)); lx=t.clientX; ly=t.clientY;} e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchend',e=>{for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; }});
   const rb=document.getElementById('btnRun');
   rb.addEventListener('touchstart',e=>{keys['shift']=true;rb.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
@@ -1190,6 +1193,18 @@ const STANDS=[
   {x:-32,z:11.9,r:2.6,name:"Späti",line:"Feierabendbier? Ham wa. Tüte kost' extra, ne.",gain:"Feierabendbier geholt!",done:false},
 ];
 
+/* ---------- Sprechblasen / Emotes über NPCs ---------- */
+const SAYS=['🍺','😤','💤','🚬','🙄','😎','🤙','🥨','Ey!','Boah','Nice!','Kein Netz','Uff.','Na?','Ick sach ma…','Digga','1 Euro?','Zack','Läuft.','Wat?'];
+let worldSays=[], worldSayT=2.5;
+function sayTex(s){ const c=document.createElement('canvas'); c.width=192; c.height=80; const x=c.getContext('2d');
+  x.fillStyle='rgba(255,255,255,0.94)'; const r=16,w=180,h=56,ox=6,oy=6;
+  x.beginPath(); x.moveTo(ox+r,oy); x.arcTo(ox+w,oy,ox+w,oy+h,r); x.arcTo(ox+w,oy+h,ox,oy+h,r); x.arcTo(ox,oy+h,ox,oy,r); x.arcTo(ox,oy,ox+w,oy,r); x.fill();
+  x.beginPath(); x.moveTo(80,oy+h); x.lineTo(96,oy+h+16); x.lineTo(104,oy+h); x.fill();
+  x.fillStyle='#15181f'; x.font='700 30px Segoe UI, Arial'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(s,96,34);
+  return new THREE.CanvasTexture(c); }
+function floatSay(x,y,z,s){ const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:sayTex(s),transparent:true,depthTest:false}));
+  spr.scale.set(1.9,0.8,1); spr.position.set(x,y,z); spr.renderOrder=6; scene.add(spr); worldSays.push({spr,life:2.2}); }
+
 /* ---------- Main loop ---------- */
 const clock=new THREE.Clock();
 function animate(){
@@ -1213,20 +1228,18 @@ function animate(){
 
   if(started&&!ended&&!transitioning&&!miniActive){
     if(manualLookT>0)manualLookT-=dt;
-    let turn=0, throttle=0;
-    if(keys['a']||keys['arrowleft']) turn-=1;
-    if(keys['d']||keys['arrowright']) turn+=1;
-    if(keys['w']||keys['arrowup']) throttle+=1;
-    if(keys['s']||keys['arrowdown']) throttle-=1;
-    if(IS_TOUCH){ turn+=move.x; throttle-=move.y; }
-    turn=Math.max(-1,Math.min(1,turn)); throttle=Math.max(-1,Math.min(1,throttle));
-    const running=keys['shift'];
-    if(Math.abs(turn)>0.04) P.yaw += turn*2.7*dt;
-    if(Math.abs(throttle)>0.06){
-      const spd=(running?P.run:P.speed)*throttle;
-      let nx=P.x+Math.sin(P.yaw)*spd*dt, nz=P.z+Math.cos(P.yaw)*spd*dt;
-      [nx,nz]=resolve(nx,nz); P.x=nx; P.z=nz;
-      const sw=Math.sin(t*(running?16:11))*(running?0.9:0.6)*(throttle>0?1:-1);
+    let ix=0,iz=0;
+    if(keys['w']||keys['arrowup'])iz-=1; if(keys['s']||keys['arrowdown'])iz+=1;
+    if(keys['a']||keys['arrowleft'])ix-=1; if(keys['d']||keys['arrowright'])ix+=1;
+    if(IS_TOUCH){ix+=move.x;iz+=move.y;}
+    let mag=Math.hypot(ix,iz); const running=keys['shift'];
+    if(mag>0.02){ const nm=Math.max(mag,1); ix/=nm; iz/=nm;
+      const cos=Math.cos(camYaw),sin=Math.sin(camYaw);
+      const wx=ix*cos-iz*sin, wz=-ix*sin-iz*cos;   // camera-relatives Laufen (konsistent: vor = in den Bildschirm)
+      const spd=(running?P.run:P.speed)*Math.min(mag,1);
+      let nx=P.x+wx*spd*dt, nz=P.z+wz*spd*dt;
+      [nx,nz]=resolve(nx,nz); P.x=nx; P.z=nz; P.yaw=Math.atan2(wx,wz);
+      const sw=Math.sin(t*(running?16:11))*(running?0.9:0.6);
       player.userData.legL.rotation.x=sw; player.userData.legR.rotation.x=-sw;
       player.userData.armL.rotation.x=-sw*0.7; player.userData.armR.rotation.x=sw*0.7;
     } else { player.userData.legL.rotation.x*=0.8; player.userData.legR.rotation.x*=0.8;
@@ -1235,6 +1248,12 @@ function animate(){
 
     // NPC-Verhalten
     for(const n of npcs) animateNPC(n,t);
+    worldSayT-=dt;
+    if(worldSayT<=0 && npcs.length){ worldSayT=2.2+Math.random()*3.2;
+      const n=npcs[(Math.random()*npcs.length)|0];
+      if(n && Math.hypot(P.x-n.x,P.z-n.z)<24) floatSay(n.x,2.55,n.z, SAYS[(Math.random()*SAYS.length)|0]); }
+    for(let k=worldSays.length-1;k>=0;k--){ const ws=worldSays[k]; ws.life-=dt; ws.spr.position.y+=dt*0.35;
+      ws.spr.material.opacity=Math.min(1,ws.life); if(ws.life<=0){ scene.remove(ws.spr); worldSays.splice(k,1); } }
 
     nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null;
     let best=2.0;
@@ -1298,10 +1317,10 @@ function animate(){
   }
 
   const px=player.position.x, pz=player.position.z;
-  let dyaw=P.yaw-camYaw; while(dyaw>Math.PI)dyaw-=2*Math.PI; while(dyaw<-Math.PI)dyaw+=2*Math.PI; camYaw+=dyaw*Math.min(1,dt*(started?9:2));
-  const cx=px-Math.sin(camYaw)*Math.cos(camPitch)*camDist, cz=pz-Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  let cx=px-Math.sin(camYaw)*Math.cos(camPitch)*camDist, cz=pz-Math.cos(camYaw)*Math.cos(camPitch)*camDist;
   const cy=1.9+Math.sin(camPitch)*camDist;
-  camera.position.lerp(new THREE.Vector3(cx,cy,cz),started?0.5:0.05); camera.lookAt(px,1.55,pz);
+  if(place==='underground'){ cz=Math.max(-(HALF_Z+3.4),Math.min(HALF_Z+3.4,cz)); cx=Math.max(-(HALF_X+0.4),Math.min(HALF_X+0.4,cx)); }
+  camera.position.lerp(new THREE.Vector3(cx,cy,cz),started?0.35:0.05); camera.lookAt(px,1.55,pz);
 
   if(place==='underground') for(let i=0;i<tubeLights.length;i++) tubeLights[i].intensity=0.55+Math.sin(t*7+i)*0.06+(Math.random()<0.004?-0.4:0);
   automatSign.position.y=3.0+Math.sin(t*2)*0.06;
@@ -1343,6 +1362,13 @@ function buildStreetExtras(i){
   ssign.position.set(sx,1.7,sz); streetGroup.add(ssign);
   makeFloatIcon("🛴",sx,2.6,sz,streetGroup);
   streetInteract.push({x:sx,z:sz,r:1.9,name:"Gehweg-Slalom",verb:"START",kind:'dodge'});
+  // Länderfinanzausgleich-Stand
+  const fx=-26, fz=6;
+  box(1.6,1.0,1.0,mat(0x2a5a3a),fx,0.5,fz,0,streetGroup);
+  for(let k=0;k<5;k++) box(0.22,0.22,0.22,new THREE.MeshStandardMaterial({color:0xf3c000,emissive:0x8a6a00,emissiveIntensity:0.4}),fx-0.5+k*0.25,1.12,fz,0,streetGroup);
+  const fsign=makeTextPlane("💰 FINANZAUSGLEICH",256,64,"#111111","#f3c000",34); fsign.scale.set(2.9,0.72,1); fsign.position.set(fx,1.9,fz); streetGroup.add(fsign);
+  makeFloatIcon("💰",fx,2.7,fz,streetGroup);
+  streetInteract.push({x:fx,z:fz,r:1.9,name:"Länderfinanzausgleich",verb:"KLAUEN",kind:'finanz'});
 }
 
 /* ---------- Rahmen ---------- */
@@ -1439,7 +1465,7 @@ function miniBribe(n){
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} hasBaurecht=true; bribedPolitician=true; momente+=2; updateMomente();
     if(n&&!n.collected){ n.collected=true; try{streetGroup.remove(n.icon); n.icon=makeFloatIcon('🤑',n.x,2.7,n.z,streetGroup);}catch(e){} streetDone[stationIndex].add(n.name); } jingle();
-    panelEl().innerHTML=`<h2>🤑 Deal!</h2><div style="font-size:56px">🤵🤝🏗️</div><div class="miniDesc"><i>„Ick hab dit nie angenommen."</i><br>Du hast jetzt <b>Baurecht am Alex</b> – bei der Wohnung kannst du damit <b>einfach kaufen</b>!</div><button class="mBtn big" id="ok">👍 Nice (+2 🌟)</button>`;
+    panelEl().innerHTML=`<h2>🤑 Deal!</h2><div style="font-size:56px">🤵🤝🏗️</div><div class="miniDesc"><i>„Ick hab dit nie angenommen."</i><br>Du hast jetzt <b>ein Baugrundstück am Alex</b> zugeteilt 🏗️ – bei der Wohnungsbesichtigung kannst du damit <b>einfach kaufen</b>!</div><button class="mBtn big" id="ok">👍 Nice (+2 🌟)</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🏗️ Baurecht gesichert!');}); }
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2);
     panelEl().innerHTML=`<h2>📸 Skandal!</h2><div style="font-size:56px">📸😱</div><div class="miniDesc">Jemand hat alles gefilmt. Morgen Seite 1. <i>„Kein Kommentar!"</i></div><button class="mBtn big" id="ok">😬 Nochmal</button><button class="mBtn alt" id="c">Lieber nicht</button>`;
@@ -1560,6 +1586,68 @@ function miniWohnung(){
 }
 
 
+
+
+
+
+/* ---------- MG5: Länderfinanzausgleich (Goldtaler klauen) ---------- */
+function miniFinanz(){
+  openMini();
+  panelEl().innerHTML=`<h2>💰 Länderfinanzausgleich</h2>
+    <div class="miniDesc">Berlin lebt vom Geld der anderen! Fang mit dem 🐻 die <b>Goldtaler 🪙</b> von <b>Bayern, Ba-Wü & Niedersachsen</b> – aber lass die <b>Bürokratie 📄</b> fallen! Ziel: <b>20 Taler</b> in 30s.</div>
+    <canvas id="mCanvas" width="360" height="450"></canvas>
+    <div id="miniResult">Kohle machen!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const lanes=[W*0.22,W*0.5,W*0.78]; const LAND=[{e:'🥨',n:'Bayern'},{e:'🧽',n:'Ba-Wü'},{e:'🐑',n:'Nds'}];
+  let lane=1, bx=lanes[1], taler=0, target=20, tLeft=30, items=[], spawnT=0.5, over=false, flash=0, floaters=[];
+  const THANKS=['Danke Bayern!','Solidarität!',' From Stuttgart with love','Zack, eingesackt!','Berlin dankt!'];
+  const res=document.getElementById('miniResult');
+  function go(d){ lane=Math.max(0,Math.min(2,lane+d)); }
+  mOn(cv,'pointerdown',e=>{ const r=cv.getBoundingClientRect(); go(((e.clientX-r.left)/r.width<0.5)?-1:1); });
+  mOn(window,'keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a')go(-1); if(e.key==='ArrowRight'||e.key==='d')go(1); });
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){ tLeft-=dt; if(tLeft<=0){ over=true; return end(); }
+      spawnT-=dt; if(spawnT<=0){ spawnT=0.42+Math.random()*0.35;
+        const roll=Math.random(); const kind = roll<0.16?'buro' : roll<0.28?'euro' : 'taler';
+        items.push({lane:(Math.random()*3)|0,y:-24,kind,v:150+(30-tLeft)*4}); }
+      for(const it of items) it.y+=it.v*dt;
+      for(const it of items){ if(!it.done && it.lane===lane && it.y>H-70 && it.y<H-24){ it.done=true;
+        if(it.kind==='buro'){ taler=Math.max(0,taler-2); flash=1; beep(160,0.15,'sawtooth',0.14); res.style.color='#ff9db0'; res.textContent='📄 Bürokratie! -2 (zurückzahlen!)'; }
+        else { const g=it.kind==='euro'?3:1; taler+=g; beep(it.kind==='euro'?1500:1050,0.07,'square',0.12);
+          floaters.push({t:(it.kind==='euro'?'+3 💶':'+1 🪙'),x:lanes[it.lane],y:H-60,life:1});
+          if(Math.random()<0.25) floaters.push({t:THANKS[(Math.random()*THANKS.length)|0],x:lanes[it.lane],y:H-90,life:1.2}); }
+      } }
+      items=items.filter(it=>it.y<H+30 && !it.done);
+      if(taler>=target){ over=true; return end(true); }
+    }
+    for(const fl of floaters) fl.life-=dt; floaters=floaters.filter(f=>f.life>0);
+    bx+=(lanes[lane]-bx)*Math.min(1,dt*12);
+    if(flash>0)flash-=dt*3;
+    ctx.fillStyle='#12203a'; ctx.fillRect(0,0,W,H);
+    // Länder-Köpfe oben
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(let i=0;i<3;i++){ ctx.font='30px serif'; ctx.fillText(LAND[i].e,lanes[i],26);
+      ctx.font='700 11px Segoe UI'; ctx.fillStyle='#cfe0ff'; ctx.fillText(LAND[i].n,lanes[i],48); }
+    ctx.strokeStyle='#20345a'; ctx.lineWidth=2; for(const lx of lanes){ ctx.beginPath(); ctx.moveTo(lx,60); ctx.lineTo(lx,H); ctx.stroke(); }
+    for(const it of items){ ctx.font='30px serif'; ctx.fillText(it.kind==='buro'?'📄':(it.kind==='euro'?'💶':'🪙'),lanes[it.lane],it.y); }
+    // Berlin-Bär (Korb)
+    ctx.font='40px serif'; ctx.fillText('🐻',bx,H-40);
+    for(const fl of floaters){ ctx.globalAlpha=Math.max(0,fl.life); ctx.fillStyle='#ffe9a0'; ctx.font='700 14px Segoe UI'; ctx.fillText(fl.t,fl.x,fl.y-(1.2-fl.life)*24); ctx.globalAlpha=1; }
+    ctx.fillStyle='#fff'; ctx.font='700 15px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s',8,16);
+    ctx.textAlign='right'; ctx.fillStyle='#ffd23f'; ctx.fillText('🪙 '+taler+'/'+target,W-8,16);
+    if(flash>0){ ctx.fillStyle='rgba(255,40,60,'+flash*0.25+')'; ctx.fillRect(0,0,W,H); }
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function end(win){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
+    if(win){ momente+=3; updateMomente(); jingle();
+      panelEl().innerHTML=`<h2>💰 Kasse gemacht!</h2><div style="font-size:56px">🐻💰</div><div class="miniDesc">${taler} Goldtaler nach Berlin gebracht. Bayern zahlt, Berlin feiert – so läuft der Laden!</div><button class="mBtn big" id="ok">🤑 Nice (+3 🌟)</button>`;
+      document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('💰 '+taler+' Taler abgegriffen – Berlin bleibt pleite, aber glücklich!');}); }
+    else { beep(180,0.4,'sawtooth',0.18);
+      panelEl().innerHTML=`<h2>⌛ Zeit um!</h2><div class="miniDesc">Nur ${taler} Taler. Macht nix – der Bund überweist eh weiter. 🤷</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Reicht</button>`;
+      document.getElementById('ok').addEventListener('click',()=>{closeMini();miniFinanz();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+  }
+}
 
 
 </script>

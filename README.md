@@ -13,16 +13,17 @@ nichts umstellen.
 
 ## Steuerung
 
-Klares Fahrschema: **vorwärts geht immer in den Bildschirm hinein**, die Kamera
-sitzt fest hinter dir. Zum Abbiegen **drehst** du dich (die Kamera dreht mit).
+**Kamera-relative Steuerung mit frei drehbarer Ansicht** (mathematisch sauber):
+dreh die Ansicht wie du willst – **„vorwärts" geht immer in den Bildschirm
+hinein**, links/rechts bleibt bildschirm-links/rechts. So kannst du die Kamera
+einmal ausrichten und dann intuitiv navigieren.
 
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
-| Vor / Zurück | `W` `S` / `↑` `↓` | Joystick hoch / runter |
-| Drehen (links/rechts) | `A` `D` / `←` `→` | Joystick links / rechts |
+| Laufen | `W A S D` / Pfeiltasten | Linker Joystick |
+| Ansicht drehen / neigen | Maus ziehen | Rechts über den Screen wischen |
 | Interagieren | `E` | **Aktions-Knopf** (Label passt sich an) |
 | Rennen | `Shift` | **RENN**-Knopf |
-| Blick neigen / zoomen | Maus ziehen / Rad | wischen / pinch |
 | Ton an/aus | 🔊-Button oben rechts | 🔊-Button oben rechts |
 
 Am Start wählst du deine **Spielfigur** aus (Kreuzberg-Kid, Techno-Raverin,
@@ -65,7 +66,7 @@ Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
 
-## 🎮 4 Minispiele (visuelle Szenen, an den passenden Orten)
+## 🎮 5 Minispiele (visuelle Szenen, an den passenden Orten)
 
 Zu finden über **Schilder/Icons** in jedem Kiez, über den **Fahrkartenautomaten**
 unten, oder indem du bestimmte Leute ansprichst (z. B. den **Makler 🏠** für die
@@ -81,8 +82,12 @@ Wohnungssuche oder den **Politiker 🤵** am Alex).
 - 🛴 **Gehweg-Slalom** (Straße): Weich in 3 Spuren den Berliner Gefahren aus –
   E-Scooter-Rowdys, Rentnern mit Rollator, Babys im Lastenrad und Kotti-Gestalten.
 - 🏠 **Wohnungsbesichtigung** (Straße): 50 Bewerber:innen vor dir – drängel dich
-  durch das Getümmel und überzeug am Ende den Vermieter (bestechen, ehrlich sein
-  oder mit Baurecht direkt kaufen).
+  sichtbar durch das Getümmel und überzeug am Ende den Vermieter (bestechen,
+  ehrlich sein oder mit Baugrundstück direkt kaufen).
+- 💰 **Länderfinanzausgleich** (Straße): Berlin lebt vom Geld der anderen! Fang
+  mit dem Berliner Bären 🐻 die Goldtaler von **Bayern, Ba-Wü & Niedersachsen**,
+  aber lass die **Bürokratie 📄** fallen – satirisch, wie sich die Stadt
+  mitfinanziert.
 
 Und du kannst mehr als nur reden – je nach Gestalt eine eigene **Aktivität**:
 
