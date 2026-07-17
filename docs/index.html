@@ -255,6 +255,7 @@
 
 
 
+
 "use strict";
 /* ============================================================
    BERLIN UNTERGRUND – U-Bahn Odyssee (U1 + Straße)
@@ -870,12 +871,48 @@ function makeHazard(type,laneZ,speed){
     : ["Fahrrad hier!! Nich gucken bringt Glück!","Ampeln sind Empfehlungen!","Ick hab VORFAHRT! Immer!"];
   return {g,z:laneZ,x:start,speed,type,talkCool:2,hitCool:0,lines,hphase:Math.random()*6,wait:(type==='cyclist'?3:0)};
 }
+const SKY_WIN=[];
+(function(){ for(let v=0;v<4;v++){ const c=document.createElement('canvas'); c.width=64;c.height=128; const x=c.getContext('2d');
+  x.fillStyle=['#2a3550','#38304a','#2f3a44','#333a52'][v]; x.fillRect(0,0,64,128);
+  for(let fy=0;fy<12;fy++) for(let fx=0;fx<4;fx++){ x.fillStyle=(((fx+fy+v)*7)%10<5)?'#ffe6a0':'#1a2130'; x.fillRect(6+fx*14,7+fy*10,9,6); }
+  const t=new THREE.CanvasTexture(c); SKY_WIN.push(t); } })();
+const skylineGroup=new THREE.Group(); skylineGroup.visible=false; scene.add(skylineGroup);
+(function buildSkyline(){
+  const rows=[{z:23,hmin:12,hmax:24,col:0x3c4763},{z:31,hmin:18,hmax:36,col:0x313b52},{z:41,hmin:26,hmax:50,col:0x2a3243},{z:53,hmin:34,hmax:66,col:0x252c3b}];
+  for(const r of rows){ for(let gx=-84;gx<=84;gx+=6.5){ const h=r.hmin+Math.random()*(r.hmax-r.hmin), w=4.5+Math.random()*3.5;
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,5),new THREE.MeshStandardMaterial({map:SKY_WIN[(gx*3+r.z|0)%4<0?0:(Math.abs(gx*3+r.z)|0)%4],color:r.col,roughness:0.92}));
+    m.position.set(gx+(Math.random()-0.5)*2,h/2,r.z); skylineGroup.add(m);
+    if(Math.random()<0.28){ const a=new THREE.Mesh(new THREE.BoxGeometry(0.25,2+Math.random()*4,0.25),new THREE.MeshStandardMaterial({color:0xcc2222,emissive:0xaa1111,emissiveIntensity:0.6})); a.position.set(m.position.x,h+2,r.z); skylineGroup.add(a); }
+  } }
+})();
 function groundTex(rx,ry){ const c=document.createElement('canvas');c.width=128;c.height=128;const x=c.getContext('2d');
   x.fillStyle='#9a9d9f'; x.fillRect(0,0,128,128);
-  x.strokeStyle='#7d8083'; x.lineWidth=3;
+  const greys=['#93969a','#9ea1a3','#8d9092','#a3a5a6','#96999b'];
+  for(let gy=0;gy<4;gy++) for(let gx=0;gx<4;gx++){ x.fillStyle=greys[(gx*3+gy*5)%greys.length]; x.fillRect(gx*32+1,gy*32+1,30,30); }
+  x.strokeStyle='#787b7e'; x.lineWidth=2;
   for(let i=0;i<=128;i+=32){ x.beginPath();x.moveTo(i,0);x.lineTo(i,128);x.stroke(); x.beginPath();x.moveTo(0,i);x.lineTo(128,i);x.stroke(); }
-  x.fillStyle='rgba(0,0,0,0.06)'; for(let k=0;k<7;k++) x.fillRect((k*29)%128,(k*47)%128,26,26);
+  // Risse
+  x.strokeStyle='rgba(30,30,30,0.4)'; x.lineWidth=1;
+  for(let k=0;k<3;k++){ x.beginPath(); let px=Math.random()*128, py=Math.random()*128; x.moveTo(px,py);
+    for(let j=0;j<4;j++){ px+=(Math.random()-0.5)*40; py+=(Math.random()-0.5)*40; x.lineTo(px,py);} x.stroke(); }
+  // Moos + Flecken + Kaugummi
+  x.fillStyle='rgba(60,90,50,0.35)'; for(let k=0;k<5;k++) x.fillRect((k*41)%120,(k*67)%120,6+((k*7)%6),4+((k*5)%5));
+  x.fillStyle='rgba(0,0,0,0.10)'; for(let k=0;k<8;k++){ x.beginPath(); x.arc((k*53)%128,(k*31)%128,2+((k)%3),0,7); x.fill(); }
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||30,ry||15); return t; }
+function groundDecals(p){
+  // Gullideckel
+  function gully(gx,gz){ const m=new THREE.Mesh(new THREE.CircleGeometry(0.55,12),new THREE.MeshStandardMaterial({color:0x33363c,metalness:0.4,roughness:0.7}));
+    m.rotation.x=-Math.PI/2; m.position.set(gx,0.02,gz); p.add(m); }
+  gully(-8,5); gully(12,4); gully(28,8);
+  // Pfütze (leicht spiegelnd)
+  const pud=new THREE.Mesh(new THREE.CircleGeometry(1.1,16),new THREE.MeshStandardMaterial({color:0x2a3a4a,metalness:0.7,roughness:0.15,transparent:true,opacity:0.75}));
+  pud.rotation.x=-Math.PI/2; pud.position.set(6,0.015,10); p.add(pud);
+  // Grasbüschel an Baumscheiben + Ritzen
+  for(const g of [[-20,3.4],[-4,3.4],[10,3.4],[30,3.4],[2,11],[-14,4]]) for(let k=0;k<4;k++)
+    box(0.05,0.22+Math.random()*0.15,0.05,mat(0x3f7d3a),g[0]+(Math.random()-0.5)*1.2,0.11,g[1]+(Math.random()-0.5)*1.2,0,p);
+  // Laub / Kippen / Müll
+  for(let k=0;k<16;k++){ const col=[0x8a6a2a,0xa06a2a,0x777777,0xbbbbbb][k%4]; box(0.14,0.02,0.09,mat(col),-40+Math.random()*80,0.02,1+Math.random()*13,Math.random()*3,p); }
+}
 function bikeTex(){ const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
   x.fillStyle='#8a3320'; x.fillRect(0,0,128,64); x.fillStyle='#a83c22'; x.fillRect(0,5,128,54);
   x.fillStyle='#f4e9d0'; x.font='38px serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('🚲',64,34);
@@ -908,9 +945,10 @@ function buildStreet(i){
   box(120,0.205,2.4,new THREE.MeshStandardMaterial({map:bikeTex(),roughness:0.9}),0,-0.05,2.1,0,streetGroup);   // Radweg
   box(120,0.22,7,new THREE.MeshStandardMaterial({map:roadTex(),roughness:0.9}),0,-0.08,-3,0,streetGroup);        // Fahrbahn
   box(120,0.08,0.35,mat(0xcfcfcf),0,0.03,0.7,0,streetGroup);  // Bordstein
+  groundDecals(streetGroup);
   // Häuserzeile (Altbau)
   const cols=[0xcaa66a,0xb98d5a,0xd9c39a,0x9a7a5a,0xc0a878,0xa88a6a];
-  for(let x=-44;x<=44;x+=11) building(x,19,10.6,10+((x*7)%6)+4,cols[Math.abs(x/11|0)%cols.length],streetGroup);
+  for(let x=-44;x<=44;x+=11){ if(x===0||x===33)continue; building(x,19.5,10.6,7+((x*13)%5)+2,cols[Math.abs(x/11|0)%cols.length],streetGroup); }
   landmark(kz.land,streetGroup);
   // U-Bahn-Eingang
   uEntranceStreet(ST_ENTRANCE.x,ST_ENTRANCE.z,streetGroup);
@@ -971,7 +1009,7 @@ let dialogueTimer=0, toastTimer=0;
 
 /* State */
 let started=false, ended=false, ticketBought=false, collected=0, stationTotal=0, momente=0, transitioning=false;
-let bribedPolitician=false, hasBaurecht=false, hasFlat=false, miniActive=false, streetInteract=[], escapeCool=0;
+let bribedPolitician=false, hasBaurecht=false, hasFlat=false, miniActive=false, streetInteract=[], escapeCool=0, verspaetRecord=0;
 let miniListeners=[], miniRAF=null;
 let trainState='gone', trainGap=3, trainWait=0;
 let annTimer=16;
@@ -1024,7 +1062,7 @@ function updateTrain(dt){
 /* Umgebung wechseln */
 function setPlace(pl){
   place=pl; const ug=(pl==='underground');
-  ugStatic.visible=ug; stationGroup.visible=ug; streetGroup.visible=!ug;
+  ugStatic.visible=ug; stationGroup.visible=ug; streetGroup.visible=!ug; skylineGroup.visible=!ug;
   keyLight.visible=ug; sunLight.visible=!ug; hemi.intensity=ug?0.55:0.95;
   if(ug){ scene.background.set(0x0a0e1c); scene.fog.color.set(0x0a0e1c); scene.fog.near=30; scene.fog.far=90; }
   else { scene.background.set(0x9cc2ec); scene.fog.color.set(0xbcd6f2); scene.fog.near=55; scene.fog.far=170; }
@@ -1438,6 +1476,27 @@ function buildStreetExtras(i){
   const vsg=makeTextPlane("🎲 VERSPÄTUNG",256,64,"#fff","#f3a51a",32); vsg.scale.set(2.9,0.72,1); vsg.position.set(vxp,2.1,vzp-0.32); streetGroup.add(vsg);
   makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
   streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
+  // ===== Sichtbare Belohnungen =====
+  const hx=40, hz=18;
+  if(hasFlat){
+    box(8,17,6,new THREE.MeshStandardMaterial({color:0x88b6dd,metalness:0.3,roughness:0.3}),hx,8.5,hz,0,streetGroup);
+    for(let fy=1;fy<8;fy++) for(let fxx=-1;fxx<=1;fxx++) box(1.7,1.5,0.1,new THREE.MeshStandardMaterial({color:0x9fd8ff,emissive:0xffe9a8,emissiveIntensity:0.55}),hx+fxx*2.3,fy*2.0,hz-3.05,0,streetGroup);
+    box(8.3,0.5,6.3,mat(0x2a2f3a),hx,17.2,hz,0,streetGroup);
+    const hs=makeTextPlane("🔑 DEIN NEUBAU",256,64,"#111","#f3d000",34); hs.scale.set(5.6,1.1,1); hs.position.set(hx,18.4,hz-3.1); streetGroup.add(hs);
+    makeFloatIcon("🏠",hx,19.6,hz-3,streetGroup);
+  } else if(hasBaurecht){
+    box(7,0.5,6,mat(0x8a7a5a),hx,0.25,hz,0,streetGroup);
+    box(0.3,11,0.3,mat(0xf3a51a),hx-2,5.5,hz,0,streetGroup); box(6,0.3,0.3,mat(0xf3a51a),hx+1,11,hz,0,streetGroup); box(0.25,3,0.25,mat(0x333333),hx+4,9.5,hz,0,streetGroup);
+    for(let k=0;k<7;k++) box(1.1,1.2,0.25,mat(k%2?0xffcc33:0xcc2222),hx-3.3+k,0.6,hz-3.1,0,streetGroup);
+    const hs=makeTextPlane("🏗️ DEIN BAUGRUNDSTÜCK",256,64,"#111","#ffcc33",28); hs.scale.set(6.4,1.0,1); hs.position.set(hx,4.4,hz-3.1); streetGroup.add(hs);
+    makeFloatIcon("🏗️",hx,6.2,hz-3,streetGroup);
+  }
+  if(verspaetRecord>0){
+    box(0.3,5,0.3,mat(0x222222),0,2.5,13,0,streetGroup);
+    box(5.0,2.0,0.16,mat(0x0a0d14),0,5.4,13.02,0,streetGroup);
+    const bd=makeTextPlane("🚇 +"+verspaetRecord+" min",256,96,"#ff5a3a",null,54); bd.scale.set(4.7,1.85,1); bd.position.set(0,5.4,12.92); streetGroup.add(bd);
+    const bl=makeTextPlane("REKORD-VERSPÄTUNG",256,40,"#ffd23f",null,28); bl.scale.set(4.2,0.7,1); bl.position.set(0,6.55,12.92); streetGroup.add(bl);
+  }
 }
 
 /* ---------- Rahmen ---------- */
@@ -1789,37 +1848,52 @@ function miniKontrolle(fromGuard){
 
 /* ---------- MG7: Verspätungen würfeln ---------- */
 function miniVerspaetung(){
-  openMini(); let anger=0, rolls=0, d1=1, d2=1, rolling=0, over=false;
+  openMini(); let anger=0, delayMin=0, rolls=0, d1=1, d2=1, rolling=0, over=false, combo=0, flash=0;
   panelEl().innerHTML=`<h2>🎲 Verspätungen würfeln</h2>
-    <div class="miniDesc">Du bist die <b>BVG-Leitstelle</b> 🚇. Würfle hohe Zahlen = mehr Verspätung = wütendere Fahrgäste! Treib die <b>Verärgerung auf 100%</b>. Aber Vorsicht: <b>Doppel-1</b> = ein Zug kommt pünktlich 😱 (Verärgerung sinkt).</div>
-    <canvas id="mCanvas" width="360" height="230"></canvas>
+    <div class="miniDesc">Du bist die <b>BVG-Leitstelle</b> 🚇. Würfle hohe Zahlen = mehr <b>Verspätungs-Minuten</b>! Ohne Doppel-1 baust du <b>Combos</b> auf (×1,5 / ×2). Treib die <b>Verärgerung auf 100%</b>. Aber <b>Doppel-1</b> = ein Zug kommt pünktlich 😱.</div>
+    <canvas id="mCanvas" width="360" height="250"></canvas>
     <div class="mBar"><i id="aBar" style="background:#e0466a"></i><div class="lbl" id="aLbl">Verärgerung 0%</div></div>
     <button class="mBtn big" id="rollBtn">🎲 WÜRFELN!</button><div id="miniResult" style="min-height:22px">Los, mach Chaos!</div>`;
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult');
   const FACE=['','⚀','⚁','⚂','⚃','⚄','⚅'], REACT=['😐','😕','😠','😤','🤬'];
-  const GAG=['„Wo bleibt die Bahn?!"','„Schon wieder!"','„Ick beschwer mich!"','„30 Minuten?!"','„Zu meiner Zeit war…"','„Ersatzverkehr, klar."'];
-  function roll(){ if(over||rolling>0)return; rolling=0.6; }
+  const GAG=['„Wo bleibt die Bahn?!"','„Schon wieder!"','„Ick beschwer mich!"','„30 Minuten?!"','„Zu meiner Zeit…"','„Ersatzverkehr, klar."','„Ich komm zu spät zur Arbeit!"','„Das Ticket war teuer genug!"','„Gibt kein Netz zum Meckern!"','„Nächste Bahn: irgendwann."','„Ich nehm nie wieder die U8."','„Skandal!"'];
+  function roll(){ if(over||rolling>0)return; rolling=0.55; }
   document.getElementById('rollBtn').addEventListener('click',roll);
   mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();roll();}});
   let last=performance.now();
   function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now;
     if(rolling>0){ rolling-=dt; d1=1+((Math.random()*6)|0); d2=1+((Math.random()*6)|0);
       if(rolling<=0){ const sum=d1+d2; rolls++;
-        if(d1===1&&d2===1){ anger=Math.max(0,anger-15); res.style.color='#8fd0ff'; res.textContent='😱 Doppel-1! Ein Zug kommt PÜNKTLICH! −15%'; beep(420,0.2,'sine',0.14); }
-        else { anger=Math.min(100,anger+sum); res.style.color='#ffd0d0'; res.textContent='🎲 '+sum+' Min Verspätung! '+GAG[(Math.random()*GAG.length)|0]; beep(680+sum*28,0.08,'square',0.12); }
-        if(anger>=100){ over=true; setTimeout(win,350); } } }
+        if(d1===1&&d2===1){ combo=0; const drop=12+((Math.random()*8)|0); anger=Math.max(0,anger-drop); delayMin=Math.max(0,delayMin-drop);
+          res.style.color='#8fd0ff'; res.textContent='😱 PÜNKTLICH! Ein Zug kommt! −'+drop+' min. Katastrophe!'; beep(420,0.25,'sine',0.14); }
+        else { combo++; const mult=combo>=6?2:(combo>=3?1.5:1); let add=Math.round(sum*mult); let bonus='';
+          if(d1===d2){ add+=6; bonus=' 🎲 DOPPEL – Ersatzverkehr!'; } if(sum>=11){ add+=8; bonus+=' 🚨 Signalstörung!'; }
+          anger=Math.min(100,anger+add); delayMin+=add; flash=1;
+          res.style.color='#ffd0d0'; res.textContent='+'+add+' min'+(mult>1?(' · COMBO ×'+mult):'')+bonus+'  '+GAG[(Math.random()*GAG.length)|0]; beep(680+sum*28,0.08,'square',0.12); }
+        if(anger>=100){ over=true; setTimeout(win,400); } } }
+    else { anger=Math.max(0,anger-dt*2.5); }
+    if(flash>0)flash-=dt*3;
     aBar.style.width=anger+'%'; aLbl.textContent='Verärgerung '+(anger|0)+'%';
-    ctx.fillStyle='#12203a'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#0e1a30'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
+    // grosse Minuten-Anzeige
+    const col = delayMin>=60?'#ff4a3a':(delayMin>=25?'#ffa53a':'#ffd23f');
+    ctx.fillStyle='#060a14'; ctx.fillRect(W*0.5-96,14,192,50);
+    ctx.fillStyle=col; ctx.font='900 40px Consolas, monospace'; ctx.fillText('🕐 +'+delayMin+' min', W*0.5, 40);
+    // Wuerfel
+    ctx.font='64px serif'; ctx.fillStyle='#fff'; ctx.fillText(FACE[d1], W*0.4, 108); ctx.fillText(FACE[d2], W*0.6, 108);
+    // combo
+    if(combo>=3){ ctx.font='900 18px Segoe UI'; ctx.fillStyle='#ffd23f'; ctx.fillText('🔥 COMBO ×'+(combo>=6?2:1.5), W*0.5, 150); }
+    ctx.font='700 13px Segoe UI'; ctx.fillStyle='#9fb0d8'; ctx.fillText(rolling>0?'…rollt…':('Würfe: '+rolls), W*0.5, 172);
+    // Fahrgaeste
     const lvl=Math.min(4,Math.floor(anger/22));
-    ctx.font='30px serif'; for(let i=0;i<6;i++) ctx.fillText(REACT[Math.min(4,lvl+((i%3===0)?1:0))], 34+i*((W-68)/5), H-34);
-    ctx.font='72px serif'; ctx.fillStyle='#fff'; ctx.fillText(FACE[d1], W*0.38, 68); ctx.fillText(FACE[d2], W*0.62, 68);
-    ctx.font='700 14px Segoe UI'; ctx.fillStyle='#cdd6f0'; ctx.fillText((rolling>0?'…rollt…':'Würfe: '+rolls), W*0.5, 120);
+    ctx.font='30px serif'; for(let i=0;i<6;i++) ctx.fillText(REACT[Math.min(4,lvl+((i%3===0)?1:0))], 34+i*((W-68)/5), H-28);
+    if(flash>0){ ctx.fillStyle='rgba(255,80,40,'+flash*0.18+')'; ctx.fillRect(0,0,W,H); }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
-  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
-    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px">😤🤬🎉</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht, drei Beschwerden pro Minute. Ein perfekter BVG-Tag – in ${rolls} Würfen geschafft!</div><button class="mBtn big" id="ok">😈 Nice (+2 🌟)</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Maximale Verärgerung – die BVG ist stolz auf dich!');}); }
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} verspaetRecord=Math.max(verspaetRecord,delayMin); momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:44px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht – Rekord-Verspätung von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Draußen hängt jetzt die <b>Schandtafel</b> mit deinem Rekord! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die BVG ist stolz auf dich.');}); }
 }
 
 </script>

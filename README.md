@@ -78,8 +78,19 @@ Kontrolle, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich) pl
   schleichen, aus dem **Sichtkegel** des Kontrolleurs bleiben, hinter Säulen
   verstecken. (Erwischt dich unten ein Kontrolleur, startet die Flucht direkt.)
 - 🎲 **Verspätungen würfeln** (neu): Als BVG-Leitstelle hohe Zahlen würfeln, um
-  die **Verärgerung der Fahrgäste auf 100 %** zu treiben – aber Doppel-1 heißt,
-  ein Zug kommt pünktlich (Katastrophe!).
+  die **Verärgerung der Fahrgäste auf 100 %** zu treiben. Ein großer Zähler
+  zeigt die aufsummierten **Verspätungs-Minuten**, ohne Doppel-1 baust du
+  **Combos** (×1,5/×2) auf, Doppel/Signalstörung geben Bonus – aber Doppel-1
+  heißt, ein Zug kommt pünktlich (Katastrophe!). Dein Rekord hängt danach als
+  **Schandtafel** draußen im Kiez.
+
+## 🏆 Sichtbare Belohnungen
+
+Was du in den Minispielen schaffst, siehst du danach im Kiez:
+
+- **Politiker geschmiert** → dein **🏗️ Baugrundstück** (mit Kran) erscheint.
+- **Wohnung bekommen** → daraus wird dein **🔑 Neubau** (gläsernes Hochhaus).
+- **Verspätungen-Rekord** → eine große **🚇 „+NN min" Anzeige** auf der Straße.
 
 - 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
   natürlich – kaputt (mit „DEFEKT"-Display und einer Ratte 🐀). Triff den grünen
@@ -126,6 +137,9 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 ## Details & Berlin-Feeling
 
 - **Echte U-Bahn**, die einfährt, hält, die Türen öffnet und mit dir losfährt.
+- **Hochhaus-Skyline** hinter der Straße (viele Türme mit beleuchteten Fenstern)
+  plus **natürlicherer Gehweg** (abwechslungsreiches Pflaster, Risse, Moos,
+  Gullideckel, Pfütze, Grasbüschel, Laub) und ein **roter Radweg** 🚲.
 - **Deutlich unterschiedlichere Figuren**: verschiedene Größen, Bäuche, Bärte,
   Frisuren (Iro, Dutt, Glatze, Beanie, Cap), Brillen, Kleider, Rucksäcke,
   Props und komplette Kostüme (Bär, Döner-Spieß, Statue).
