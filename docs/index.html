@@ -22,10 +22,10 @@
 
   /* ---------- Overlays ---------- */
   .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    z-index:50;padding:24px;text-align:center;
+    z-index:50;padding:20px;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch;
     background:radial-gradient(circle at 50% 30%, #1a2450 0%, #070a16 70%);}
-  .card{max-width:560px;width:100%;background:rgba(12,17,38,.85);border:1px solid #2a366b;
-    border-radius:20px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .card{max-width:560px;width:100%;margin:auto;background:rgba(12,17,38,.9);border:1px solid #2a366b;
+    border-radius:20px;padding:24px 24px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
   h1{margin:.1em 0 .1em;font-size:clamp(26px,7vw,46px);line-height:1.02;letter-spacing:.5px;}
   .u{display:inline-flex;align-items:center;justify-content:center;width:1.35em;height:1.35em;
     background:var(--bvg-purple);color:#fff;border-radius:6px;font-weight:900;transform:translateY(4px);}
@@ -41,7 +41,7 @@
   .emoji-row{font-size:26px;letter-spacing:4px;margin:8px 0 2px;}
 
   /* ---------- HUD ---------- */
-  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;}
+  #hud{position:fixed;inset:0;z-index:28;pointer-events:none;}
   #objective{position:absolute;top:calc(env(safe-area-inset-top,0) + 12px);left:12px;right:12px;
     display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
   .badge{background:rgba(8,12,28,.72);border:1px solid #2c3768;border-radius:12px;
@@ -209,9 +209,10 @@
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
       einfahrende U-Bahn 🚇. <b>Dreh die Ansicht</b> mit Maus/Wisch – „vor" ist
       immer in den Bildschirm hinein. Nimm den <b>🚪 Ausgang nach oben</b> an die
-      Straße: dort warten <b>5 Minispiele</b> (🔧 Automat, 💶 Politiker schmieren,
-      🛴 Slalom, 🏠 Wohnung, 💰 Länderfinanzausgleich), schräge Gestalten und
-      rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
+      Straße: dort warten <b>6 Minispiele</b> in <b>jedem Kiez</b> (🔧 Automat,
+      💶 Politiker schmieren, 🛴 Slalom, 🏠 Wohnung, 💰 Länderfinanzausgleich,
+      🚔 Kontrolle entkommen), schräge Gestalten und rasende E-Scooter 🛴 – und
+      pass auf die Kontrolleure 👮 auf!
     </p>
     <div class="csLabel">Wähle deine Figur:</div>
     <div class="charsel" id="charsel"></div>
@@ -248,6 +249,7 @@
 
 </script>
 <script>
+
 
 
 
@@ -336,26 +338,28 @@ function makeFloatIcon(emoji,x,y,z,parent){
   (parent||scene).add(s); return s;
 }
 function clearGroup(g){ while(g.children.length) g.remove(g.children[g.children.length-1]); }
+function pick(a){ if(!a||!a.length)return''; let i=(Math.random()*a.length)|0; if(a.length>1&&i===a._l)i=(i+1)%a.length; a._l=i; return a[i]; }
 
 /* ---------- Person builder (viel Variation!) ---------- */
 function mat(c){ return new THREE.MeshStandardMaterial({color:c, roughness:0.8}); }
 function addFace(head,o){ o=o||{};
   const dark=mat(0x1b1b1b), white=mat(0xf4f4f4), mouthc=mat(0x8a3b3b);
-  const f=o.face||'smile';
+  const f=o.face||'smile'; let eL=null,eR=null,mo=null;
   if(o.sunglasses||o.shades){ box(0.46,0.14,0.05,mat(0x111111),0,0.05,0.26,0,head); }
   else {
-    const eL=box(0.13,0.15,0.05,white,-0.12,0.05,0.25,0,head), eR=box(0.13,0.15,0.05,white,0.12,0.05,0.25,0,head);
+    eL=box(0.13,0.15,0.05,white,-0.12,0.05,0.25,0,head); eR=box(0.13,0.15,0.05,white,0.12,0.05,0.25,0,head);
     box(0.06,0.07,0.03,dark,-0.12,0.04,0.285,0,head); box(0.06,0.07,0.03,dark,0.12,0.04,0.285,0,head);
     if(f==='angry'){ const bL=box(0.17,0.05,0.04,dark,-0.12,0.17,0.26,0,head); bL.rotation.z=-0.5;
       const bR=box(0.17,0.05,0.04,dark,0.12,0.17,0.26,0,head); bR.rotation.z=0.5; }
     if(f==='shock'){ eL.scale.set(1.3,1.4,1); eR.scale.set(1.3,1.4,1); }
   }
-  if(f==='grin') box(0.3,0.11,0.04,white,0,-0.12,0.26,0,head);
-  else if(f==='shock') box(0.12,0.15,0.04,mouthc,0,-0.13,0.26,0,head);
-  else if(f==='angry') box(0.22,0.05,0.04,mouthc,0,-0.15,0.26,0,head);
-  else if(f==='sad'){ const m=box(0.19,0.06,0.04,mouthc,0,-0.15,0.26,0,head); m.rotation.z=Math.PI; }
-  else box(0.17,0.06,0.04,mouthc,0,-0.14,0.26,0,head);
+  if(f==='grin') mo=box(0.3,0.11,0.04,white,0,-0.12,0.26,0,head);
+  else if(f==='shock') mo=box(0.12,0.15,0.04,mouthc,0,-0.13,0.26,0,head);
+  else if(f==='angry') mo=box(0.22,0.05,0.04,mouthc,0,-0.15,0.26,0,head);
+  else if(f==='sad'){ mo=box(0.19,0.06,0.04,mouthc,0,-0.15,0.26,0,head); mo.rotation.z=Math.PI; }
+  else mo=box(0.17,0.06,0.04,mouthc,0,-0.14,0.26,0,head);
   if(o.mustache) box(0.28,0.07,0.04,mat(o.mustache===true?0x2a1c10:o.mustache),0,-0.06,0.27,0,head);
+  head.userData.eyeL=eL; head.userData.eyeR=eR; head.userData.mouth=mo;
 }
 function makePerson(o){
   o=o||{};
@@ -404,7 +408,7 @@ function makePerson(o){
   if(o.accent) g.add(box(0.18,0.3,0.18,new THREE.MeshStandardMaterial(
       {color:o.accent, emissive:o.accentE||0x000000, emissiveIntensity:o.accentE?0.8:0}),0.6*bodyW,1.0,0.15));
   g.scale.set(o.w||1, o.h||1, o.w||1);
-  g.userData={legL,legR,armL,armR,head,torso};
+  g.userData={legL,legR,armL,armR,head,torso,eyeL:head.userData.eyeL,eyeR:head.userData.eyeR,mouth:head.userData.mouth};
   return g;
 }
 
@@ -671,6 +675,8 @@ function loadStation(i){
   stationIndex=i; const st=STATIONS[i];
   clearGroup(stationGroup); npcs=[]; guards=[]; collected=0; stationTotal=st.npcs.length;
   elStation.textContent="🚇 "+st.name; elStation.style.background='#'+st.accent.toString(16).padStart(6,'0');
+  const WALLCOLS=[0xd9e5ea,0xdcead9,0xead9d9,0xdadfef], TUBECOLS=[0xffe8b0,0xe8ffd0,0xffd8c0,0xd8e6ff];
+  matTileWall.color.setHex(WALLCOLS[i%4]); for(const _l of tubeLights) _l.color.setHex(TUBECOLS[i%4]);
   stationGroup.add(makeMural(st.mural));
   for(const sx of [-18,0,18]){
     const g=new THREE.Group();
@@ -817,6 +823,9 @@ const STREET_POOL={
    lines:["Zwei Döner, einer gratis – ick lauf sogar hinterher!","Im Kostüm schwitzt man wie im Grill. Passt.","Vegan? Ham wa auch. Frag nich, wie."]},
 };
 
+const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma."];
+for(const d of Object.values(NPC_POOL)) d.lines=d.lines.concat(GENERIC);
+for(const d of Object.values(STREET_POOL)) if(d.lines) d.lines=d.lines.concat(GENERIC);
 const KIEZ=[
  {land:'kotti', pool:['fkk','dj','statue','philo','fixie','passant']},
  {land:'park',  pool:['dj','yogi','tauben','floh','raveoma','makler']},
@@ -854,13 +863,44 @@ function makeHazard(type,laneZ,speed){
     : ["Fahrrad hier!! Nich gucken bringt Glück!","Ampeln sind Empfehlungen!","Ick hab VORFAHRT! Immer!"];
   return {g,z:laneZ,x:start,speed,type,talkCool:2,hitCool:0,lines,hphase:Math.random()*6,wait:(type==='cyclist'?3:0)};
 }
+function groundTex(rx,ry){ const c=document.createElement('canvas');c.width=128;c.height=128;const x=c.getContext('2d');
+  x.fillStyle='#9a9d9f'; x.fillRect(0,0,128,128);
+  x.strokeStyle='#7d8083'; x.lineWidth=3;
+  for(let i=0;i<=128;i+=32){ x.beginPath();x.moveTo(i,0);x.lineTo(i,128);x.stroke(); x.beginPath();x.moveTo(0,i);x.lineTo(128,i);x.stroke(); }
+  x.fillStyle='rgba(0,0,0,0.06)'; for(let k=0;k<7;k++) x.fillRect((k*29)%128,(k*47)%128,26,26);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||30,ry||15); return t; }
+function bikeTex(){ const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
+  x.fillStyle='#8a3320'; x.fillRect(0,0,128,64); x.fillStyle='#a83c22'; x.fillRect(0,5,128,54);
+  x.fillStyle='#f4e9d0'; x.font='38px serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('🚲',64,34);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(22,1); return t; }
+function roadTex(){ const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');
+  x.fillStyle='#2c2e33'; x.fillRect(0,0,128,64); x.fillStyle='#3a3d43'; for(let k=0;k<44;k++) x.fillRect((k*37)%128,(k*53)%64,3,3);
+  x.fillStyle='#e8c83a'; x.fillRect(24,30,56,5);
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(24,1); return t; }
+function shopWinTex(kind){ const c=document.createElement('canvas');c.width=128;c.height=96;const x=c.getContext('2d');
+  x.fillStyle='#2e2010'; x.fillRect(0,0,128,96); x.fillStyle='#ffe6a8'; x.fillRect(6,6,116,84);
+  x.fillStyle='#5a3a1a'; x.fillRect(10,22,54,4); x.fillRect(10,46,54,4);
+  const cols=['#33aabb','#aa3333','#33aa44','#aaaa33','#3344aa'];
+  for(let r=0;r<2;r++) for(let b=0;b<7;b++){ x.fillStyle=cols[(r+b)%5]; x.fillRect(12+b*7.4,8+r*24,5,13); }
+  x.font='44px serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(kind==='imbiss'?'👨‍🍳':(kind==='doener'?'🧑‍🍳':'🧍'),96,50);
+  x.fillStyle='#c9a97a'; x.fillRect(66,72,56,18);
+  return new THREE.CanvasTexture(c); }
+function shopFront(x,z,w,h,bodyCol,awnCol,label,neon,kind){
+  box(w,h,3.2,mat(bodyCol),x,h/2,z,0,streetGroup);
+  const win=new THREE.Mesh(new THREE.PlaneGeometry(w*0.72,h*0.55),new THREE.MeshStandardMaterial({map:shopWinTex(kind),emissive:0xffddaa,emissiveIntensity:0.4}));
+  win.position.set(x,h*0.48,z-1.61); win.rotation.y=Math.PI; streetGroup.add(win);
+  for(let k=0;k<Math.round(w/0.6);k++) box(0.6,0.12,1.0,mat(k%2?awnCol:0xf4f4f4),x-w/2+0.3+k*0.6,h*0.88,z-1.95,0,streetGroup);
+  const sg=makeTextPlane(label,256,80,'#141414',neon,52); sg.scale.set(w*0.72,0.9,1); sg.position.set(x,h+0.55,z-1.56); sg.rotation.y=Math.PI; streetGroup.add(sg);
+  box(w*0.7,0.1,0.1,new THREE.MeshStandardMaterial({color:neon,emissive:neon,emissiveIntensity:0.9}),x,h+0.05,z-1.6,0,streetGroup);
+  for(let k=0;k<3;k++) box(0.8,0.5,0.8,mat(k%2?0x2a6a3a:0xcc7722),x-1.2+k*1.2,0.25,z-2.25,0,streetGroup);
+}
 function buildStreet(i){
   clearGroup(streetGroup); npcs=[]; streetColl=[]; const kz=KIEZ[i]; const st=STATIONS[i];
-  // Boden: Gehweg + Straße
-  box(120,0.2,60,mat(0x8f9298),0,-0.1,20,0,streetGroup);      // Gehweg
-  box(120,0.22,7,mat(0x2a2c30),0,-0.08,-3,0,streetGroup);     // Fahrbahn
-  for(let x=-56;x<60;x+=6) box(2,0.02,0.25,mat(0xf3d000),x,0.02,-3,0,streetGroup); // Mittellinie
-  box(120,0.06,0.4,mat(0xdddddd),0,0.02,0.4,0,streetGroup);   // Bordstein-Linie
+  // Boden: texturierter Gehweg + Radweg + Fahrbahn
+  box(120,0.2,60,new THREE.MeshStandardMaterial({map:groundTex(30,15),roughness:0.96}),0,-0.1,20,0,streetGroup);
+  box(120,0.205,2.4,new THREE.MeshStandardMaterial({map:bikeTex(),roughness:0.9}),0,-0.05,2.1,0,streetGroup);   // Radweg
+  box(120,0.22,7,new THREE.MeshStandardMaterial({map:roadTex(),roughness:0.9}),0,-0.08,-3,0,streetGroup);        // Fahrbahn
+  box(120,0.08,0.35,mat(0xcfcfcf),0,0.03,0.7,0,streetGroup);  // Bordstein
   // Häuserzeile (Altbau)
   const cols=[0xcaa66a,0xb98d5a,0xd9c39a,0x9a7a5a,0xc0a878,0xa88a6a];
   for(let x=-44;x<=44;x+=11) building(x,19,10.6,10+((x*7)%6)+4,cols[Math.abs(x/11|0)%cols.length],streetGroup);
@@ -868,13 +908,10 @@ function buildStreet(i){
   // U-Bahn-Eingang
   uEntranceStreet(ST_ENTRANCE.x,ST_ENTRANCE.z,streetGroup);
   streetColl.push({x:ST_ENTRANCE.x,z:ST_ENTRANCE.z,r:1.7});
-  // Späti + Imbiss
-  box(6,3,4,mat(0x2b6b3a),-32,1.5,14,0,streetGroup); streetColl.push({x:-32,z:14,r:3});
-  (function(){const s=makeTextPlane("SPÄTI",256,90,"#f3d000","#111",64); s.scale.set(3.4,1.2,1); s.position.set(-32,3.4,11.9); streetGroup.add(s);})();
-  box(1.4,1.2,0.8,mat(0xff8800),-29,0.6,11.6,0,streetGroup); // Kühlschrank draußen
-  box(5,2.6,3.5,mat(0xcc2222),22,1.3,14,0,streetGroup); streetColl.push({x:22,z:14,r:2.8});
-  (function(){const s=makeTextPlane("🌭 IMBISS",256,90,"#fff","#cc2222",56); s.scale.set(3.2,1.1,1); s.position.set(22,3.0,12.2); streetGroup.add(s);})();
-  box(4,1.0,1.0,mat(0x999999),22,1.0,12.4,0,streetGroup); // Theke
+  // Späti + Imbiss mit Details (Schaufenster mit Innenleben)
+  shopFront(-32,14,6,3,0x2b6b3a,0x2b6b3a,'SPÄTI 24h',0xf3d000,'spaeti'); streetColl.push({x:-32,z:14,r:3});
+  box(1.3,1.2,0.8,mat(0xff8800),-28.4,0.6,11.4,0,streetGroup);
+  shopFront(22,14,5.4,2.9,0xcc2222,0xffcc33,'🌭 IMBISS',0xffcc33,'imbiss'); streetColl.push({x:22,z:14,r:2.8});
   // Deko
   litfass(12,9,streetGroup);
   for(const tx of [-20,-4,10,30]) { tree(tx,3.4,streetGroup); streetColl.push({x:tx,z:3.4,r:0.6}); }
@@ -927,7 +964,7 @@ let dialogueTimer=0, toastTimer=0;
 
 /* State */
 let started=false, ended=false, ticketBought=false, collected=0, stationTotal=0, momente=0, transitioning=false;
-let bribedPolitician=false, hasBaurecht=false, hasFlat=false, miniActive=false, streetInteract=[];
+let bribedPolitician=false, hasBaurecht=false, hasFlat=false, miniActive=false, streetInteract=[], escapeCool=0;
 let miniListeners=[], miniRAF=null;
 let trainState='gone', trainGap=3, trainWait=0;
 let annTimer=16;
@@ -1021,7 +1058,7 @@ function collectNPC(n){
       if(collected>=stationTotal) toast("Alle erledigt – ab in die U-Bahn! 🚇"); updateObjective(); }
     else toast("🌟 Skurriler Berlin-Moment gesammelt!");
   }
-  showDialogue(n.name, n.lines[(Math.random()*n.lines.length)|0]);
+  if(n) n.talkUntil=clock.elapsedTime+2.4; showDialogue(n.name, pick(n.lines));
 }
 
 /* Interaktion */
@@ -1037,7 +1074,7 @@ function tryInteract(){
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='kontrolle') miniKontrolle(false); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1104,6 +1141,8 @@ function animateNPC(n,t){
     case 'wave': u.armR.rotation.z=-0.4+Math.sin(t*6+ph)*0.7; break;
     default: u.head.position.y=1.95+Math.sin(t*2+ph)*0.03; u.head.rotation.y=Math.sin(t*0.55+ph)*0.45;
   }
+  if(u.eyeL){ const bl=(Math.sin(t*2.6+ph*5)>0.93)?0.14:1; u.eyeL.scale.y=bl; u.eyeR.scale.y=bl; }
+  if(u.mouth){ u.mouth.scale.y=(n.talkUntil&&t<n.talkUntil)?(1+Math.abs(Math.sin(t*17))*1.2):1; }
 }
 
 /* ---------- Audio ---------- */
@@ -1131,6 +1170,7 @@ function say(text){ if(!soundOn||!window.speechSynthesis)return;
     const de=vs.find(v=>/de-?DE/i.test(v.lang))||vs.find(v=>/german|deutsch/i.test(v.name)); if(de)u.voice=de;
     speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
 const ANNOUNCE=["Sehr geehrte Fahrgäste, aufgrund einer Signalstörung verzögert sich alles.",
+  "Zug fällt aus. Grund: gibt keinen. Berlin halt.","Bitte nicht in die Türen lehnen – die halten auch so kaum.","Der nächste Zug ist voll. Der übernächste auch. Viel Erfolg.","Ein Fahrgast sucht seinen Schlüssel seit 2019. Wir drücken die Daumen.","Fahrausweise bitte bereithalten – oder schnell rennen.",
   "Bitte beachten Sie: der Aufzug ist außer Betrieb. Wie immer.","Taschendiebe sind auch heute wieder für Sie da.",
   "Bitte lassen Sie Ihren Sperrmüll nicht auf dem Sitz. Danke, Kevin.","Wir bitten um Ihr Verständnis. Kriegen es aber nicht.","Nächster Halt: irgendwann."];
 const STREET_ANN=["Irgendwo pöbelt jemand. Klingt nach Zuhause.","Ein E-Scooter piept traurig im Kanal.","Über dir: 200 Tauben und ein Kranich, der sich verflogen hat.","Bass wummert aus 'nem Hinterhof. Sonntag halt."];
@@ -1194,7 +1234,7 @@ const STANDS=[
 ];
 
 /* ---------- Sprechblasen / Emotes über NPCs ---------- */
-const SAYS=['🍺','😤','💤','🚬','🙄','😎','🤙','🥨','Ey!','Boah','Nice!','Kein Netz','Uff.','Na?','Ick sach ma…','Digga','1 Euro?','Zack','Läuft.','Wat?'];
+const SAYS=['🍺','😤','💤','🚬','🙄','😎','🤙','🥨','🌭','🎧','📱','🤝','🕶️','Ey!','Boah ey','Nice!','Kein Netz','Uff.','Na?','Ick sach ma…','Digga','1 Euro?','Zack','Läuft.','Wat?','Alles jut?','Hömma','Wa?','Nee, ne?','Voll','Krass','Geht so','Isso','Jibs nich','Bin U-Bahn','Feierabend!','Sonntag halt','Kiez!','Berlin, du Biest'];
 let worldSays=[], worldSayT=2.5;
 function sayTex(s){ const c=document.createElement('canvas'); c.width=192; c.height=80; const x=c.getContext('2d');
   x.fillStyle='rgba(255,255,255,0.94)'; const r=16,w=180,h=56,ox=6,oy=6;
@@ -1227,7 +1267,7 @@ function animate(){
     if(pt.position.x>90||pt.position.x<-90){ ugStatic.remove(pt); passers.splice(k,1); } }
 
   if(started&&!ended&&!transitioning&&!miniActive){
-    if(manualLookT>0)manualLookT-=dt;
+    if(manualLookT>0)manualLookT-=dt; if(escapeCool>0)escapeCool-=dt;
     let ix=0,iz=0;
     if(keys['w']||keys['arrowup'])iz-=1; if(keys['s']||keys['arrowdown'])iz+=1;
     if(keys['a']||keys['arrowleft'])ix-=1; if(keys['d']||keys['arrowright'])ix+=1;
@@ -1245,13 +1285,14 @@ function animate(){
     } else { player.userData.legL.rotation.x*=0.8; player.userData.legR.rotation.x*=0.8;
       player.userData.armL.rotation.x*=0.8; player.userData.armR.rotation.x*=0.8; }
     player.position.set(P.x,0,P.z); player.rotation.y=P.yaw;
+    if(player.userData.eyeL){ const _b=(Math.sin(t*2.4)>0.93)?0.14:1; player.userData.eyeL.scale.y=_b; player.userData.eyeR.scale.y=_b; }
 
     // NPC-Verhalten
     for(const n of npcs) animateNPC(n,t);
     worldSayT-=dt;
     if(worldSayT<=0 && npcs.length){ worldSayT=2.2+Math.random()*3.2;
       const n=npcs[(Math.random()*npcs.length)|0];
-      if(n && Math.hypot(P.x-n.x,P.z-n.z)<24) floatSay(n.x,2.55,n.z, SAYS[(Math.random()*SAYS.length)|0]); }
+      if(n && Math.hypot(P.x-n.x,P.z-n.z)<24){ n.talkUntil=t+2.0; floatSay(n.x,2.55,n.z, pick(SAYS)); } }
     for(let k=worldSays.length-1;k>=0;k--){ const ws=worldSays[k]; ws.life-=dt; ws.spr.position.y+=dt*0.35;
       ws.spr.material.opacity=Math.min(1,ws.life); if(ws.life<=0){ scene.remove(ws.spr); worldSays.splice(k,1); } }
 
@@ -1267,7 +1308,7 @@ function animate(){
         gd.mesh.position.set(gd.x,0,gd.z); gd.mesh.rotation.y=gd.dir>0?Math.PI/2:-Math.PI/2;
         const sw=Math.sin(t*10+gd.phase)*0.7; gd.mesh.userData.legL.rotation.x=sw; gd.mesh.userData.legR.rotation.x=-sw;
         gd.icon.position.set(gd.x,2.7,gd.z); const dist=Math.hypot(P.x-gd.x,P.z-gd.z);
-        if(!ticketBought){ if(dist<5.5)danger=true; if(dist<1.7)caughtGame(); } }
+        if(!ticketBought){ if(dist<5.5)danger=true; if(dist<1.7 && escapeCool<=0){ escapeCool=8; miniKontrolle(true); } } }
       elWarn.classList.toggle('on',danger&&!ticketBought);
       const dA=Math.hypot(P.x-automatPos.x,P.z-automatPos.z); if(dA<2.3&&dA<best+0.4){nearAutomat=true;nearNPC=null;}
       const dE=Math.hypot(P.x-UG_EXIT.x,P.z-(UG_EXIT.z+1.5)); if(dE<2.8&&dE<best+0.4){nearExit=true;nearNPC=null;}
@@ -1369,6 +1410,18 @@ function buildStreetExtras(i){
   const fsign=makeTextPlane("💰 FINANZAUSGLEICH",256,64,"#111111","#f3c000",34); fsign.scale.set(2.9,0.72,1); fsign.position.set(fx,1.9,fz); streetGroup.add(fsign);
   makeFloatIcon("💰",fx,2.7,fz,streetGroup);
   streetInteract.push({x:fx,z:fz,r:1.9,name:"Länderfinanzausgleich",verb:"KLAUEN",kind:'finanz'});
+  // Politiker-Schmieren-Stand (in JEDEM Kiez findbar)
+  const bxp=-12, bzp=8;
+  box(1.2,2.2,0.8,mat(0x14141f),bxp,1.1,bzp,0,streetGroup);
+  const bsg=makeTextPlane("💼 POLITIKER",256,64,"#fff","#7a2b8e",34); bsg.scale.set(2.9,0.72,1); bsg.position.set(bxp,2.7,bzp-0.42); streetGroup.add(bsg);
+  makeFloatIcon("💼",bxp,3.3,bzp,streetGroup);
+  streetInteract.push({x:bxp,z:bzp,r:1.4,name:"Politiker schmieren",verb:"SCHMIEREN",kind:'bribe'});
+  // Kontrolle-entkommen (Schwarzfahr-Spot)
+  const kxp=8, kzp=9;
+  box(1.0,1.6,0.6,mat(0x1a2a55),kxp,0.8,kzp,0,streetGroup);
+  const ksg=makeTextPlane("🚔 KONTROLLE",256,64,"#fff","#c2183a",34); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
+  makeFloatIcon("🚔",kxp,2.8,kzp,streetGroup);
+  streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Kontrolle entkommen",verb:"RENNEN",kind:'kontrolle'});
 }
 
 /* ---------- Rahmen ---------- */
@@ -1641,12 +1694,78 @@ function miniFinanz(){
   miniRAF=requestAnimationFrame(loop);
   function end(win){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
     if(win){ momente+=3; updateMomente(); jingle();
-      panelEl().innerHTML=`<h2>💰 Kasse gemacht!</h2><div style="font-size:56px">🐻💰</div><div class="miniDesc">${taler} Goldtaler nach Berlin gebracht. Bayern zahlt, Berlin feiert – so läuft der Laden!</div><button class="mBtn big" id="ok">🤑 Nice (+3 🌟)</button>`;
-      document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('💰 '+taler+' Taler abgegriffen – Berlin bleibt pleite, aber glücklich!');}); }
+      let scene='🐻💰', reward, sub;
+      if(taler>=40){ scene='🐻👑🏰'; reward='Berlin kauft sich ein <b>SCHLOSS</b> 🏰 (und einen zweiten Flughafen, sicherheitshalber).'; sub='In Bayern wird dafür ein Kindergarten „temporär optimiert". Die leben damit. 🥨😭'; }
+      else if(taler>=28){ scene='🐻🤑🍾'; reward='Berlin gönnt sich <b>10 neue Brunnen</b>, die alle nicht funktionieren. Kunst!'; sub='Ba-Wü kehrt jetzt zwei Wochen extra, um es zu verkraften. 🧽'; }
+      else { reward=`<b>${taler} Goldtaler</b> nach Berlin gebracht.`; sub='Bayern zahlt, Berlin feiert – so läuft der Laden!'; }
+      panelEl().innerHTML=`<h2>💰 Kasse gemacht!</h2><div style="font-size:56px">${scene}</div><div class="miniDesc">${reward}<br><br>${sub}</div><button class="mBtn big" id="ok">🤑 Sahne (+3 🌟)</button>`;
+      document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('💰 '+taler+' Taler abgegriffen – Berlin bleibt pleite, aber happy!');}); }
     else { beep(180,0.4,'sawtooth',0.18);
       panelEl().innerHTML=`<h2>⌛ Zeit um!</h2><div class="miniDesc">Nur ${taler} Taler. Macht nix – der Bund überweist eh weiter. 🤷</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Reicht</button>`;
       document.getElementById('ok').addEventListener('click',()=>{closeMini();miniFinanz();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
   }
+}
+
+
+
+/* ---------- MG6: Fahrkartenkontrolle entkommen ---------- */
+function miniKontrolle(fromGuard){
+  openMini();
+  panelEl().innerHTML=`<h2>🚔 Kontrolle entkommen!</h2>
+    <div class="miniDesc">„Fahrscheine, bitte!" – <b>NÖ!</b> Renn weg, weich mit <b>◀ ▶ / A D / tippen</b> den Hindernissen aus. Halt die Kontrolleure 👮 auf Abstand und <b>entkomme 22 Sekunden</b>!</div>
+    <canvas id="mCanvas" width="360" height="470"></canvas>
+    <div id="miniResult">Renn, Digga!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const lanes=[W*0.22,W*0.5,W*0.78]; let lane=1, px=lanes[1];
+  let d=62, tLeft=22, obs=[], spawnT=0.6, over=false, shake=0, lastLane=-1, iFrame=0, chatT=0;
+  const OB=[{e:'🚧',n:'Baustelle'},{e:'🧳',n:'Rollkoffer'},{e:'🐀',n:'Ratte'},{e:'👵',n:'Oma'},{e:'🚮',n:'Mülleimer'},{e:'🛴',n:'E-Scooter'}];
+  const SHOUT=['Fahrscheine bitte!','Stehenbleiben!','Schwarzfahrer!','60 Euro!','Halt, BVG!'];
+  const res=document.getElementById('mCanvas')?document.getElementById('miniResult'):null;
+  function go(k){ lane=Math.max(0,Math.min(2,lane+k)); }
+  mOn(cv,'pointerdown',e=>{ const r=cv.getBoundingClientRect(); go(((e.clientX-r.left)/r.width<0.5)?-1:1); });
+  mOn(window,'keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a')go(-1); if(e.key==='ArrowRight'||e.key==='d')go(1); });
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){ tLeft-=dt; if(tLeft<=0){ over=true; return win(); }
+      d=Math.min(100,d+dt*5.5);         // du ziehst davon
+      spawnT-=dt; const diff=22-tLeft;
+      if(spawnT<=0){ spawnT=Math.max(0.5,0.95-diff*0.015); let ln=(Math.random()*3)|0; if(ln===lastLane&&Math.random()<0.6)ln=(ln+1)%3; lastLane=ln;
+        obs.push({lane:ln,y:-30,k:OB[(Math.random()*OB.length)|0],v:150+diff*7}); }
+      for(const o of obs) o.y+=o.v*dt;
+      if(iFrame>0)iFrame-=dt;
+      for(const o of obs){ if(!o.hit && o.lane===lane && o.y>H-150 && o.y<H-100 && iFrame<=0){ o.hit=true; iFrame=0.7; d-=20; shake=11; beep(170,0.2,'sawtooth',0.16);
+        res.textContent='💥 '+o.k.n+'! Die Kontrolle holt auf!'; if(d<=0){ over=true; return caught(); } } }
+      obs=obs.filter(o=>o.y<H+30);
+      chatT-=dt; if(chatT<=0 && d<55){ chatT=1.6+Math.random()*2; res.style.color='#ff9db0'; res.textContent='👮 „'+SHOUT[(Math.random()*SHOUT.length)|0]+'"'; }
+    }
+    px+=(lanes[lane]-px)*Math.min(1,dt*12);
+    ctx.save(); if(shake>0){ ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*40; if(shake<0)shake=0; }
+    // Bahnsteig-Boden
+    ctx.fillStyle='#8a8578'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#736f64'; ctx.lineWidth=2; for(let y=((now/5)%44)-44;y<H;y+=44){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.fillStyle='#f3d000'; ctx.fillRect(6,0,5,H); ctx.fillRect(W-11,0,5,H);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const o of obs){ ctx.font='32px serif'; ctx.fillText(o.k.e,lanes[o.lane],o.y); }
+    // du
+    ctx.globalAlpha=(iFrame>0&&Math.floor(now/70)%2)?0.4:1; ctx.font='36px serif'; ctx.fillText('🏃',px,H-120); ctx.globalAlpha=1;
+    // Kontrolleure – näher wenn d klein
+    const ky=H-40 + (d/100)*36; ctx.font='34px serif'; ctx.fillText('👮',W*0.42,ky); ctx.fillText('👮',W*0.58,ky);
+    ctx.restore();
+    // HUD
+    ctx.fillStyle='#fff'; ctx.font='700 15px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s Flucht',8,18);
+    ctx.fillStyle='#20264a'; ctx.fillRect(8,26,W-16,10); ctx.fillStyle=d<35?'#e0466a':'#3fd18a'; ctx.fillRect(8,26,(W-16)*d/100,10);
+    ctx.fillStyle='#cdd6f0'; ctx.font='700 11px Segoe UI'; ctx.textAlign='right'; ctx.fillText('Abstand',W-10,20);
+    if(iFrame>0){ ctx.fillStyle='rgba(255,40,60,'+(iFrame*0.28)+')'; ctx.fillRect(0,0,W,H); }
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🏃💨 Entkommen!</h2><div style="font-size:54px">😎🎫❌</div><div class="miniDesc">Abgehängt! Die BVG guckt in die Röhre. Schwarzfahren bleibt Volkssport.</div><button class="mBtn big" id="ok">😏 Weiter (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast("🏃 Kontrolle abgehängt! (Kauf trotzdem mal ein Ticket 😅)");}); }
+  function caught(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2);
+    if(fromGuard){ closeMini(); caughtGame(); return; }
+    panelEl().innerHTML=`<h2>👮 Geschnappt!</h2><div style="font-size:54px">😬📝</div><div class="miniDesc">„60 Euro erhöhtes Beförderungsentgelt." Zack. Nächstes Mal schneller!</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Zahlen &amp; gehen</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); miniKontrolle(false);});
+    document.getElementById('c').addEventListener('click',()=>{closeMini(); toast('💸 60€ weg. Autsch.');}); }
 }
 
 

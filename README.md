@@ -66,11 +66,16 @@ Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
 
-## 🎮 5 Minispiele (visuelle Szenen, an den passenden Orten)
+## 🎮 6 Minispiele (visuelle Szenen)
 
-Zu finden über **Schilder/Icons** in jedem Kiez, über den **Fahrkartenautomaten**
-unten, oder indem du bestimmte Leute ansprichst (z. B. den **Makler 🏠** für die
-Wohnungssuche oder den **Politiker 🤵** am Alex).
+In **jedem Kiez** findest du **alle** Minispiel-Schilder (💼 Politiker, 🚔
+Kontrolle, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich) plus den 🔧 Automaten unten
+– du musst also nicht bis zum Alex fahren.
+
+- 🚔 **Kontrolle entkommen**: „Fahrscheine, bitte!" – NÖ! Renn vor den BVG-
+  Kontrolleuren weg, weich Hindernissen aus und halt sie 22 s auf Abstand.
+  (Erwischt dich unten ein Kontrolleur ohne Ticket, startet automatisch die
+  Flucht – schaffst du's, entkommst du.)
 
 - 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
   natürlich – kaputt (mit „DEFEKT"-Display und einer Ratte 🐀). Triff den grünen
