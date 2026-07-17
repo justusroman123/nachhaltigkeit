@@ -197,11 +197,11 @@
     <p style="font-size:15px;line-height:1.5;color:#d7ddf7;margin:0 0 6px">
       Fahr die <b>U1</b> von <b>Kottbusser Tor</b> bis <b>Alexanderplatz</b>:
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
-      einfahrende U-Bahn 🚇. Nimm den <b>🚪 Ausgang nach oben</b> an die Straße –
-      dort warten <b>4 Minispiele</b>: 🔧 Automaten reparieren, 💶 Politiker
-      unauffällig schmieren, 🛴 Gehweg-Slalom &amp; 🏠 Wohnungsbesichtigung.
-      Dazu schräge Gestalten (Bollerwagen-DJ 🔊, Mecker-Rentner 👴, Schwabe
-      aus Stuttgart 🧽 …) – und pass auf die Kontrolleure 👮 auf!
+      einfahrende U-Bahn 🚇. Die <b>Kamera folgt dir automatisch</b> – „vor" ist
+      immer in den Bildschirm. Nimm den <b>🚪 Ausgang nach oben</b> an die Straße:
+      dort warten <b>4 Minispiele</b> (🔧 Automat reparieren, 💶 Politiker
+      schmieren, 🛴 Gehweg-Slalom, 🏠 Wohnungsbesichtigung), schräge Gestalten
+      und rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
     </p>
     <div class="keys" id="deskKeys">
       <span class="kbd">W A S D</span><span class="kbd">Maus ziehen = umsehen</span>
@@ -236,6 +236,7 @@
 
 </script>
 <script>
+
 
 "use strict";
 /* ============================================================
@@ -727,6 +728,9 @@ function uEntranceStreet(x,z,p){
 }
 
 const STREET_POOL={
+ makler:{name:"Makler",emoji:"🏠",act:'idle',verb:'Wohnung zeigen 🏠',special:(nn)=>miniWohnung(),
+   look:{shirt:0x223a66,tie:0xdd3333,pants:0x14141f,hair:0x33261a,face:'grin',glasses:true,h:1.03},
+   lines:["Traumwohnung! 28 qm, Bad im Flur, nur 1400 warm. Ehrlich."]},
  politiker:{name:"Filz-Politiker",emoji:"🤵",act:'wave',verb:'schmieren 💶',
    look:{shirt:0x14141f,pants:0x14141f,tie:0xcc2222,hair:0x9a9a9a,face:'grin',glasses:true,h:1.05,girth:1.05},
    special:(n)=>miniBribe(n),
@@ -782,8 +786,8 @@ const STREET_POOL={
 
 const KIEZ=[
  {land:'kotti', pool:['fkk','dj','statue','philo','fixie','passant']},
- {land:'park',  pool:['dj','yogi','tauben','floh','raveoma','meckerrentner']},
- {land:'oberbaum', pool:['bear','statue','buergeramt','doenerman','schwabe','passant']},
+ {land:'park',  pool:['dj','yogi','tauben','floh','raveoma','makler']},
+ {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
 const STREET_SPOTS=[{x:-9,z:6},{x:9,z:7},{x:-19,z:5},{x:19,z:6},{x:-2,z:9},{x:15,z:9},{x:-26,z:8}];
@@ -815,7 +819,7 @@ function makeHazard(type,laneZ,speed){
   const lines=type==='scooter'
     ? ["AUS DEM WEG! Klingel is kaputt!","E-Scooter kennt kein Erbarmen!","Ich lad den nur schnell ab – auf dem Gehweg!"]
     : ["Fahrrad hier!! Nich gucken bringt Glück!","Ampeln sind Empfehlungen!","Ick hab VORFAHRT! Immer!"];
-  return {g,z:laneZ,x:start,speed,type,talkCool:2,hitCool:0,lines,hphase:Math.random()*6};
+  return {g,z:laneZ,x:start,speed,type,talkCool:2,hitCool:0,lines,hphase:Math.random()*6,wait:(type==='cyclist'?3:0)};
 }
 function buildStreet(i){
   clearGroup(streetGroup); npcs=[]; streetColl=[]; const kz=KIEZ[i]; const st=STATIONS[i];
@@ -865,7 +869,7 @@ function buildStreet(i){
 const player=makePerson({shirt:0xcc3344,pants:0x22304a,hair:0x25150a,skin:0xe6b58a,backpack:0x334455});
 player.position.set(5,0,3); scene.add(player);
 const P={x:5,z:3,yaw:0,speed:4.6,run:7.8};
-let camYaw=Math.PI, camPitch=0.30, camDist=6.6;
+let camYaw=Math.PI, camPitch=0.30, camDist=6.6, manualLookT=0;
 
 /* HUD refs */
 const elPrompt=document.getElementById('prompt'), elDialogue=document.getElementById('dialogue'),
@@ -1054,7 +1058,7 @@ function animateNPC(n,t){
       n.mesh.rotation.y=Math.PI+Math.sin(t*8+ph)*0.3; } break;
     case 'lean': n.mesh.rotation.z=0.14; u.armR.rotation.z=-0.5; break;
     case 'wave': u.armR.rotation.z=-0.4+Math.sin(t*6+ph)*0.7; break;
-    default: u.head.position.y=1.95+Math.sin(t*2+ph)*0.03;
+    default: u.head.position.y=1.95+Math.sin(t*2+ph)*0.03; u.head.rotation.y=Math.sin(t*0.55+ph)*0.45;
   }
 }
 
@@ -1100,7 +1104,7 @@ let dragging=false,lastX=0,lastY=0;
 renderer.domElement.addEventListener('pointerdown',e=>{ if(IS_TOUCH)return; dragging=true; lastX=e.clientX; lastY=e.clientY; });
 addEventListener('pointerup',()=>dragging=false);
 addEventListener('pointermove',e=>{ if(IS_TOUCH||!dragging)return; camYaw-=(e.clientX-lastX)*0.005; camPitch+=(e.clientY-lastY)*0.004;
-  camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lastX=e.clientX; lastY=e.clientY; });
+  camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lastX=e.clientX; lastY=e.clientY; manualLookT=1.5; });
 addEventListener('wheel',e=>{ camDist=Math.max(3.5,Math.min(9,camDist+e.deltaY*0.01)); },{passive:true});
 const touchUI=document.getElementById('touch'), stick=document.getElementById('stick'),
       nub=stick.querySelector('.nub'), looklayer=document.getElementById('looklayer');
@@ -1117,7 +1121,7 @@ if(IS_TOUCH){ touchUI.style.display='block';
   let lid=null,lx=0,ly=0;
   looklayer.addEventListener('touchstart',e=>{const t=e.changedTouches[0]; lid=t.identifier; lx=t.clientX; ly=t.clientY; e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchmove',e=>{for(const t of e.changedTouches){ if(t.identifier!==lid)continue;
-    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lx=t.clientX; ly=t.clientY;} e.preventDefault();},{passive:false});
+    camYaw-=(t.clientX-lx)*0.006; camPitch+=(t.clientY-ly)*0.005; camPitch=Math.max(-0.15,Math.min(0.85,camPitch)); lx=t.clientX; ly=t.clientY; manualLookT=1.5;} e.preventDefault();},{passive:false});
   looklayer.addEventListener('touchend',e=>{for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; }});
   const rb=document.getElementById('btnRun');
   rb.addEventListener('touchstart',e=>{keys['shift']=true;rb.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
@@ -1157,15 +1161,17 @@ function animate(){
     if(pt.position.x>90||pt.position.x<-90){ ugStatic.remove(pt); passers.splice(k,1); } }
 
   if(started&&!ended&&!transitioning&&!miniActive){
+    if(manualLookT>0)manualLookT-=dt;
     let ix=0,iz=0;
     if(keys['w']||keys['arrowup'])iz-=1; if(keys['s']||keys['arrowdown'])iz+=1;
     if(keys['a']||keys['arrowleft'])ix-=1; if(keys['d']||keys['arrowright'])ix+=1;
     if(IS_TOUCH){ix+=move.x;iz+=move.y;}
     let mag=Math.hypot(ix,iz); const running=keys['shift'];
     if(mag>0.02){ const nm=Math.max(mag,1); ix/=nm; iz/=nm;
-      const cos=Math.cos(camYaw),sin=Math.sin(camYaw); const wx=ix*cos-iz*sin, wz=ix*sin+iz*cos;
+      const cos=Math.cos(camYaw),sin=Math.sin(camYaw); const wx=ix*cos-iz*sin, wz=-ix*sin-iz*cos;
       const spd=(running?P.run:P.speed)*Math.min(mag,1); let nx=P.x+wx*spd*dt, nz=P.z+wz*spd*dt;
       [nx,nz]=resolve(nx,nz); P.x=nx; P.z=nz; P.yaw=Math.atan2(wx,wz);
+      if(manualLookT<=0 && iz<0.15){ let dd=P.yaw-camYaw; while(dd>Math.PI)dd-=2*Math.PI; while(dd<-Math.PI)dd+=2*Math.PI; camYaw+=dd*Math.min(1,dt*3.0); }
       const sw=Math.sin(t*(running?16:11))*(running?0.9:0.6);
       player.userData.legL.rotation.x=sw; player.userData.legR.rotation.x=-sw;
       player.userData.armL.rotation.x=-sw*0.7; player.userData.armR.rotation.x=sw*0.7;
@@ -1200,10 +1206,12 @@ function animate(){
       for(const si of streetInteract){ const d=Math.hypot(P.x-si.x,P.z-si.z); if(d<si.r+1.3){nearSI=si;nearNPC=null;nearEntrance=false;} }
       if(!nearEntrance&&!nearSI) for(const s of STANDS){ const d=Math.hypot(P.x-s.x,P.z-s.z); if(d<3.6){nearStand=s;nearNPC=null;} }
       for(const hz of hazards){
-        hz.x+=hz.speed*dt; if(hz.x>54)hz.x=-54; if(hz.x<-54)hz.x=54; hz.g.position.x=hz.x;
-        hz.g.position.y=Math.abs(Math.sin(t*14+hz.hphase))*0.05;
+        if(hz.wait>0){ hz.wait-=dt; hz.g.visible=false; continue; }
+        hz.g.visible=true; hz.x+=hz.speed*dt;
+        if(hz.x>54||hz.x<-54){ hz.x=hz.speed>0?-54:54; hz.wait=3.5+Math.random()*5; }
+        hz.g.position.x=hz.x; hz.g.position.y=Math.abs(Math.sin(t*14+hz.hphase))*0.05;
         hz.talkCool-=dt; hz.hitCool-=dt; const dh=Math.hypot(P.x-hz.x,P.z-hz.z);
-        if(dh<8&&hz.talkCool<=0&&Math.random()<0.03){ hz.talkCool=4;
+        if(dh<9&&hz.talkCool<=0){ hz.talkCool=3+Math.random()*2;
           toast((hz.type==='scooter'?'🛴 ':'🚴 ')+hz.lines[(Math.random()*hz.lines.length)|0]); beep(880,0.07,'square',0.12); }
         if(dh<1.4&&hz.hitCool<=0){ hz.hitCool=2; const dir=hz.speed>0?1:-1;
           P.z+=(P.z>=hz.z?1:-1)*1.4; P.x+=dir*0.5; [P.x,P.z]=resolve(P.x,P.z);
@@ -1236,7 +1244,7 @@ function animate(){
   }
 
   const px=player.position.x, pz=player.position.z;
-  const cx=px+Math.sin(camYaw)*Math.cos(camPitch)*camDist, cz=pz+Math.cos(camYaw)*Math.cos(camPitch)*camDist;
+  const cx=px-Math.sin(camYaw)*Math.cos(camPitch)*camDist, cz=pz-Math.cos(camYaw)*Math.cos(camPitch)*camDist;
   const cy=2.0+Math.sin(camPitch)*camDist;
   camera.position.lerp(new THREE.Vector3(cx,cy,cz),started?0.15:0.04); camera.lookAt(px,1.6,pz);
 
@@ -1251,7 +1259,7 @@ if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>speechSynthesis.ge
 
 
 /* ============================================================
-   MINISPIELE + Straßen-Extras (Wolken, Wohnung, Slalom)
+   MINISPIELE (Canvas-Szenen) + Straßen-Extras
    ============================================================ */
 const cloudMeshes=[];
 function cloud(x,y,z,p){ const g=new THREE.Group();
@@ -1263,7 +1271,6 @@ function buildStreetExtras(i){
   for(let k=0;k<5;k++) cloudMeshes.push(cloud(-42+k*20+(i*4),20+((k%2)?2.5:0),6+((k%3)*6),streetGroup));
   const sun=new THREE.Mesh(new THREE.SphereGeometry(2.4,12,10),new THREE.MeshBasicMaterial({color:0xfff2b0}));
   sun.position.set(32,27,42); streetGroup.add(sun);
-  // Wohnungsbesichtigung
   const wx=-38, wz=15;
   box(4.2,4.6,0.5,mat(0x7a5330),wx,2.3,wz,0,streetGroup);
   box(1.7,2.8,0.2,mat(0x281a10),wx,1.4,wz-0.36,0,streetGroup);
@@ -1273,10 +1280,8 @@ function buildStreetExtras(i){
     const pr=makePerson({shirt:[0x884444,0x448866,0x444488,0xaa8833,0x6644aa][k%5],pants:0x222222,
       face:['smile','angry','sad','shock'][k%4],hair:[0x2a1c10,0x553311,0x999999,0x1a1008][k%4],girth:0.9+((k%3)*0.1)});
     pr.position.set(px,0,pz); pr.rotation.y=Math.PI; pr.scale.set(0.95,0.95,0.95); streetGroup.add(pr); }
-  makeFloatIcon("🏠",wx,4.0,wz-1.4,streetGroup);
-  streetColl.push({x:wx,z:wz,r:2.6});
+  makeFloatIcon("🏠",wx,4.0,wz-1.4,streetGroup); streetColl.push({x:wx,z:wz,r:2.6});
   streetInteract.push({x:wx,z:11.6,r:2.2,name:"Wohnungsbesichtigung",verb:"REIN",kind:'wohnung'});
-  // Slalom
   const sx=30, sz=7;
   for(const cxx of [sx-0.5,sx+0.5]) cyl(0.02,0.34,0.7,mat(0xff7a1a),cxx,0.35,sz,streetGroup);
   const ssign=makeTextPlane("🛴 SLALOM",256,64,"#111111","#f3d000",44); ssign.scale.set(2.6,0.7,1);
@@ -1285,199 +1290,216 @@ function buildStreetExtras(i){
   streetInteract.push({x:sx,z:sz,r:1.9,name:"Gehweg-Slalom",verb:"START",kind:'dodge'});
 }
 
-/* ---------- Minispiel-Rahmen ---------- */
-const miniEl=()=>document.getElementById('mini');
+/* ---------- Rahmen ---------- */
 const panelEl=()=>document.getElementById('miniPanel');
 function mOn(t,ev,fn,opts){ t.addEventListener(ev,fn,opts); miniListeners.push([t,ev,fn,opts]); }
-function openMini(){ miniActive=true; miniEl().classList.add('on');
+function openMini(){ miniActive=true; document.getElementById('mini').classList.add('on');
   elPrompt.classList.remove('on'); elDialogue.classList.remove('on');
   if(IS_TOUCH) document.getElementById('btnAct').style.display='none';
   if(window.speechSynthesis) speechSynthesis.cancel(); }
-function closeMini(){ miniActive=false; miniEl().classList.remove('on'); panelEl().innerHTML='';
+function closeMini(){ miniActive=false; document.getElementById('mini').classList.remove('on'); panelEl().innerHTML='';
   if(miniRAF){cancelAnimationFrame(miniRAF); miniRAF=null;}
   miniListeners.forEach(([t,ev,fn,o])=>t.removeEventListener(ev,fn,o)); miniListeners=[];
   if(IS_TOUCH) document.getElementById('btnAct').style.display='none'; }
 
-/* ---------- MG4: Automat reparieren + Ticket ---------- */
+/* ---------- MG4: Automat reparieren (Szene) ---------- */
 function miniAutomat(){
-  openMini(); let phase='repair', hits=0, need=3, pos=0, dir=1, zoneStart=0.40, zoneW=0.24;
+  openMini(); let hits=0, need=3, pos=0.5, dir=1, zone=0.4, zw=0.24, phase='repair', ratX=-1, flash=0;
   panelEl().innerHTML=`<h2>🔧 Automat reparieren</h2>
-    <div class="miniDesc">Der Fahrkartenautomat ist – natürlich – kaputt. Triff den <b>grünen Strom-Bereich ⚡</b>, um den Wackelkontakt zu fixen (3×). Dann kannst du das Ticket ziehen.</div>
-    <div style="position:relative;height:36px;background:#20264a;border-radius:9px;overflow:hidden;margin:12px 0;">
-      <div id="repGreen" style="position:absolute;top:0;bottom:0;background:#2fbf6a;"></div>
-      <div id="repMark" style="position:absolute;top:-3px;bottom:-3px;width:7px;background:#ffd23f;border-radius:3px;box-shadow:0 0 8px #ffd23f;"></div>
-    </div>
-    <div id="repInfo" style="font-size:13px;color:#aab3d6;margin-bottom:8px;">⚡ Reparatur: 0/${need}</div>
+    <div class="miniDesc">Kaputt, klar. Triff mit ⚡ den <b>grünen Kontakt</b> (3×), dann Ticket ziehen.</div>
+    <canvas id="mCanvas" width="360" height="230"></canvas>
     <button class="mBtn big" id="repBtn">⚡ ZACK! Kontakt fixen</button>
-    <div id="miniResult"></div>`;
-  const green=document.getElementById('repGreen'),mark=document.getElementById('repMark'),
-        info=document.getElementById('repInfo'),res=document.getElementById('miniResult');
-  function layout(){ green.style.left=(zoneStart*100)+'%'; green.style.width=(zoneW*100)+'%'; } layout();
+    <div id="miniResult">⚡ 0/${need}</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,res=document.getElementById('miniResult');
   let last=performance.now();
   function loop(now){ if(!miniActive)return; const dt=(now-last)/1000; last=now;
-    pos+=dir*dt*0.95; if(pos>1){pos=1;dir=-1;} if(pos<0){pos=0;dir=1;} mark.style.left=(pos*100)+'%';
+    if(phase==='repair'){ pos+=dir*dt*0.95; if(pos>1){pos=1;dir=-1;} if(pos<0){pos=0;dir=1;} }
+    if(ratX>=0){ ratX+=dt*0.45; if(ratX>1)ratX=-1; } else if(Math.random()<0.008) ratX=0;
+    if(flash>0)flash-=dt*3;
+    ctx.fillStyle='#101626'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#7a2b8e'; ctx.fillRect(W*0.5-58,26,116,150);
+    ctx.fillStyle='#0b1020'; ctx.fillRect(W*0.5-42,42,84,54);
+    ctx.fillStyle=phase==='done'?'#2fd18a':'#e0466a'; ctx.font='700 16px Consolas'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(phase==='done'?'OK ✓':'DEFEKT',W*0.5,69);
+    ctx.font='28px serif'; ctx.fillText('🎫',W*0.5,128);
+    const tx=W*0.15,tw=W*0.7,ty=H-38;
+    ctx.fillStyle='#20264a'; ctx.fillRect(tx,ty,tw,20);
+    ctx.fillStyle='#2fbf6a'; ctx.fillRect(tx+zone*tw,ty,zw*tw,20);
+    ctx.fillStyle='#ffd23f'; ctx.fillRect(tx+pos*tw-3,ty-5,7,30);
+    ctx.fillStyle='#cdd6f0'; ctx.font='11px Segoe UI'; ctx.fillText('⚡ Strom-Kontakt',W*0.5,ty-13);
+    if(ratX>=0){ ctx.font='24px serif'; ctx.fillText('🐀',tx+ratX*tw,ty-32); }
+    if(flash>0){ ctx.fillStyle='rgba(255,220,60,'+flash*0.4+')'; ctx.fillRect(0,0,W,H); }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function hit(){ if(phase!=='repair')return;
-    if(pos>=zoneStart&&pos<=zoneStart+zoneW){ hits++; beep(1400,0.08,'square',0.14);
-      res.style.color='#3fd18a'; res.textContent='ZACK! Kontakt sitzt.';
-      zoneW=Math.max(0.13,zoneW-0.03); zoneStart=0.18+Math.random()*0.55; layout();
-      info.textContent=`⚡ Reparatur: ${hits}/${need}`;
-      if(hits>=need){ phase='done'; if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} draw(); } }
-    else { beep(150,0.18,'sawtooth',0.16); res.style.color='#ff6b8a'; res.textContent='Bzzt! Daneben – Stromschlag. 🐀'; } }
+    if(pos>=zone&&pos<=zone+zw){ hits++; flash=1; beep(1400,0.08,'square',0.14); res.style.color='#3fd18a'; res.textContent='ZACK! '+hits+'/'+need;
+      zw=Math.max(0.13,zw-0.03); zone=0.12+Math.random()*0.62;
+      if(hits>=need){ phase='done'; setTimeout(draw,450); } }
+    else { beep(150,0.18,'sawtooth',0.16); res.style.color='#ff6b8a'; res.textContent='Bzzt! Daneben – Stromschlag 🐀'; if(ratX<0)ratX=0; } }
   document.getElementById('repBtn').addEventListener('click',hit);
-  mOn(window,'keydown',e=>{ if(e.code==='Space'||e.key==='e'){e.preventDefault(); hit();} });
-  function draw(){ panelEl().innerHTML=`<h2>✅ Repariert!</h2>
-      <div class="miniDesc">Der Automat brummt wieder (nimmt heut sogar Karte). Zieh deinen Fahrschein AB.</div>
+  mOn(window,'keydown',e=>{ if(e.code==='Space'||e.key==='e'){e.preventDefault();hit();} });
+  function draw(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
+    panelEl().innerHTML=`<h2>✅ Repariert!</h2><div style="font-size:58px">🎫✨</div>
+      <div class="miniDesc">Der Automat brummt wieder (nimmt heut sogar Karte). Zieh deinen Fahrschein.</div>
       <button class="mBtn big" id="drawBtn">🎫 Fahrschein ziehen</button><div id="miniResult"></div>`;
     document.getElementById('drawBtn').addEventListener('click',()=>{ ticketBought=true; momente++; updateMomente();
       beep(523,0.1,'square',0.14); setTimeout(()=>beep(784,0.22,'square',0.14),110);
       document.getElementById('miniResult').textContent='🎫 Fahrschein AB gezogen!';
-      setTimeout(()=>{ closeMini(); toast('🎫 Automat repariert & Ticket gezogen!'); updateObjective(); },850); }); }
+      setTimeout(()=>{ closeMini(); toast('🎫 Automat repariert & Ticket gezogen!'); updateObjective(); },800); }); }
 }
 
-/* ---------- MG1: Politiker schmieren (Stealth) ---------- */
+/* ---------- MG1: Politiker schmieren (Szene) ---------- */
 function miniBribe(n){
-  openMini(); let bribe=0, susp=0, holding=false, done=false;
-  const NW=5, watch=new Array(NW).fill(false), wt=new Array(NW).fill(0);
+  openMini(); let bribe=0, susp=0, holding=false, done=false, money=0;
+  const NW=5, watch=new Array(NW).fill(false), wt=[]; for(let i=0;i<NW;i++)wt[i]=0.5+Math.random()*2;
   panelEl().innerHTML=`<h2>💶 Politiker schmieren</h2>
-    <div class="miniDesc">Übergib das Schmiergeld <b>unauffällig</b>! Halte den Knopf – aber <b>nur wenn keiner guckt</b> (🙂). Guckt jemand (👀), steigt der Verdacht.</div>
-    <div class="watchers" id="wRow"></div>
+    <div class="miniDesc">Halte den Knopf & schieb das Kuvert rüber – <b>nur wenn keiner guckt</b> (🙂). Guckt wer (👀), steigt Verdacht!</div>
+    <canvas id="mCanvas" width="360" height="210"></canvas>
     <div class="mBar"><i id="bBar" style="background:#2fbf6a"></i><div class="lbl" id="bLbl">Übergabe 0%</div></div>
     <div class="mBar"><i id="sBar" style="background:#e0466a"></i><div class="lbl" id="sLbl">Verdacht 0%</div></div>
-    <button class="mBtn big" id="hBtn">💶 GELD ÜBERGEBEN (gedrückt halten)</button>
-    <div id="miniResult"></div>`;
-  const wRow=document.getElementById('wRow');
-  for(let i=0;i<NW;i++){ const s=document.createElement('span'); s.textContent='🙂'; wRow.appendChild(s); wt[i]=0.5+Math.random()*2; }
-  const spans=[...wRow.children], bBar=document.getElementById('bBar'),sBar=document.getElementById('sBar'),
-        bLbl=document.getElementById('bLbl'),sLbl=document.getElementById('sLbl'),
-        res=document.getElementById('miniResult'), hBtn=document.getElementById('hBtn');
-  const set=v=>{holding=v;};
-  mOn(hBtn,'pointerdown',e=>{e.preventDefault();set(true);});
-  mOn(window,'pointerup',()=>set(false));
-  mOn(hBtn,'touchstart',e=>{e.preventDefault();set(true);},{passive:false});
-  mOn(hBtn,'touchend',()=>set(false));
-  mOn(window,'keydown',e=>{ if(e.code==='Space'){e.preventDefault();set(true);} });
-  mOn(window,'keyup',e=>{ if(e.code==='Space')set(false); });
+    <button class="mBtn big" id="hBtn">💶 GELD ÜBERGEBEN (halten)</button><div id="miniResult"></div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const bBar=document.getElementById('bBar'),sBar=document.getElementById('sBar'),bLbl=document.getElementById('bLbl'),
+        sLbl=document.getElementById('sLbl'),res=document.getElementById('miniResult'),hBtn=document.getElementById('hBtn');
+  const set=v=>holding=v;
+  mOn(hBtn,'pointerdown',e=>{e.preventDefault();set(true);}); mOn(window,'pointerup',()=>set(false));
+  mOn(hBtn,'touchstart',e=>{e.preventDefault();set(true);},{passive:false}); mOn(hBtn,'touchend',()=>set(false));
+  mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();set(true);}}); mOn(window,'keyup',e=>{if(e.code==='Space')set(false);});
+  const wpos=[]; for(let i=0;i<NW;i++) wpos.push(30+i*((W-60)/(NW-1)));
   let last=performance.now();
   function loop(now){ if(!miniActive)return; const dt=(now-last)/1000; last=now; let anyW=false;
-    for(let i=0;i<NW;i++){ wt[i]-=dt; if(wt[i]<=0){ watch[i]=!watch[i]; wt[i]=watch[i]?(0.6+Math.random()*1.1):(0.8+Math.random()*1.7);
-        spans[i].textContent=watch[i]?'👀':'🙂'; spans[i].classList.toggle('watch',watch[i]); } if(watch[i])anyW=true; }
-    if(holding){ if(anyW){ susp+=dt*58; hBtn.classList.add('flashSeen'); res.style.color='#ff6b8a'; res.textContent='👀 Gesehen! Loslassen!'; }
-      else { bribe+=dt*33; hBtn.classList.remove('flashSeen'); res.style.color='#3fd18a'; res.textContent='🤫 …unauffällig übergeben…'; } }
-    else { susp=Math.max(0,susp-dt*11); hBtn.classList.remove('flashSeen'); }
+    for(let i=0;i<NW;i++){ wt[i]-=dt; if(wt[i]<=0){ watch[i]=!watch[i]; wt[i]=watch[i]?(0.6+Math.random()*1.1):(0.8+Math.random()*1.7); } if(watch[i])anyW=true; }
+    if(holding){ if(anyW){ susp+=dt*58; money=Math.max(0,money-dt*2.2); res.style.color='#ff6b8a'; res.textContent='👀 Gesehen! Loslassen!'; }
+      else { bribe+=dt*33; money=Math.min(1,money+dt*1.5); res.style.color='#3fd18a'; res.textContent='🤫 …unauffällig…'; } }
+    else { susp=Math.max(0,susp-dt*11); money=Math.max(0,money-dt*1.1); }
     bribe=Math.min(100,bribe); susp=Math.min(100,susp);
     bBar.style.width=bribe+'%'; sBar.style.width=susp+'%'; bLbl.textContent='Übergabe '+(bribe|0)+'%'; sLbl.textContent='Verdacht '+(susp|0)+'%';
-    if(!done&&bribe>=100){ done=true; return win(); }
-    if(!done&&susp>=100){ done=true; return lose(); }
+    ctx.fillStyle='#152036'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(let i=0;i<NW;i++){ if(watch[i]){ ctx.strokeStyle='rgba(255,60,80,.45)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(wpos[i],54); ctx.lineTo(W*0.5,H-44); ctx.stroke(); }
+      ctx.font='30px serif'; ctx.fillText(watch[i]?'👀':'🙂',wpos[i],40); }
+    ctx.font='48px serif'; ctx.fillText('🧍',W*0.26,H-42); ctx.fillText('🤵',W*0.74,H-42);
+    const mx=W*0.26+(W*0.48)*(0.15+money*0.7); ctx.font='24px serif'; ctx.fillText('💶',mx,H-62);
+    if(bribe>=100&&!done){done=true; return win();} if(susp>=100&&!done){done=true; return lose();}
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
-  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
-    hasBaurecht=true; bribedPolitician=true; momente+=2; updateMomente();
-    if(n&&!n.collected){ n.collected=true; try{streetGroup.remove(n.icon); n.icon=makeFloatIcon('🤑',n.x,2.7,n.z,streetGroup);}catch(e){} streetDone[stationIndex].add(n.name); }
-    jingle();
-    panelEl().innerHTML=`<h2>🤑 Deal!</h2><div class="miniDesc">Der Politiker lässt das Kuvert verschwinden: <i>„Ick hab dit nie angenommen."</i><br><br>Du hast jetzt <b>Baurecht am Alex 🏗️</b> – bei der <b>Wohnungsbesichtigung</b> darfst du damit einfach kaufen!</div><button class="mBtn big" id="ok">👍 Nice</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{ closeMini(); toast('🏗️ Baurecht gesichert – ein Stück Berlin gehört dir.'); }); }
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} hasBaurecht=true; bribedPolitician=true; momente+=2; updateMomente();
+    if(n&&!n.collected){ n.collected=true; try{streetGroup.remove(n.icon); n.icon=makeFloatIcon('🤑',n.x,2.7,n.z,streetGroup);}catch(e){} streetDone[stationIndex].add(n.name); } jingle();
+    panelEl().innerHTML=`<h2>🤑 Deal!</h2><div style="font-size:56px">🤵🤝🏗️</div><div class="miniDesc"><i>„Ick hab dit nie angenommen."</i><br>Du hast jetzt <b>Baurecht am Alex</b> – bei der Wohnung kannst du damit <b>einfach kaufen</b>!</div><button class="mBtn big" id="ok">👍 Nice (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🏗️ Baurecht gesichert!');}); }
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2);
-    panelEl().innerHTML=`<h2>📸 Skandal!</h2><div class="miniDesc">Jemand hat alles gefilmt. Morgen stehst du auf Seite 1. <i>„Kein Kommentar!"</i></div><button class="mBtn big" id="ok">😬 Nochmal</button><button class="mBtn alt" id="c">Lieber nicht</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{ closeMini(); miniBribe(n); });
-    document.getElementById('c').addEventListener('click',()=>closeMini()); }
+    panelEl().innerHTML=`<h2>📸 Skandal!</h2><div style="font-size:56px">📸😱</div><div class="miniDesc">Jemand hat alles gefilmt. Morgen Seite 1. <i>„Kein Kommentar!"</i></div><button class="mBtn big" id="ok">😬 Nochmal</button><button class="mBtn alt" id="c">Lieber nicht</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBribe(n);}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
-/* ---------- MG2: Gehweg-Slalom (Ausweichen) ---------- */
+/* ---------- MG2: Gehweg-Slalom (Szene) ---------- */
 function miniDodge(){
   openMini();
   panelEl().innerHTML=`<h2>🛴 Gehweg-Slalom</h2>
-    <div class="miniDesc">Weich den Berliner Gefahren aus! <b>◀ ▶ / A D / links-rechts tippen</b> = Spur wechseln. Überlebe <b>25 Sekunden</b>!</div>
-    <div class="mLives" id="dLives">❤️❤️❤️</div>
-    <canvas id="dCanvas" width="360" height="440"></canvas>
-    <div id="miniResult">Los geht's – ausweichen!</div>`;
-  const cv=document.getElementById('dCanvas'), ctx=cv.getContext('2d');
-  const W=cv.width,H=cv.height, lanes=[W*0.2,W*0.5,W*0.8];
-  let lane=1, lives=3, tLeft=25, obs=[], spawnT=0.6, iFrame=0, over=false, lastLane=-1;
-  const KINDS=[{e:'🛴',n:'E-Scooter-Rowdy'},{e:'👴',n:'Rentner mit Rollator'},{e:'👶',n:'Baby im Lastenrad'},{e:'💊',n:'Kotti-Gestalt'},{e:'🚲',n:'Geisterradler'}];
-  function setLives(){ document.getElementById('dLives').textContent='❤️'.repeat(lives)+'🖤'.repeat(3-lives); }
-  setLives();
-  mOn(cv,'pointerdown',e=>{ const r=cv.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width;
-    if(x<0.5) lane=Math.max(0,lane-1); else lane=Math.min(2,lane+1); });
-  mOn(window,'keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a') lane=Math.max(0,lane-1);
-    if(e.key==='ArrowRight'||e.key==='d') lane=Math.min(2,lane+1); });
+    <div class="miniDesc">Weich aus! <b>◀ ▶ / A D / links-rechts tippen</b>. Überlebe <b>25s</b>!</div>
+    <canvas id="mCanvas" width="360" height="470"></canvas>
+    <div id="miniResult">Los!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const lanes=[W*0.22,W*0.5,W*0.78]; let lane=1, px=lanes[1], lives=3, tLeft=25, dodged=0;
+  let obs=[], spawnT=0.7, iFrame=0, over=false, shake=0, lastLane=-1;
+  const KINDS=[{e:'🛴',n:'E-Scooter-Rowdy',s:"AUS'M WEG!"},{e:'👴',n:'Rentner mit Rollator',s:'Rowdys!'},
+    {e:'👶',n:'Baby im Lastenrad',s:'Wääh!'},{e:'💊',n:'Kotti-Gestalt',s:'Kennste Görli?'},
+    {e:'🚲',n:'Geisterradler',s:'Vorfahrt!'},{e:'🛹',n:'Skater',s:'yeeew'}];
+  function go(d){ lane=Math.max(0,Math.min(2,lane+d)); }
+  mOn(cv,'pointerdown',e=>{ const r=cv.getBoundingClientRect(); go(((e.clientX-r.left)/r.width<0.5)?-1:1); });
+  mOn(window,'keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a')go(-1); if(e.key==='ArrowRight'||e.key==='d')go(1); });
+  const res=document.getElementById('miniResult');
   let last=performance.now();
   function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
-    if(!over){ tLeft-=dt; if(tLeft<=0){ over=true; return win(); }
-      spawnT-=dt; const rate=Math.max(0.5,1.05-(25-tLeft)*0.02);
-      if(spawnT<=0){ spawnT=rate; let ln=(Math.random()*3)|0; if(ln===lastLane&&Math.random()<0.6)ln=(ln+1)%3; lastLane=ln;
-        obs.push({lane:ln,y:-30,k:KINDS[(Math.random()*KINDS.length)|0],v:150+(25-tLeft)*7}); }
-      for(const o of obs) o.y+=o.v*dt;
-      if(iFrame>0) iFrame-=dt;
-      for(const o of obs){ if(o.lane===lane&&o.y>H-84&&o.y<H-32&&iFrame<=0){ iFrame=0.9; lives--; setLives();
-          beep(180,0.2,'sawtooth',0.16); document.getElementById('miniResult').textContent='💥 '+o.k.n+' erwischt dich!';
-          if(lives<=0){ over=true; return lose(); } } }
-      obs=obs.filter(o=>o.y<H+30);
+    if(!over){ tLeft-=dt; if(tLeft<=0){over=true;return win();}
+      spawnT-=dt; const diff=25-tLeft;
+      if(spawnT<=0){ spawnT=Math.max(0.5,1.05-diff*0.02); let ln=(Math.random()*3)|0; if(ln===lastLane&&Math.random()<0.6)ln=(ln+1)%3; lastLane=ln;
+        obs.push({lane:ln,y:-30,k:KINDS[(Math.random()*KINDS.length)|0],v:140+diff*7,say:Math.random()<0.4,rot:(Math.random()-.5)}); }
+      for(const o of obs){ o.y+=o.v*dt; o.rot+=dt*2; }
+      if(iFrame>0)iFrame-=dt;
+      for(const o of obs){ if(o.lane===lane&&o.y>H-92&&o.y<H-40&&iFrame<=0){ iFrame=1; lives--; shake=11; beep(180,0.2,'sawtooth',0.16);
+        res.textContent='💥 '+o.k.n+' erwischt dich!'; if(lives<=0){over=true;return lose();} } }
+      obs=obs.filter(o=>{ if(o.y>H-30&&o.lane!==lane&&!o.counted){o.counted=true;dodged++;} return o.y<H+40; });
     }
-    ctx.clearRect(0,0,W,H); ctx.fillStyle='#0a1226'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='#223055'; ctx.lineWidth=2;
-    for(const lx of lanes){ ctx.beginPath(); ctx.moveTo(lx,0); ctx.lineTo(lx,H); ctx.stroke(); }
-    ctx.font='30px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    for(const o of obs) ctx.fillText(o.k.e, lanes[o.lane], o.y);
-    ctx.globalAlpha=(iFrame>0&&(Math.floor(now/80)%2))?0.35:1; ctx.fillText('🧍', lanes[lane], H-56); ctx.globalAlpha=1;
-    ctx.fillStyle='#fff'; ctx.font='700 16px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s',8,18);
+    px+=(lanes[lane]-px)*Math.min(1,dt*12);
+    ctx.save(); if(shake>0){ ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*40; if(shake<0)shake=0; }
+    ctx.fillStyle='#8f9298'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#7c7f86'; ctx.lineWidth=2;
+    for(let y=((now/6)%40)-40;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.fillStyle='#2a2c30'; ctx.fillRect(0,0,10,H); ctx.fillStyle='#f3d000'; ctx.fillRect(10,0,4,H);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const o of obs){ ctx.save(); ctx.translate(lanes[o.lane],o.y); ctx.rotate(Math.sin(o.rot)*0.16); ctx.font='34px serif'; ctx.fillText(o.k.e,0,0); ctx.restore();
+      if(o.say){ ctx.font='700 11px Segoe UI'; ctx.fillStyle='#20242c'; ctx.fillText(o.k.s,lanes[o.lane],o.y-24); } }
+    ctx.globalAlpha=(iFrame>0&&Math.floor(now/70)%2)?0.35:1; ctx.font='36px serif'; ctx.fillText('🧍',px,H-58); ctx.globalAlpha=1;
+    ctx.restore();
+    ctx.fillStyle='#fff'; ctx.font='700 15px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s',8,18);
+    ctx.textAlign='right'; ctx.fillStyle='#ff6b8a'; ctx.fillText('❤ '.repeat(Math.max(0,lives)),W-8,18);
+    if(iFrame>0){ ctx.fillStyle='rgba(255,40,60,'+(iFrame*0.25)+')'; ctx.fillRect(0,0,W,H); }
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
-    panelEl().innerHTML=`<h2>🏁 Überlebt!</h2><div class="miniDesc">Du hast den Berliner Gehweg-Wahnsinn überlebt. Respekt, Digga!</div><button class="mBtn big" id="ok">👍 Weiter</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🛴 Slalom gemeistert! +2 Momente');}); }
+    panelEl().innerHTML=`<h2>🏁 Überlebt!</h2><div style="font-size:52px">🛴🏁</div><div class="miniDesc">${dodged} Gefahren ausgewichen. Echter Gehweg-Profi!</div><button class="mBtn big" id="ok">👍 Weiter (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🛴 Slalom gemeistert! +2 Momente');}); }
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(160,0.5,'sawtooth',0.2);
     panelEl().innerHTML=`<h2>💥 Aua.</h2><div class="miniDesc">Der Gehweg hat gewonnen. Typisch Berlin.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); miniDodge();});
-    document.getElementById('c').addEventListener('click',()=>closeMini()); }
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniDodge();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
-/* ---------- MG3: Wohnungsbesichtigung ---------- */
+/* ---------- MG3: Wohnungsbesichtigung (Szene) ---------- */
 function miniWohnung(){
-  openMini(); let prog=0, tLeft=18, over=false;
+  openMini(); let prog=0, tLeft=20, over=false, lunge=0, floaters=[];
   panelEl().innerHTML=`<h2>🏠 Wohnungsbesichtigung</h2>
-    <div class="miniDesc">50 Bewerber:innen drängeln vor dir. <b>Tippen / Leertaste</b> = vordrängeln – die Meute schiebt zurück! Erreiche die Tür, bevor die Zeit um ist.</div>
-    <div class="mBar"><i id="pBar" style="background:#f3a51a"></i><div class="lbl" id="pLbl">0%</div></div>
-    <div id="wInfo" style="font-size:13px;color:#aab3d6;margin:6px 0;">⏱ 18s · 👥 49 vor dir</div>
+    <div class="miniDesc">50 Bewerber:innen! <b>Tippen / Leertaste</b> = dich zur Tür 🚪 durchdrängeln. Schaff's rechtzeitig!</div>
+    <canvas id="mCanvas" width="360" height="300"></canvas>
     <button class="mBtn big" id="pushBtn">👉 DRÄNGELN!</button>
     <div id="miniResult"></div>`;
-  const pBar=document.getElementById('pBar'),pLbl=document.getElementById('pLbl'),info=document.getElementById('wInfo'),res=document.getElementById('miniResult');
-  const GAGS=['🙄 „Ick war zuerst da!"','📄 Bewerbungsmappe runtergefallen!','🐕 „Kein Haustier, ja?"','💸 „3 Monatsmieten Kaution!"','🧍 Jemand drängelt zurück!'];
-  function push(){ if(over)return; prog+=4.4; beep(560+Math.random()*220,0.05,'square',0.1);
-    if(Math.random()<0.13){ prog=Math.max(0,prog-3.2); res.style.color='#ffb3c0'; res.textContent=GAGS[(Math.random()*GAGS.length)|0]; } else res.textContent=''; }
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const crowd=[]; const FACE=['🧑','👩','🧔','👵','🧓','👨','👱','🧕','👳','🧑‍🦰'];
+  for(let i=0;i<24;i++) crowd.push({bx:70+Math.random()*(W-150),by:70+Math.random()*(H-110),e:FACE[i%FACE.length],ph:Math.random()*6,glare:Math.random()<0.35});
+  const GAGS=['„Ick war zuerst!"','„Kein Haustier?"','„3 Mieten Kaution!"','„Schufa?"','„40 Bewerber!"'];
+  const res=document.getElementById('miniResult');
+  function push(){ if(over)return; prog=Math.min(100,prog+4.4); lunge=1; beep(560+Math.random()*220,0.05,'square',0.1);
+    if(Math.random()<0.55) floaters.push({t:GAGS[(Math.random()*GAGS.length)|0],x:30+Math.random()*(W-90),y:H*0.35+Math.random()*60,life:1});
+    if(Math.random()<0.14){ prog=Math.max(0,prog-3); res.style.color='#ffb3c0'; res.textContent='🙄 Jemand drängelt zurück!'; } else res.textContent=''; }
   document.getElementById('pushBtn').addEventListener('click',push);
-  mOn(window,'keydown',e=>{ if(e.code==='Space'){e.preventDefault(); push();} });
+  mOn(window,'keydown',e=>{ if(e.code==='Space'){e.preventDefault();push();} });
   let last=performance.now();
   function loop(now){ if(!miniActive)return; const dt=(now-last)/1000; last=now;
-    if(!over){ tLeft-=dt; prog=Math.min(100,Math.max(0,prog-dt*6));
-      pBar.style.width=prog+'%'; pLbl.textContent=(prog|0)+'%';
-      info.textContent=`⏱ ${Math.max(0,Math.ceil(tLeft))}s · 👥 ${Math.max(0,49-Math.floor(prog/2))} vor dir`;
-      if(prog>=100){ over=true; return landlord(); }
-      if(tLeft<=0){ over=true; return loseTime(); } }
+    if(!over){ tLeft-=dt; prog=Math.max(0,prog-dt*5.5); if(lunge>0)lunge-=dt*3;
+      if(prog>=100){over=true;return landlord();} if(tLeft<=0){over=true;return loseTime();} }
+    for(const f of floaters) f.life-=dt*0.85; floaters=floaters.filter(f=>f.life>0);
+    ctx.fillStyle='#c9c4bb'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#8a7f6e'; ctx.fillRect(0,H-26,W,26);
+    ctx.fillStyle='#5a3a22'; ctx.fillRect(W-38,H*0.30,32,H*0.55);
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='22px serif'; ctx.fillText('🚪',W-22,H*0.5);
+    ctx.font='700 10px Segoe UI'; ctx.fillStyle='#222'; ctx.fillText('WOHNUNG',W-22,H*0.30-6);
+    const playerX=26+prog*(W-100)/100;
+    for(const c of crowd){ const jig=Math.sin(now/300+c.ph)*3; let cx=c.bx, cy=c.by+jig;
+      const near=Math.abs(cx-playerX); if(near<42&&prog<100){ cx+=(cx>=playerX?1:-1)*(42-near)*0.5*(0.6+lunge); }
+      ctx.font='28px serif'; ctx.fillText(c.e,cx,cy);
+      if(c.glare&&near<95){ ctx.font='14px serif'; ctx.fillText('💢',cx+13,cy-15); } }
+    ctx.font='34px serif'; ctx.fillText('🧍',playerX,H-40-lunge*8);
+    if(lunge>0){ ctx.font='18px serif'; ctx.fillText('💪',playerX+17,H-52); }
+    for(const f of floaters){ ctx.globalAlpha=Math.max(0,f.life); ctx.fillStyle='#2a2a2a'; ctx.font='700 12px Segoe UI'; ctx.fillText(f.t,f.x,f.y-(1-f.life)*18); ctx.globalAlpha=1; }
+    ctx.fillStyle='#20264a'; ctx.fillRect(8,8,W-16,12); ctx.fillStyle='#f3a51a'; ctx.fillRect(8,8,(W-16)*prog/100,12);
+    ctx.fillStyle='#fff'; ctx.font='700 12px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s   👥 '+Math.max(0,49-Math.floor(prog/2)),10,32);
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function landlord(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
-    const buy = hasBaurecht?`<button class="mBtn big" id="buy">🏗️ Einfach kaufen (dein Baurecht)</button>`:'';
-    panelEl().innerHTML=`<h2>🤵 Der Vermieter</h2><div class="miniDesc">Geschafft – du stehst vor dem Vermieter. Er mustert dich: <i>„40 andere wollen die Bude auch. Warum Sie?"</i></div>
-      ${buy}
-      <button class="mBtn big" id="bribe">💶 Vermieter bestechen</button>
-      <button class="mBtn alt" id="honest">📄 Ehrlich sein (Schufa zeigen)</button>
-      <div id="miniResult"></div>`;
-    if(hasBaurecht) document.getElementById('buy').addEventListener('click',()=>got("Mit deinem Baurecht kaufst du das Haus gleich mit. Der Vermieter ist jetzt DEIN Mieter. 😎"));
-    document.getElementById('bribe').addEventListener('click',()=>got("Ein diskretes Kuvert später gehört die Wohnung dir. Willkommen in Berlin. 🔑"));
-    document.getElementById('honest').addEventListener('click',()=>{ if(Math.random()<0.35) got("Ehrlichkeit! Er ist gerührt und gibt sie dir. Unrealistisch, aber schön."); else rejected(); }); }
-  function got(msg){ hasFlat=true; momente+=3; updateMomente(); jingle();
-    panelEl().innerHTML=`<h2>🔑 Wohnung bekommen!</h2><div class="miniDesc">${msg}</div><button class="mBtn big" id="ok">🎉 Endlich!</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🔑 Eigene Wohnung in Berlin – Legende! +3 Momente');}); }
-  function rejected(){ beep(180,0.4,'sawtooth',0.18);
-    panelEl().innerHTML=`<h2>🚪 „Wir melden uns."</h2><div class="miniDesc">(Tut er nie.) Nummer 41 ist dran.</div><button class="mBtn big" id="ok">🔁 Nochmal anstellen</button><button class="mBtn alt" id="c">Seufz</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); miniWohnung();});
-    document.getElementById('c').addEventListener('click',()=>closeMini()); }
+    const buy=hasBaurecht?`<button class="mBtn big" id="buy">🏗️ Einfach kaufen (Baurecht)</button>`:'';
+    panelEl().innerHTML=`<h2>🤵 Der Vermieter</h2><div style="font-size:60px">🤵</div>
+      <div class="miniDesc"><i>„40 andere wollen die Bude auch. Warum Sie?"</i></div>
+      ${buy}<button class="mBtn big" id="bribe">💶 Vermieter bestechen</button>
+      <button class="mBtn alt" id="honest">📄 Ehrlich sein (Schufa)</button><div id="miniResult"></div>`;
+    if(hasBaurecht) document.getElementById('buy').addEventListener('click',()=>got("Mit Baurecht kaufst du das Haus gleich mit. Der Vermieter is jetzt DEIN Mieter. 😎"));
+    document.getElementById('bribe').addEventListener('click',()=>got("Ein Kuvert später gehört die Wohnung dir. Willkommen in Berlin. 🔑"));
+    document.getElementById('honest').addEventListener('click',()=>{ if(Math.random()<0.35) got("Ehrlichkeit! Er ist gerührt. Unrealistisch, aber schön."); else rej(); }); }
+  function got(m){ hasFlat=true; momente+=3; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🔑 Wohnung bekommen!</h2><div style="font-size:60px">🎉🔑</div><div class="miniDesc">${m}</div><button class="mBtn big" id="ok">🎉 Endlich! (+3 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🔑 Eigene Wohnung in Berlin – Legende!');}); }
+  function rej(){ beep(180,0.4,'sawtooth',0.18); panelEl().innerHTML=`<h2>🚪 „Wir melden uns."</h2><div class="miniDesc">(Tut er nie.) Nummer 41 ist dran.</div><button class="mBtn big" id="ok">🔁 Nochmal anstellen</button><button class="mBtn alt" id="c">Seufz</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniWohnung();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
   function loseTime(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.4,'sawtooth',0.18);
     panelEl().innerHTML=`<h2>⌛ Zu langsam!</h2><div class="miniDesc">Die Bude ging an jemand mit Bürgen, Schufa und drei Gehaltsnachweisen. Klar.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); miniWohnung();});
-    document.getElementById('c').addEventListener('click',()=>closeMini()); }
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniWohnung();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
 

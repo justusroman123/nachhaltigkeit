@@ -13,13 +13,21 @@ nichts umstellen.
 
 ## Steuerung
 
+Die **Kamera zieht beim Laufen automatisch hinter dich** – „vorwärts" ist immer
+in den Bildschirm hinein, egal wie du dich vorher umgesehen hast. Nach dem
+manuellen Umsehen zentriert sie sich beim nächsten Schritt sanft wieder.
+
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
 | Laufen | `W A S D` / Pfeiltasten | Linker Joystick |
 | Umsehen | Maus ziehen | Rechts über den Screen wischen |
-| Sprechen / Interagieren | `E` | **SPRECHEN**-Knopf |
+| Interagieren | `E` | **Aktions-Knopf** (Label passt sich an) |
 | Rennen | `Shift` | **RENN**-Knopf |
 | Ton an/aus | 🔊-Button oben rechts | 🔊-Button oben rechts |
+
+Der **Aktions-Knopf ist kontextabhängig** und erscheint nur, wenn wirklich etwas
+in der Nähe ist – z. B. `HOCH`, `RUNTER`, `EINSTEIGEN`, `AUTOMAT`, `SCHMIEREN`,
+`START`, `REIN`.
 
 ## Ziel – die ganze Linie U1 fahren
 
@@ -54,11 +62,15 @@ Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
 
-## 🎮 4 Minispiele (an den passenden Orten)
+## 🎮 4 Minispiele (visuelle Szenen, an den passenden Orten)
+
+Zu finden über **Schilder/Icons** in jedem Kiez, über den **Fahrkartenautomaten**
+unten, oder indem du bestimmte Leute ansprichst (z. B. den **Makler 🏠** für die
+Wohnungssuche oder den **Politiker 🤵** am Alex).
 
 - 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
-  natürlich – kaputt. Triff den grünen Strom-Bereich, um den Wackelkontakt zu
-  fixen, dann kannst du das Ticket ziehen.
+  natürlich – kaputt (mit „DEFEKT"-Display und einer Ratte 🐀). Triff den grünen
+  Strom-Bereich, um den Wackelkontakt zu fixen, dann zieht der Automat ein Ticket.
 - 💶 **Politiker schmieren** (Straße am Alex): Übergib das Schmiergeld
   **unauffällig** – halte den Knopf, aber nur wenn keiner guckt (👀), sonst
   steigt der Verdacht. Erfolg gibt dir **Baurecht** – damit kannst du bei der
