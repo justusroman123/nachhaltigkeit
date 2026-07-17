@@ -720,13 +720,67 @@ function loadStation(i){
 const streetDone=[new Set(),new Set(),new Set(),new Set()];
 
 function winTex(col,floors,colsN){
-  const c=document.createElement('canvas'); c.width=128; c.height=256; const ctx=c.getContext('2d');
-  ctx.fillStyle='#'+col.toString(16).padStart(6,'0'); ctx.fillRect(0,0,128,256);
-  for(let f=0;f<floors;f++) for(let k=0;k<colsN;k++){
-    ctx.fillStyle=(Math.random()<0.5)?'#2a2f3a':'#ffe9a8';
-    ctx.fillRect(10+k*(108/colsN),14+f*(236/floors),(108/colsN)-8,(236/floors)-12);
+  const W=256,H=512; const c=document.createElement('canvas'); c.width=W; c.height=H; const ctx=c.getContext('2d');
+  const base='#'+col.toString(16).padStart(6,'0');
+  ctx.fillStyle=base; ctx.fillRect(0,0,W,H);
+  // Putz-Textur (leichtes Rauschen)
+  for(let i=0;i<1400;i++){ ctx.fillStyle='rgba('+(Math.random()<0.5?'0,0,0':'255,255,255')+','+(Math.random()*0.05).toFixed(3)+')';
+    ctx.fillRect(Math.random()*W,Math.random()*H,2,2); }
+  const shade=(hex,d)=>{ const n=parseInt(hex.slice(1),16); let r=(n>>16)+d,g=((n>>8)&255)+d,b=(n&255)+d;
+    r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
+    return 'rgb('+r+','+g+','+b+')'; };
+  const groundH=H*0.26;                 // Erdgeschoss (Laden/Tür)
+  const upperH=H-groundH; const fh=upperH/floors;  // Höhe pro Obergeschoss
+  const cw=W/colsN;                     // Breite pro Fensterachse
+  // Gesims über dem Erdgeschoss
+  ctx.fillStyle=shade(base,-28); ctx.fillRect(0,upperH-6,W,7);
+  ctx.fillStyle=shade(base,24); ctx.fillRect(0,upperH-9,W,3);
+  // Obergeschoss-Fenster mit Rahmen, Bank & Sprossenkreuz
+  for(let f=0;f<floors;f++){
+    const fy=f*fh;
+    // Etagen-Gesims
+    ctx.fillStyle=shade(base,-18); ctx.fillRect(0,fy+fh-4,W,4);
+    for(let k=0;k<colsN;k++){
+      const wx=k*cw + cw*0.24, wy=fy + fh*0.16;
+      const ww=cw*0.52, wh=fh*0.62;
+      // Fensterbank
+      ctx.fillStyle=shade(base,30); ctx.fillRect(wx-3,wy+wh+1,ww+6,4);
+      // Rahmen (hell)
+      ctx.fillStyle='#e9e4d8'; ctx.fillRect(wx-3,wy-3,ww+6,wh+6);
+      // Glas – abends beleuchtet oder dunkel gespiegelt
+      const lit=Math.random()<0.42;
+      if(lit){ const g=ctx.createLinearGradient(wx,wy,wx,wy+wh); g.addColorStop(0,'#fff3c4'); g.addColorStop(1,'#f2c66a'); ctx.fillStyle=g; }
+      else { const g=ctx.createLinearGradient(wx,wy,wx+ww,wy+wh); g.addColorStop(0,'#5d6b78'); g.addColorStop(0.5,'#39434e'); g.addColorStop(1,'#2b333c'); ctx.fillStyle=g; }
+      ctx.fillRect(wx,wy,ww,wh);
+      // Sprossenkreuz
+      ctx.strokeStyle='#e9e4d8'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(wx+ww/2,wy); ctx.lineTo(wx+ww/2,wy+wh);
+      ctx.moveTo(wx,wy+wh/2); ctx.lineTo(wx+ww,wy+wh/2); ctx.stroke();
+      // gelegentlich ein Balkon-/Blumenkasten
+      if(f>0 && Math.random()<0.28){ ctx.fillStyle='#6b4a2a'; ctx.fillRect(wx-4,wy+wh+3,ww+8,5);
+        ctx.fillStyle='#c0392b'; for(let d=0;d<4;d++) ctx.fillRect(wx+d*(ww/4)+2,wy+wh+1,3,3); }
+    }
   }
-  const t=new THREE.CanvasTexture(c); return t;
+  // Erdgeschoss: Laden mit Schaufenstern + Tür
+  ctx.fillStyle=shade(base,-14); ctx.fillRect(0,upperH,W,groundH);
+  const dx=W*0.40, dw=W*0.20;           // Hauseingang mittig
+  ctx.fillStyle='#3a2a1c'; ctx.fillRect(dx,upperH+groundH*0.16,dw,groundH*0.84);
+  ctx.fillStyle='#5a4230'; ctx.fillRect(dx+3,upperH+groundH*0.20,dw-6,groundH*0.80);
+  ctx.fillStyle='#c9a24b'; ctx.beginPath(); ctx.arc(dx+dw-8,upperH+groundH*0.60,3,0,7); ctx.fill(); // Klinke
+  // Türbogen (Altbau)
+  ctx.strokeStyle='#e9e4d8'; ctx.lineWidth=3;
+  ctx.strokeRect(dx-2,upperH+groundH*0.14,dw+4,groundH*0.86);
+  // Schaufenster links & rechts
+  for(const sx of [W*0.06, W*0.72]){
+    const sw=W*0.22, sy=upperH+groundH*0.22, sh=groundH*0.56;
+    ctx.fillStyle='#1c2530'; ctx.fillRect(sx,sy,sw,sh);
+    const g=ctx.createLinearGradient(sx,sy,sx+sw,sy+sh); g.addColorStop(0,'rgba(180,220,255,0.35)'); g.addColorStop(1,'rgba(120,160,200,0.08)');
+    ctx.fillStyle=g; ctx.fillRect(sx,sy,sw,sh);
+    ctx.fillStyle='#e9e4d8'; ctx.fillRect(sx-3,sy-3,sw+6,4);   // Fenstersturz
+    // Markise
+    ctx.fillStyle=(sx<W/2)?'#2e7d32':'#b23a3a'; ctx.fillRect(sx-4,sy-12,sw+8,9);
+  }
+  const t=new THREE.CanvasTexture(c); t.anisotropy=4; return t;
 }
 function building(x,z,w,h,col,p){
   const floors=Math.max(3,Math.round(h/2.2)); const t=winTex(col,floors,Math.max(2,Math.round(w/2.2)));
@@ -741,7 +795,8 @@ function tree(x,z,p){ cyl(0.16,0.22,1.3,mat(0x5a3a1a),x,0.65,z,p);
   ball(0.9,mat(0x2f7d3a),x,1.9,z,p); ball(0.7,mat(0x2f8d42),x,2.5,x*0+z-0.2,p); }
 function streetlamp(x,z,p){ cyl(0.09,0.11,4,mat(0x2a2f38),x,2,z,p);
   box(1.0,0.16,0.3,mat(0x2a2f38),x+0.4,3.9,z,0,p);
-  box(0.5,0.14,0.24,new THREE.MeshStandardMaterial({color:0xfff2c0,emissive:0xffe6a0,emissiveIntensity:0.7}),x+0.7,3.82,z,0,p); }
+  box(0.5,0.14,0.24,new THREE.MeshStandardMaterial({color:0xfff2c0,emissive:0xffe6a0,emissiveIntensity:0.7}),x+0.7,3.82,z,0,p);
+  streetColl.push({x,z,r:0.4}); }
 function carMesh(col,tuned){ const g=new THREE.Group();
   const bodyMat=new THREE.MeshStandardMaterial({color:col,metalness:0.4,roughness:0.35});
   const lowY=tuned?0.34:0.42;
@@ -994,6 +1049,7 @@ function buildStreet(i){
   buildTraffic();
   // E-Scooter-Haufen
   for(let k=0;k<4;k++) box(0.2,0.9,1.4,mat([0x22aa88,0xff5533,0x5533ff,0x22aa88][k]),34+k*0.15,0.45+k*0.05,6+k*0.2,0.3*k,streetGroup);
+  streetColl.push({x:34.3,z:6.3,r:1.1});
   // Bänke + Mülleimer
   box(2.2,0.15,0.7,mat(0x3a6a3a),-2,0.55,7,0,streetGroup); box(2.2,0.5,0.12,mat(0x3a6a3a),-2,0.85,6.7,0,streetGroup); streetColl.push({x:-2,z:7,r:1.1});
   box(0.5,0.9,0.5,mat(0xbf8f2f),4,0.45,2,0,streetGroup); streetColl.push({x:4,z:2,r:0.5});
@@ -1217,6 +1273,18 @@ function animateNPC(n,t){
     case 'wave': u.armR.rotation.z=-0.4+Math.sin(t*6+ph)*0.7; break;
     default: u.head.position.y=1.95+Math.sin(t*2+ph)*0.03; u.head.rotation.y=Math.sin(t*0.55+ph)*0.45;
   }
+  // Blick-Verhalten: stehende Leute schauen zu den Passanten (nicht auf die Straße)
+  // und drehen sich zu dir, wenn du in die Nähe kommst.
+  const moving=(n.act==='pace'||n.act==='wander'||n.act==='panic');
+  if(!moving){
+    const dp=Math.hypot(P.x-n.x,P.z-n.z);
+    let tx,tz;
+    if(dp<11){ tx=P.x; tz=P.z; }                         // jemand kommt → anschauen
+    else { tx=n.x+Math.sin(t*0.35+ph)*9; tz=9; }         // Gehweg absuchen (Richtung Leute)
+    const targetYaw=Math.atan2(tx-n.x, tz-n.z);
+    let dy=targetYaw-n.mesh.rotation.y; while(dy>Math.PI)dy-=6.28318; while(dy<-Math.PI)dy+=6.28318;
+    n.mesh.rotation.y+=dy*(dp<11?0.14:0.05);             // näher = schneller herdrehen
+  }
   if(u.eyeL){ const bl=(Math.sin(t*2.6+ph*5)>0.93)?0.14:1; u.eyeL.scale.y=bl; u.eyeR.scale.y=bl; }
   if(u.mouth){ u.mouth.scale.y=(n.talkUntil&&t<n.talkUntil)?(1+Math.abs(Math.sin(t*17))*1.2):1; }
 }
@@ -1415,6 +1483,15 @@ function animate(){
           toast("💥 "+(hz.type==='scooter'?'E-Scooter':'Radfahrer')+" nietet dich um!");
           say(hz.type==='scooter'?"Aus dem Weg!":"Fahrrad, Mann!"); beep(150,0.4,'sawtooth',0.2); }
       }
+      // Fahrende Autos schleudern dich weg, wenn du auf der Straße stehst
+      if(hitT<=0) for(const tc of trafficCars){ const dcx=P.x-tc.x, dcz=P.z-tc.z;
+        if(Math.abs(dcx)<2.4 && Math.abs(dcz)<1.5){
+          const push=tc.speed>0?1:-1;
+          P.x+=push*2.6; P.z=Math.max(P.z+3.4, 0.8);   // in Fahrtrichtung + rauf auf den Gehweg geschleudert
+          [P.x,P.z]=resolve(P.x,P.z);
+          hitT=1.0; shakeT=0.7; floatSay(P.x,2.6,P.z,['🚗💥 WUMM!','💥 BÄM!','😵 Autsch!'][(Math.random()*3)|0]);
+          toast("🚗 Auto erwischt dich – runter von der Straße!");
+          say("Pass doch uff, Alter!"); beep(120,0.5,'sawtooth',0.22); break; } }
       annTimer-=dt; if(annTimer<=0){annTimer=20+Math.random()*12; announce(STREET_ANN[(Math.random()*STREET_ANN.length)|0]);}
     }
 
@@ -1487,6 +1564,7 @@ function buildStreetExtras(i){
   const ssign=makeTextPlane("🛴 SLALOM",256,64,"#111111","#f3d000",44); ssign.scale.set(2.6,0.7,1);
   ssign.position.set(sx,1.7,sz); streetGroup.add(ssign);
   makeFloatIcon("🛴",sx,2.6,sz,streetGroup);
+  streetColl.push({x:sx,z:sz,r:0.7});
   streetInteract.push({x:sx,z:sz,r:1.9,name:"Gehweg-Slalom",verb:"START",kind:'dodge'});
   // Länderfinanzausgleich-Stand
   const fx=-26, fz=6;
@@ -1494,24 +1572,28 @@ function buildStreetExtras(i){
   for(let k=0;k<5;k++) box(0.22,0.22,0.22,new THREE.MeshStandardMaterial({color:0xf3c000,emissive:0x8a6a00,emissiveIntensity:0.4}),fx-0.5+k*0.25,1.12,fz,0,streetGroup);
   const fsign=makeTextPlane("💰 FINANZAUSGLEICH",256,64,"#111111","#f3c000",34); fsign.scale.set(2.9,0.72,1); fsign.position.set(fx,1.9,fz); streetGroup.add(fsign);
   makeFloatIcon("💰",fx,2.7,fz,streetGroup);
+  streetColl.push({x:fx,z:fz,r:1.0});
   streetInteract.push({x:fx,z:fz,r:1.9,name:"Länderfinanzausgleich",verb:"KLAUEN",kind:'finanz'});
   // Politiker-Schmieren-Stand (in JEDEM Kiez findbar)
   const bxp=-12, bzp=8;
   box(1.2,2.2,0.8,mat(0x14141f),bxp,1.1,bzp,0,streetGroup);
   const bsg=makeTextPlane("💼 POLITIKER",256,64,"#fff","#7a2b8e",34); bsg.scale.set(2.9,0.72,1); bsg.position.set(bxp,2.7,bzp-0.42); streetGroup.add(bsg);
   makeFloatIcon("💼",bxp,3.3,bzp,streetGroup);
+  streetColl.push({x:bxp,z:bzp,r:0.8});
   streetInteract.push({x:bxp,z:bzp,r:1.4,name:"Politiker schmieren",verb:"SCHMIEREN",kind:'bribe'});
   // Kontrolle-entkommen (Schwarzfahr-Spot)
   const kxp=8, kzp=9;
   box(1.0,1.6,0.6,mat(0x1a2a55),kxp,0.8,kzp,0,streetGroup);
   const ksg=makeTextPlane("🚔 KONTROLLE",256,64,"#fff","#c2183a",34); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
   makeFloatIcon("🚔",kxp,2.8,kzp,streetGroup);
+  streetColl.push({x:kxp,z:kzp,r:0.7});
   streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Kontrolle entkommen",verb:"RENNEN",kind:'kontrolle'});
   // Verspätungen würfeln (BVG-Leitstelle, auch draußen)
   const vxp=18, vzp=8;
   box(1.1,1.5,0.6,mat(0x7a2b8e),vxp,0.75,vzp,0,streetGroup);
   const vsg=makeTextPlane("🎲 VERSPÄTUNG",256,64,"#fff","#f3a51a",32); vsg.scale.set(2.9,0.72,1); vsg.position.set(vxp,2.1,vzp-0.32); streetGroup.add(vsg);
   makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
+  streetColl.push({x:vxp,z:vzp,r:0.7});
   streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
   // ===== Sichtbare Belohnungen =====
   const hx=40, hz=18;
@@ -1521,16 +1603,19 @@ function buildStreetExtras(i){
     box(8.3,0.5,6.3,mat(0x2a2f3a),hx,17.2,hz,0,streetGroup);
     const hs=makeTextPlane("🔑 DEIN NEUBAU",256,64,"#111","#f3d000",34); hs.scale.set(5.6,1.1,1); hs.position.set(hx,18.4,hz-3.1); streetGroup.add(hs);
     makeFloatIcon("🏠",hx,19.6,hz-3,streetGroup);
+    streetColl.push({x:hx,z:hz,r:4.2});
   } else if(hasBaurecht){
     box(7,0.5,6,mat(0x8a7a5a),hx,0.25,hz,0,streetGroup);
     box(0.3,11,0.3,mat(0xf3a51a),hx-2,5.5,hz,0,streetGroup); box(6,0.3,0.3,mat(0xf3a51a),hx+1,11,hz,0,streetGroup); box(0.25,3,0.25,mat(0x333333),hx+4,9.5,hz,0,streetGroup);
     for(let k=0;k<7;k++) box(1.1,1.2,0.25,mat(k%2?0xffcc33:0xcc2222),hx-3.3+k,0.6,hz-3.1,0,streetGroup);
     const hs=makeTextPlane("🏗️ DEIN BAUGRUNDSTÜCK",256,64,"#111","#ffcc33",28); hs.scale.set(6.4,1.0,1); hs.position.set(hx,4.4,hz-3.1); streetGroup.add(hs);
     makeFloatIcon("🏗️",hx,6.2,hz-3,streetGroup);
+    streetColl.push({x:hx,z:hz,r:3.6});
   }
   if(verspaetRecord>0){
     box(0.3,5,0.3,mat(0x222222),0,2.5,13,0,streetGroup);
     box(5.0,2.0,0.16,mat(0x0a0d14),0,5.4,13.02,0,streetGroup);
+    streetColl.push({x:0,z:13,r:0.5});
     const bd=makeTextPlane("🚇 +"+verspaetRecord+" min",256,96,"#ff5a3a",null,54); bd.scale.set(4.7,1.85,1); bd.position.set(0,5.4,12.92); streetGroup.add(bd);
     const bl=makeTextPlane("REKORD-VERSPÄTUNG",256,40,"#ffd23f",null,28); bl.scale.set(4.2,0.7,1); bl.position.set(0,6.55,12.92); streetGroup.add(bl);
   }

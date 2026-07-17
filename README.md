@@ -60,11 +60,21 @@ die ganze Umgebung wechselt von U-Bahnhof zu **Berliner Kiez bei Tageslicht**
 Jeder Kiez sieht anders aus (Fernsehturm, Oberbaumbrücke, Görli-Park …).
 
 Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
-**laufen herum** statt nur zu stehen, und es rasen **rücksichtslose Hindernisse**
-über den Gehweg, denen du ausweichen musst:
+**laufen herum** statt nur zu stehen, **schauen zu den Passanten** (nicht auf die
+Straße) und **drehen sich zu dir**, wenn du näher kommst – die lebende Statue steht
+am Gehweg und **guckt sich um, ob wer kommt**. Und es rasen **rücksichtslose
+Hindernisse** über den Gehweg, denen du ausweichen musst:
 
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
+
+**Physik & Kollision**: Du läufst nicht mehr durch Stände, Laternen, Bäume,
+Bänke, E-Scooter-Haufen oder Belohnungs-Bauten hindurch – alles blockt sauber ab.
+Und stellst du dich **auf die Fahrbahn**, während ein Auto kommt, wirst du
+**weggeschleudert** (in Fahrtrichtung, rauf auf den Gehweg) – „🚗 runter von der
+Straße!". Die **Hintergrund-Altbauten** haben jetzt echte **Fenster mit
+Sprossenkreuz, Fensterbänken, Blumenkästen** und ein **Erdgeschoss mit Ladentür &
+Schaufenstern (mit Markise)** statt kahler Wände.
 
 ## 🎮 7 Minispiele (visuelle Szenen)
 
