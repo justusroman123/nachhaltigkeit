@@ -66,16 +66,20 @@ Die Figuren haben jetzt **Gesichter** (Augen, Mund, wütende Augenbrauen …),
 - 🛴 **E-Scooter-Rowdy** („AUS DEM WEG! Klingel is kaputt!") – nietet dich um
 - 🚴 **Radfahrer, der nicht guckt** („Ampeln sind Empfehlungen!")
 
-## 🎮 6 Minispiele (visuelle Szenen)
+## 🎮 7 Minispiele (visuelle Szenen)
 
 In **jedem Kiez** findest du **alle** Minispiel-Schilder (💼 Politiker, 🚔
-Kontrolle, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich) plus den 🔧 Automaten unten
-– du musst also nicht bis zum Alex fahren.
+Kontrolle, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich) plus den
+🔧 Automaten unten und die 🎲 BVG-Leitstelle an der Anzeigetafel.
 
-- 🚔 **Kontrolle entkommen**: „Fahrscheine, bitte!" – NÖ! Renn vor den BVG-
-  Kontrolleuren weg, weich Hindernissen aus und halt sie 22 s auf Abstand.
-  (Erwischt dich unten ein Kontrolleur ohne Ticket, startet automatisch die
-  Flucht – schaffst du's, entkommst du.)
+- 💶 **Politiker schmieren** (neu, als **Ampel** 🚦): Schieb das Kuvert **nur bei
+  GRÜN** – springt die Ampel auf ROT, sofort loslassen, sonst fliegst du auf.
+- 🚔 **Kontrolle-Schleichen** (neu, echtes Stealth): Ohne Ticket zum Ausgang
+  schleichen, aus dem **Sichtkegel** des Kontrolleurs bleiben, hinter Säulen
+  verstecken. (Erwischt dich unten ein Kontrolleur, startet die Flucht direkt.)
+- 🎲 **Verspätungen würfeln** (neu): Als BVG-Leitstelle hohe Zahlen würfeln, um
+  die **Verärgerung der Fahrgäste auf 100 %** zu treiben – aber Doppel-1 heißt,
+  ein Zug kommt pünktlich (Katastrophe!).
 
 - 🔧 **Automat reparieren** (am Fahrkartenautomaten, unten): Der Automat ist –
   natürlich – kaputt (mit „DEFEKT"-Display und einer Ratte 🐀). Triff den grünen

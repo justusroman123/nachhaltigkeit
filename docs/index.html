@@ -209,10 +209,10 @@
       quatsch die Berliner:innen an, kauf 'n Fahrschein 🎫 und steig in die
       einfahrende U-Bahn 🚇. <b>Dreh die Ansicht</b> mit Maus/Wisch – „vor" ist
       immer in den Bildschirm hinein. Nimm den <b>🚪 Ausgang nach oben</b> an die
-      Straße: dort warten <b>6 Minispiele</b> in <b>jedem Kiez</b> (🔧 Automat,
+      Straße: dort warten <b>7 Minispiele</b> in <b>jedem Kiez</b> (🔧 Automat,
       💶 Politiker schmieren, 🛴 Slalom, 🏠 Wohnung, 💰 Länderfinanzausgleich,
-      🚔 Kontrolle entkommen), schräge Gestalten und rasende E-Scooter 🛴 – und
-      pass auf die Kontrolleure 👮 auf!
+      🚔 Kontrolle-Schleichen, 🎲 Verspätungen würfeln), schräge Gestalten und
+      rasende E-Scooter 🛴 – und pass auf die Kontrolleure 👮 auf!
     </p>
     <div class="csLabel">Wähle deine Figur:</div>
     <div class="charsel" id="charsel"></div>
@@ -249,6 +249,7 @@
 
 </script>
 <script>
+
 
 
 
@@ -566,6 +567,12 @@ const boardCtx=boardCanvas.getContext('2d'); const boardTex=new THREE.CanvasText
 const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.2),new THREE.MeshBasicMaterial({map:boardTex,side:THREE.DoubleSide}));
 boardMesh.position.set(-9,4.35,0); boardMesh.rotation.y=Math.PI/2; ugStatic.add(boardMesh);
 box(0.1,0.5,0.1,matDark,-9,4.85,0,0,ugStatic);
+/* BVG-Leitstelle: Verspätungen würfeln */
+const verspaetPos={x:-16,z:2.4};
+box(1.3,1.1,0.7,mat(0x7a2b8e),verspaetPos.x,0.55,verspaetPos.z,0,ugStatic);
+box(0.9,0.5,0.06,new THREE.MeshStandardMaterial({color:0x101820,emissive:0xf3a51a,emissiveIntensity:0.6}),verspaetPos.x,0.95,verspaetPos.z+0.36,0,ugStatic);
+staticColliders.push({x:verspaetPos.x,z:verspaetPos.z,r:0.6});
+const verspaetSign=makeFloatIcon("🎲",verspaetPos.x,2.4,verspaetPos.z,ugStatic);
 
 /* ============================================================
    NPCs, STATIONEN, STRASSE
@@ -832,7 +839,7 @@ const KIEZ=[
  {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
-const STREET_SPOTS=[{x:-9,z:6},{x:9,z:7},{x:-19,z:5},{x:19,z:6},{x:-2,z:9},{x:15,z:9},{x:-26,z:8}];
+const STREET_SPOTS=[{x:-18,z:6},{x:-4,z:5},{x:4,z:6.5},{x:16,z:6},{x:-8,z:9},{x:14,z:9},{x:-20,z:9}];
 
 function landmark(kind,p){
   if(kind==='fernsehturm'){ cyl(0.9,1.4,26,mat(0xcfd6e2),-30,13,20,p); ball(2.6,mat(0xd0d8e6),-30,25,20,p);
@@ -1062,19 +1069,20 @@ function collectNPC(n){
 }
 
 /* Interaktion */
-let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null;
+let nearNPC=null, nearAutomat=false, nearTrain=false, nearExit=false, nearEntrance=false, nearStand=null, nearSI=null, nearVerspaet=false;
 function tryInteract(){
   if(!started||ended||transitioning||miniActive) return;
   if(nearNPC){ collectNPC(nearNPC); return; }
   if(place==='underground'){
     if(nearAutomat){ if(!ticketBought) miniAutomat(); else showDialogue("Fahrkartenautomat","Haste schon. Einmal reicht, is ja nich Weihnachten."); return; }
+    if(nearVerspaet){ miniVerspaetung(); return; }
     if(nearExit){ goUp(); return; }
     if(nearTrain){ if(collected<stationTotal) showDialogue("BVG-Ansage",`Erst noch ${stationTotal-collected} Berlin-Momente, dann fahr'n wir!`);
       else if(trainState!=='waiting'||train.userData.openAmt<0.6) showDialogue("BVG-Ansage","Der Zug fährt gleich ein – kurz warten.");
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='kontrolle') miniKontrolle(false); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='kontrolle') miniKontrolle(false); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1296,7 +1304,7 @@ function animate(){
     for(let k=worldSays.length-1;k>=0;k--){ const ws=worldSays[k]; ws.life-=dt; ws.spr.position.y+=dt*0.35;
       ws.spr.material.opacity=Math.min(1,ws.life); if(ws.life<=0){ scene.remove(ws.spr); worldSays.splice(k,1); } }
 
-    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null;
+    nearNPC=null; nearAutomat=false; nearTrain=false; nearExit=false; nearEntrance=false; nearStand=null; nearSI=null; nearVerspaet=false;
     let best=2.0;
     for(const n of npcs){ const d=Math.hypot(P.x-n.x,P.z-n.z); if(d<best){best=d; nearNPC=n;} }
 
@@ -1311,6 +1319,7 @@ function animate(){
         if(!ticketBought){ if(dist<5.5)danger=true; if(dist<1.7 && escapeCool<=0){ escapeCool=8; miniKontrolle(true); } } }
       elWarn.classList.toggle('on',danger&&!ticketBought);
       const dA=Math.hypot(P.x-automatPos.x,P.z-automatPos.z); if(dA<2.3&&dA<best+0.4){nearAutomat=true;nearNPC=null;}
+      const dV=Math.hypot(P.x-verspaetPos.x,P.z-verspaetPos.z); if(dV<2.5){nearVerspaet=true;nearNPC=null;nearAutomat=false;}
       const dE=Math.hypot(P.x-UG_EXIT.x,P.z-(UG_EXIT.z+1.5)); if(dE<2.8&&dE<best+0.4){nearExit=true;nearNPC=null;}
       if(P.z<-HALF_Z+1.7&&trainState==='waiting'){ nearTrain=true; nearNPC=(nearAutomat||nearExit)?null:nearNPC; }
       annTimer-=dt; if(annTimer<=0){annTimer=22+Math.random()*14; announce(ANNOUNCE[(Math.random()*ANNOUNCE.length)|0]);}
@@ -1340,6 +1349,7 @@ function animate(){
     if(nearNPC){ pv= nearNPC.collected?`${nearNPC.name} nochmal quatschen`:`${nearNPC.emoji} ${nearNPC.name} ${nearNPC.verb||'ansprechen'}`;
       aLabel=(nearNPC.verb||'sprechen').toUpperCase(); }
     else if(nearAutomat){ pv= ticketBought?`Fahrschein hast du ✅`:`🎫 Fahrkartenautomat (kaputt!)`; aLabel=ticketBought?'OK':'AUTOMAT'; }
+    else if(nearVerspaet){ pv=`🎲 BVG-Leitstelle: Verspätungen würfeln`; aLabel='WÜRFELN'; }
     else if(nearExit){ pv=`🚪 Rauf an die Oberfläche`; aLabel='HOCH'; }
     else if(nearTrain){ pv= collected>=stationTotal?`🚇 In die U-Bahn einsteigen`:`U-Bahn (erst alle Momente!)`; aLabel='EINSTEIGEN'; }
     else if(nearEntrance){ pv=`↓ Runter zur U-Bahn`; aLabel='RUNTER'; }
@@ -1422,6 +1432,12 @@ function buildStreetExtras(i){
   const ksg=makeTextPlane("🚔 KONTROLLE",256,64,"#fff","#c2183a",34); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
   makeFloatIcon("🚔",kxp,2.8,kzp,streetGroup);
   streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Kontrolle entkommen",verb:"RENNEN",kind:'kontrolle'});
+  // Verspätungen würfeln (BVG-Leitstelle, auch draußen)
+  const vxp=18, vzp=8;
+  box(1.1,1.5,0.6,mat(0x7a2b8e),vxp,0.75,vzp,0,streetGroup);
+  const vsg=makeTextPlane("🎲 VERSPÄTUNG",256,64,"#fff","#f3a51a",32); vsg.scale.set(2.9,0.72,1); vsg.position.set(vxp,2.1,vzp-0.32); streetGroup.add(vsg);
+  makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
+  streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
 }
 
 /* ---------- Rahmen ---------- */
@@ -1485,13 +1501,13 @@ function miniAutomat(){
 /* ---------- MG1: Politiker schmieren (Szene) ---------- */
 function miniBribe(n){
   openMini(); let bribe=0, susp=0, holding=false, done=false, money=0;
-  const NW=5, watch=new Array(NW).fill(false), wt=[]; for(let i=0;i<NW;i++)wt[i]=0.5+Math.random()*2;
+  let light='green', lt=1.6+Math.random()*1.3;
   panelEl().innerHTML=`<h2>💶 Politiker schmieren</h2>
-    <div class="miniDesc">Halte den Knopf & schieb das Kuvert rüber – <b>nur wenn keiner guckt</b> (🙂). Guckt wer (👀), steigt Verdacht!</div>
-    <canvas id="mCanvas" width="360" height="210"></canvas>
+    <div class="miniDesc">Schieb dem Politiker das Kuvert zu – aber <b>nur bei GRÜN 🟢</b>! Springt die Ampel auf <b>ROT 🔴</b> (jemand guckt), sofort <b>loslassen</b>, sonst fliegst du auf.</div>
+    <canvas id="mCanvas" width="360" height="200"></canvas>
     <div class="mBar"><i id="bBar" style="background:#2fbf6a"></i><div class="lbl" id="bLbl">Übergabe 0%</div></div>
-    <div class="mBar"><i id="sBar" style="background:#e0466a"></i><div class="lbl" id="sLbl">Verdacht 0%</div></div>
-    <button class="mBtn big" id="hBtn">💶 GELD ÜBERGEBEN (halten)</button><div id="miniResult"></div>`;
+    <div class="mBar"><i id="sBar" style="background:#e0466a"></i><div class="lbl" id="sLbl">Aufgeflogen 0%</div></div>
+    <button class="mBtn big" id="hBtn">💶 SCHIEBEN (halten)</button><div id="miniResult">Warte auf Grün…</div>`;
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const bBar=document.getElementById('bBar'),sBar=document.getElementById('sBar'),bLbl=document.getElementById('bLbl'),
         sLbl=document.getElementById('sLbl'),res=document.getElementById('miniResult'),hBtn=document.getElementById('hBtn');
@@ -1499,29 +1515,33 @@ function miniBribe(n){
   mOn(hBtn,'pointerdown',e=>{e.preventDefault();set(true);}); mOn(window,'pointerup',()=>set(false));
   mOn(hBtn,'touchstart',e=>{e.preventDefault();set(true);},{passive:false}); mOn(hBtn,'touchend',()=>set(false));
   mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();set(true);}}); mOn(window,'keyup',e=>{if(e.code==='Space')set(false);});
-  const wpos=[]; for(let i=0;i<NW;i++) wpos.push(30+i*((W-60)/(NW-1)));
   let last=performance.now();
-  function loop(now){ if(!miniActive)return; const dt=(now-last)/1000; last=now; let anyW=false;
-    for(let i=0;i<NW;i++){ wt[i]-=dt; if(wt[i]<=0){ watch[i]=!watch[i]; wt[i]=watch[i]?(0.6+Math.random()*1.1):(0.8+Math.random()*1.7); } if(watch[i])anyW=true; }
-    if(holding){ if(anyW){ susp+=dt*58; money=Math.max(0,money-dt*2.2); res.style.color='#ff6b8a'; res.textContent='👀 Gesehen! Loslassen!'; }
-      else { bribe+=dt*33; money=Math.min(1,money+dt*1.5); res.style.color='#3fd18a'; res.textContent='🤫 …unauffällig…'; } }
-    else { susp=Math.max(0,susp-dt*11); money=Math.max(0,money-dt*1.1); }
+  function loop(now){ if(!miniActive)return; const dt=(now-last)/1000; last=now;
+    lt-=dt;
+    if(lt<=0){ if(light==='green'){ light='warn'; lt=0.55; } else if(light==='warn'){ light='red'; lt=0.9+Math.random()*1.1; } else { light='green'; lt=1.3+Math.random()*1.7; } }
+    const safe=(light==='green');
+    if(holding){ if(safe){ bribe+=dt*30; money=Math.min(1,money+dt*1.4); res.style.color='#3fd18a'; res.textContent='🤫 …schieben…'; }
+      else { susp+=(light==='red'?dt*72:dt*24); money=Math.max(0,money-dt*2); res.style.color='#ff6b8a'; res.textContent=(light==='red'?'🔴 ROT! Loslassen!':'🟡 gleich rot…'); } }
+    else { susp=Math.max(0,susp-dt*9); res.style.color=safe?'#3fd18a':'#aab3d6'; res.textContent=safe?'🟢 GRÜN – jetzt schieben!':'…warten…'; }
     bribe=Math.min(100,bribe); susp=Math.min(100,susp);
-    bBar.style.width=bribe+'%'; sBar.style.width=susp+'%'; bLbl.textContent='Übergabe '+(bribe|0)+'%'; sLbl.textContent='Verdacht '+(susp|0)+'%';
+    bBar.style.width=bribe+'%'; sBar.style.width=susp+'%'; bLbl.textContent='Übergabe '+(bribe|0)+'%'; sLbl.textContent='Aufgeflogen '+(susp|0)+'%';
     ctx.fillStyle='#152036'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
-    for(let i=0;i<NW;i++){ if(watch[i]){ ctx.strokeStyle='rgba(255,60,80,.45)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(wpos[i],54); ctx.lineTo(W*0.5,H-44); ctx.stroke(); }
-      ctx.font='30px serif'; ctx.fillText(watch[i]?'👀':'🙂',wpos[i],40); }
-    ctx.font='48px serif'; ctx.fillText('🧍',W*0.26,H-42); ctx.fillText('🤵',W*0.74,H-42);
-    const mx=W*0.26+(W*0.48)*(0.15+money*0.7); ctx.font='24px serif'; ctx.fillText('💶',mx,H-62);
+    const ax=W*0.5, ay=48; ctx.fillStyle='#0a0d14'; ctx.fillRect(ax-24,ay-34,48,92);
+    function lamp(cy,on,onc){ ctx.beginPath(); ctx.arc(ax,cy,12,0,7); ctx.fillStyle=on?onc:'#20242e'; ctx.fill(); if(on){ctx.strokeStyle=onc;ctx.lineWidth=3;ctx.stroke();} }
+    lamp(ay-16,light==='red','#ff3b3b'); lamp(ay+8,light==='warn','#ffd23f'); lamp(ay+32,light==='green','#3fd18a');
+    ctx.font='700 22px Segoe UI'; ctx.fillStyle=safe?'#3fd18a':(light==='red'?'#ff6b8a':'#ffd23f');
+    ctx.fillText(safe?'🟢 SCHIEBEN!':(light==='red'?'🔴 STOPP!':'🟡 gleich rot'), ax, H-14);
+    ctx.font='46px serif'; ctx.fillText('🧍',W*0.18,H-52); ctx.fillText('🤵',W*0.82,H-52);
+    const mx=W*0.18+(W*0.64)*(0.08+money*0.84); ctx.font='24px serif'; ctx.fillText('💶',mx,H-70);
     if(bribe>=100&&!done){done=true; return win();} if(susp>=100&&!done){done=true; return lose();}
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} hasBaurecht=true; bribedPolitician=true; momente+=2; updateMomente();
     if(n&&!n.collected){ n.collected=true; try{streetGroup.remove(n.icon); n.icon=makeFloatIcon('🤑',n.x,2.7,n.z,streetGroup);}catch(e){} streetDone[stationIndex].add(n.name); } jingle();
     panelEl().innerHTML=`<h2>🤑 Deal!</h2><div style="font-size:56px">🤵🤝🏗️</div><div class="miniDesc"><i>„Ick hab dit nie angenommen."</i><br>Du hast jetzt <b>ein Baugrundstück am Alex</b> zugeteilt 🏗️ – bei der Wohnungsbesichtigung kannst du damit <b>einfach kaufen</b>!</div><button class="mBtn big" id="ok">👍 Nice (+2 🌟)</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🏗️ Baurecht gesichert!');}); }
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🏗️ Baugrundstück gesichert!');}); }
   function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2);
-    panelEl().innerHTML=`<h2>📸 Skandal!</h2><div style="font-size:56px">📸😱</div><div class="miniDesc">Jemand hat alles gefilmt. Morgen Seite 1. <i>„Kein Kommentar!"</i></div><button class="mBtn big" id="ok">😬 Nochmal</button><button class="mBtn alt" id="c">Lieber nicht</button>`;
+    panelEl().innerHTML=`<h2>📸 Skandal!</h2><div style="font-size:56px">📸😱</div><div class="miniDesc">Bei Rot geschoben – jemand hat gefilmt. Morgen Seite 1. <i>„Kein Kommentar!"</i></div><button class="mBtn big" id="ok">😬 Nochmal</button><button class="mBtn alt" id="c">Lieber nicht</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBribe(n);}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
@@ -1711,63 +1731,96 @@ function miniFinanz(){
 /* ---------- MG6: Fahrkartenkontrolle entkommen ---------- */
 function miniKontrolle(fromGuard){
   openMini();
-  panelEl().innerHTML=`<h2>🚔 Kontrolle entkommen!</h2>
-    <div class="miniDesc">„Fahrscheine, bitte!" – <b>NÖ!</b> Renn weg, weich mit <b>◀ ▶ / A D / tippen</b> den Hindernissen aus. Halt die Kontrolleure 👮 auf Abstand und <b>entkomme 22 Sekunden</b>!</div>
-    <canvas id="mCanvas" width="360" height="470"></canvas>
-    <div id="miniResult">Renn, Digga!</div>`;
+  panelEl().innerHTML=`<h2>🚔 An der Kontrolle vorbei</h2>
+    <div class="miniDesc">Kein Ticket! Schleich hoch zum <b>Ausgang 🚪</b> – aber bleib aus dem <b>Sichtkegel</b> des Kontrolleurs 👮. Versteck dich hinter den <b>Säulen</b>. <b>Ziehen / Pfeiltasten</b> = bewegen.</div>
+    <canvas id="mCanvas" width="360" height="440"></canvas>
+    <div id="miniResult">Schleichen…</div>`;
   const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
-  const lanes=[W*0.22,W*0.5,W*0.78]; let lane=1, px=lanes[1];
-  let d=62, tLeft=22, obs=[], spawnT=0.6, over=false, shake=0, lastLane=-1, iFrame=0, chatT=0;
-  const OB=[{e:'🚧',n:'Baustelle'},{e:'🧳',n:'Rollkoffer'},{e:'🐀',n:'Ratte'},{e:'👵',n:'Oma'},{e:'🚮',n:'Mülleimer'},{e:'🛴',n:'E-Scooter'}];
-  const SHOUT=['Fahrscheine bitte!','Stehenbleiben!','Schwarzfahrer!','60 Euro!','Halt, BVG!'];
-  const res=document.getElementById('mCanvas')?document.getElementById('miniResult'):null;
-  function go(k){ lane=Math.max(0,Math.min(2,lane+k)); }
-  mOn(cv,'pointerdown',e=>{ const r=cv.getBoundingClientRect(); go(((e.clientX-r.left)/r.width<0.5)?-1:1); });
-  mOn(window,'keydown',e=>{ if(e.key==='ArrowLeft'||e.key==='a')go(-1); if(e.key==='ArrowRight'||e.key==='d')go(1); });
+  let px=W*0.5, py=H-26, det=0, over=false;
+  const exit={x:W*0.5,y:26,r:26};
+  const pillars=[{x:W*0.26,y:H*0.66,w:46,h:34},{x:W*0.72,y:H*0.58,w:46,h:34},{x:W*0.46,y:H*0.40,w:46,h:34},{x:W*0.80,y:H*0.30,w:42,h:30},{x:W*0.20,y:H*0.30,w:42,h:30}];
+  let gx=W*0.5, gdir=1; const gy=H*0.14;
+  const keys2={}, res=document.getElementById('miniResult'); let tx=null,ty=null;
+  mOn(window,'keydown',e=>{keys2[e.key]=true;}); mOn(window,'keyup',e=>{keys2[e.key]=false;});
+  function setT(e){ const r=cv.getBoundingClientRect(); tx=(e.clientX-r.left)*W/r.width; ty=(e.clientY-r.top)*H/r.height; }
+  mOn(cv,'pointerdown',e=>{e.preventDefault();setT(e);}); mOn(cv,'pointermove',e=>{ if(tx!==null)setT(e); }); mOn(window,'pointerup',()=>{tx=null;ty=null;});
+  function hidden(){ for(const p of pillars){ if(Math.abs(px-p.x)<p.w/2+4 && Math.abs(py-p.y)<p.h/2+4) return true; } return false; }
   let last=performance.now();
   function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
-    if(!over){ tLeft-=dt; if(tLeft<=0){ over=true; return win(); }
-      d=Math.min(100,d+dt*5.5);         // du ziehst davon
-      spawnT-=dt; const diff=22-tLeft;
-      if(spawnT<=0){ spawnT=Math.max(0.5,0.95-diff*0.015); let ln=(Math.random()*3)|0; if(ln===lastLane&&Math.random()<0.6)ln=(ln+1)%3; lastLane=ln;
-        obs.push({lane:ln,y:-30,k:OB[(Math.random()*OB.length)|0],v:150+diff*7}); }
-      for(const o of obs) o.y+=o.v*dt;
-      if(iFrame>0)iFrame-=dt;
-      for(const o of obs){ if(!o.hit && o.lane===lane && o.y>H-150 && o.y<H-100 && iFrame<=0){ o.hit=true; iFrame=0.7; d-=20; shake=11; beep(170,0.2,'sawtooth',0.16);
-        res.textContent='💥 '+o.k.n+'! Die Kontrolle holt auf!'; if(d<=0){ over=true; return caught(); } } }
-      obs=obs.filter(o=>o.y<H+30);
-      chatT-=dt; if(chatT<=0 && d<55){ chatT=1.6+Math.random()*2; res.style.color='#ff9db0'; res.textContent='👮 „'+SHOUT[(Math.random()*SHOUT.length)|0]+'"'; }
+    if(!over){
+      let mx2=0,my2=0;
+      if(keys2['ArrowLeft']||keys2['a'])mx2-=1; if(keys2['ArrowRight']||keys2['d'])mx2+=1;
+      if(keys2['ArrowUp']||keys2['w'])my2-=1; if(keys2['ArrowDown']||keys2['s'])my2+=1;
+      if(tx!==null){ mx2+=(tx-px)*0.06; my2+=(ty-py)*0.06; }
+      const ml=Math.hypot(mx2,my2); if(ml>0.02){ const u=Math.min(1,ml); mx2/=ml; my2/=ml; const sp=118; px+=mx2*sp*u*dt; py+=my2*sp*u*dt; }
+      px=Math.max(14,Math.min(W-14,px)); py=Math.max(14,Math.min(H-14,py));
+      gx+=gdir*95*dt; if(gx>W-28){gx=W-28;gdir=-1;} if(gx<28){gx=28;gdir=1;}
+      const dyp=py-gy; const inCone = dyp>4 && dyp<H && Math.abs(px-gx) < 18 + dyp*0.5;
+      if(inCone && !hidden()){ det+=dt*72; } else { det=Math.max(0,det-dt*48); }
+      res.textContent = hidden()?'🫥 Versteckt – sicher.' : (inCone?'⚠️ Im Sichtkegel! Weg da!':'🚶 Schleichen…');
+      res.style.color = hidden()?'#8fd0ff':(inCone?'#ff6b8a':'#aab3d6');
+      if(det>=100){ over=true; return caught(); }
+      if(Math.hypot(px-exit.x,py-exit.y)<exit.r){ over=true; return win(); }
     }
-    px+=(lanes[lane]-px)*Math.min(1,dt*12);
-    ctx.save(); if(shake>0){ ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*40; if(shake<0)shake=0; }
-    // Bahnsteig-Boden
     ctx.fillStyle='#8a8578'; ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='#736f64'; ctx.lineWidth=2; for(let y=((now/5)%44)-44;y<H;y+=44){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    ctx.fillStyle='#f3d000'; ctx.fillRect(6,0,5,H); ctx.fillRect(W-11,0,5,H);
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    for(const o of obs){ ctx.font='32px serif'; ctx.fillText(o.k.e,lanes[o.lane],o.y); }
-    // du
-    ctx.globalAlpha=(iFrame>0&&Math.floor(now/70)%2)?0.4:1; ctx.font='36px serif'; ctx.fillText('🏃',px,H-120); ctx.globalAlpha=1;
-    // Kontrolleure – näher wenn d klein
-    const ky=H-40 + (d/100)*36; ctx.font='34px serif'; ctx.fillText('👮',W*0.42,ky); ctx.fillText('👮',W*0.58,ky);
-    ctx.restore();
-    // HUD
-    ctx.fillStyle='#fff'; ctx.font='700 15px Segoe UI'; ctx.textAlign='left'; ctx.fillText('⏱ '+Math.max(0,Math.ceil(tLeft))+'s Flucht',8,18);
-    ctx.fillStyle='#20264a'; ctx.fillRect(8,26,W-16,10); ctx.fillStyle=d<35?'#e0466a':'#3fd18a'; ctx.fillRect(8,26,(W-16)*d/100,10);
-    ctx.fillStyle='#cdd6f0'; ctx.font='700 11px Segoe UI'; ctx.textAlign='right'; ctx.fillText('Abstand',W-10,20);
-    if(iFrame>0){ ctx.fillStyle='rgba(255,40,60,'+(iFrame*0.28)+')'; ctx.fillRect(0,0,W,H); }
+    ctx.strokeStyle='#736f64'; ctx.lineWidth=2; for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.fillStyle='#f3d000'; ctx.fillRect(0,50,W,4);
+    // Sichtkegel
+    const clen=H; ctx.fillStyle=det>50?'rgba(255,60,60,0.22)':'rgba(255,225,130,0.15)';
+    ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx-(18+clen*0.5),gy+clen); ctx.lineTo(gx+(18+clen*0.5),gy+clen); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#3a3f4a'; for(const p of pillars) ctx.fillRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h);
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='30px serif';
+    ctx.fillText('🚪',exit.x,exit.y); ctx.font='700 11px Segoe UI'; ctx.fillStyle='#333'; ctx.fillText('AUSGANG',exit.x,exit.y+22);
+    ctx.font='30px serif'; ctx.fillText('👮',gx,gy);
+    ctx.globalAlpha=hidden()?0.55:1; ctx.fillText('🧍',px,py); ctx.globalAlpha=1;
+    ctx.fillStyle='#20264a'; ctx.fillRect(8,8,W-16,10); ctx.fillStyle=det>50?'#e0466a':'#f3a51a'; ctx.fillRect(8,8,(W-16)*det/100,10);
+    ctx.fillStyle='#fff'; ctx.font='700 11px Segoe UI'; ctx.textAlign='left'; ctx.fillText('entdeckt',10,30);
     miniRAF=requestAnimationFrame(loop); }
   miniRAF=requestAnimationFrame(loop);
   function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
-    panelEl().innerHTML=`<h2>🏃💨 Entkommen!</h2><div style="font-size:54px">😎🎫❌</div><div class="miniDesc">Abgehängt! Die BVG guckt in die Röhre. Schwarzfahren bleibt Volkssport.</div><button class="mBtn big" id="ok">😏 Weiter (+2 🌟)</button>`;
-    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast("🏃 Kontrolle abgehängt! (Kauf trotzdem mal ein Ticket 😅)");}); }
+    panelEl().innerHTML=`<h2>🏃💨 Entkommen!</h2><div style="font-size:54px">😎🎫❌</div><div class="miniDesc">Am Kontrolleur vorbeigeschlichen und ab durch den Ausgang. Schwarzfahren bleibt Volkssport.</div><button class="mBtn big" id="ok">😏 Weiter (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast("🏃 Kontrolle ausgetrickst! (Kauf trotzdem mal ein Ticket 😅)");}); }
   function caught(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(180,0.5,'sawtooth',0.2);
     if(fromGuard){ closeMini(); caughtGame(); return; }
-    panelEl().innerHTML=`<h2>👮 Geschnappt!</h2><div style="font-size:54px">😬📝</div><div class="miniDesc">„60 Euro erhöhtes Beförderungsentgelt." Zack. Nächstes Mal schneller!</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Zahlen &amp; gehen</button>`;
+    panelEl().innerHTML=`<h2>👮 Erwischt!</h2><div style="font-size:54px">😬📝</div><div class="miniDesc">„Fahrscheine, bitte." Zack, 60 Euro. Nächstes Mal mehr Deckung nutzen!</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Zahlen</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini(); miniKontrolle(false);});
-    document.getElementById('c').addEventListener('click',()=>{closeMini(); toast('💸 60€ weg. Autsch.');}); }
+    document.getElementById('c').addEventListener('click',()=>{closeMini(); toast("💸 60€ weg. Autsch.");}); }
 }
 
+/* ---------- MG7: Verspätungen würfeln ---------- */
+function miniVerspaetung(){
+  openMini(); let anger=0, rolls=0, d1=1, d2=1, rolling=0, over=false;
+  panelEl().innerHTML=`<h2>🎲 Verspätungen würfeln</h2>
+    <div class="miniDesc">Du bist die <b>BVG-Leitstelle</b> 🚇. Würfle hohe Zahlen = mehr Verspätung = wütendere Fahrgäste! Treib die <b>Verärgerung auf 100%</b>. Aber Vorsicht: <b>Doppel-1</b> = ein Zug kommt pünktlich 😱 (Verärgerung sinkt).</div>
+    <canvas id="mCanvas" width="360" height="230"></canvas>
+    <div class="mBar"><i id="aBar" style="background:#e0466a"></i><div class="lbl" id="aLbl">Verärgerung 0%</div></div>
+    <button class="mBtn big" id="rollBtn">🎲 WÜRFELN!</button><div id="miniResult" style="min-height:22px">Los, mach Chaos!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const aBar=document.getElementById('aBar'),aLbl=document.getElementById('aLbl'),res=document.getElementById('miniResult');
+  const FACE=['','⚀','⚁','⚂','⚃','⚄','⚅'], REACT=['😐','😕','😠','😤','🤬'];
+  const GAG=['„Wo bleibt die Bahn?!"','„Schon wieder!"','„Ick beschwer mich!"','„30 Minuten?!"','„Zu meiner Zeit war…"','„Ersatzverkehr, klar."'];
+  function roll(){ if(over||rolling>0)return; rolling=0.6; }
+  document.getElementById('rollBtn').addEventListener('click',roll);
+  mOn(window,'keydown',e=>{if(e.code==='Space'){e.preventDefault();roll();}});
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now;
+    if(rolling>0){ rolling-=dt; d1=1+((Math.random()*6)|0); d2=1+((Math.random()*6)|0);
+      if(rolling<=0){ const sum=d1+d2; rolls++;
+        if(d1===1&&d2===1){ anger=Math.max(0,anger-15); res.style.color='#8fd0ff'; res.textContent='😱 Doppel-1! Ein Zug kommt PÜNKTLICH! −15%'; beep(420,0.2,'sine',0.14); }
+        else { anger=Math.min(100,anger+sum); res.style.color='#ffd0d0'; res.textContent='🎲 '+sum+' Min Verspätung! '+GAG[(Math.random()*GAG.length)|0]; beep(680+sum*28,0.08,'square',0.12); }
+        if(anger>=100){ over=true; setTimeout(win,350); } } }
+    aBar.style.width=anger+'%'; aLbl.textContent='Verärgerung '+(anger|0)+'%';
+    ctx.fillStyle='#12203a'; ctx.fillRect(0,0,W,H); ctx.textAlign='center'; ctx.textBaseline='middle';
+    const lvl=Math.min(4,Math.floor(anger/22));
+    ctx.font='30px serif'; for(let i=0;i<6;i++) ctx.fillText(REACT[Math.min(4,lvl+((i%3===0)?1:0))], 34+i*((W-68)/5), H-34);
+    ctx.font='72px serif'; ctx.fillStyle='#fff'; ctx.fillText(FACE[d1], W*0.38, 68); ctx.fillText(FACE[d2], W*0.62, 68);
+    ctx.font='700 14px Segoe UI'; ctx.fillStyle='#cdd6f0'; ctx.fillText((rolling>0?'…rollt…':'Würfe: '+rolls), W*0.5, 120);
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); jingle();
+    panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px">😤🤬🎉</div><div class="miniDesc">Verärgerung auf 100%! Der ganze Bahnsteig kocht, drei Beschwerden pro Minute. Ein perfekter BVG-Tag – in ${rolls} Würfen geschafft!</div><button class="mBtn big" id="ok">😈 Nice (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Maximale Verärgerung – die BVG ist stolz auf dich!');}); }
+}
 
 </script>
 </body>
