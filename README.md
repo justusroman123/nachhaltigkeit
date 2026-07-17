@@ -13,17 +13,20 @@ nichts umstellen.
 
 ## Steuerung
 
-Die **Kamera zieht beim Laufen automatisch hinter dich** – „vorwärts" ist immer
-in den Bildschirm hinein, egal wie du dich vorher umgesehen hast. Nach dem
-manuellen Umsehen zentriert sie sich beim nächsten Schritt sanft wieder.
+Klares Fahrschema: **vorwärts geht immer in den Bildschirm hinein**, die Kamera
+sitzt fest hinter dir. Zum Abbiegen **drehst** du dich (die Kamera dreht mit).
 
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
-| Laufen | `W A S D` / Pfeiltasten | Linker Joystick |
-| Umsehen | Maus ziehen | Rechts über den Screen wischen |
+| Vor / Zurück | `W` `S` / `↑` `↓` | Joystick hoch / runter |
+| Drehen (links/rechts) | `A` `D` / `←` `→` | Joystick links / rechts |
 | Interagieren | `E` | **Aktions-Knopf** (Label passt sich an) |
 | Rennen | `Shift` | **RENN**-Knopf |
+| Blick neigen / zoomen | Maus ziehen / Rad | wischen / pinch |
 | Ton an/aus | 🔊-Button oben rechts | 🔊-Button oben rechts |
+
+Am Start wählst du deine **Spielfigur** aus (Kreuzberg-Kid, Techno-Raverin,
+Rave-Oma, Sterni-Opa, Touristin, Currywurst-Renate, Döner-Ali, Fixie-Hipster).
 
 Der **Aktions-Knopf ist kontextabhängig** und erscheint nur, wenn wirklich etwas
 in der Nähe ist – z. B. `HOCH`, `RUNTER`, `EINSTEIGEN`, `AUTOMAT`, `SCHMIEREN`,
