@@ -231,7 +231,7 @@
   <div class="card">
     <div class="emoji-row">🚇 🍺 🥨 🐻 🎧</div>
     <h1><span class="u">U</span> BERLIN UNTERGRUND</h1>
-    <div class="sub">Überlebe die U1 – von Kotti bis Alex 🐻</div>
+    <div class="sub">Überlebe die U8 – von Kotti bis Alex 🐻</div>
     <div class="steps">
       <div class="step"><b>1.</b> 🗣️ Leute anquatschen</div>
       <div class="step"><b>2.</b> 🚪 hoch = 🎮 Minispiele</div>
@@ -280,7 +280,7 @@
 
 "use strict";
 /* ============================================================
-   BERLIN UNTERGRUND – U-Bahn Odyssee (U1 + Straße)
+   BERLIN UNTERGRUND – U-Bahn Odyssee (U8 + Straße)
    Third-Person 3D (Three.js) – self-contained.
    ============================================================ */
 if (!window.THREE) {
@@ -607,7 +607,7 @@ function buildTrain(bodyColor,dest){
       const rp=box(0.86,2.3,0.08,doorMat,dx+0.47,1.4,side,0,g); box(0.6,0.9,0.02,doorWinMat,0,0.5,sgn*0.045,0,rp);
       doors.push({l:lp,r:rp,bl:dx-0.47,br:dx+0.47});
     }
-    const zt=makeTextPlane(dest||"U1  Alexanderplatz",256,48,"#ffcc33","#111111",30);
+    const zt=makeTextPlane(dest||"U8  Alexanderplatz",256,48,"#ffcc33","#111111",30);
     zt.scale.set(3.0,0.55,1); zt.position.set(0,2.55,side+sgn*0.04); if(sgn<0)zt.rotation.y=Math.PI; g.add(zt);
   }
   for(const ex of [-1,1]){
@@ -618,12 +618,12 @@ function buildTrain(bodyColor,dest){
   g.userData={doors,interior,openAmt:0,openTarget:0};
   return g;
 }
-const train=buildTrain(0xf3d000,"U1  Alexanderplatz");
+const train=buildTrain(0xf3d000,"U8  Alexanderplatz");
 train.position.set(60,0.2,NEAR_Z); ugStatic.add(train);
 const passers=[]; let passerTimer=6;
 function spawnPasser(){
   const cols=[0xdedede,0xf3d000,0xcf5a2a];
-  const t=buildTrain(cols[passers.length%3],"U1"); t.userData.openTarget=0;
+  const t=buildTrain(cols[passers.length%3],"U8"); t.userData.openTarget=0;
   const fromLeft=(passers.length%2===0);
   t.position.set(fromLeft?-70:70,0.2,FAR_Z); t.rotation.y=Math.PI; t.userData.vx=fromLeft?34:-34;
   ugStatic.add(t); passers.push(t);
@@ -720,9 +720,9 @@ const NPC_POOL={
 };
 
 const STATIONS=[
- {name:"Kottbusser Tor",accent:0x7a2b8e,line:"U1 · U8",mural:"kotti",npcs:["sterni","doener","techno"],guards:0,short:"Kotti"},
- {name:"Görlitzer Bahnhof",accent:0x2e7d32,line:"U1",mural:"park",npcs:["currywurst","punkhund","rad"],guards:1,short:"Görli"},
- {name:"Warschauer Straße",accent:0xd23b3b,line:"U1 · U3",mural:"oberbaum",npcs:["musiker","touri","spaeti"],guards:2,short:"Warschauer"},
+ {name:"Kottbusser Tor",accent:0x7a2b8e,line:"U8",mural:"kotti",npcs:["sterni","doener","techno"],guards:0,short:"Kotti"},
+ {name:"Görlitzer Bahnhof",accent:0x2e7d32,line:"U8",mural:"park",npcs:["currywurst","punkhund","rad"],guards:1,short:"Görli"},
+ {name:"Warschauer Straße",accent:0xd23b3b,line:"U8 · U3",mural:"oberbaum",npcs:["musiker","touri","spaeti"],guards:2,short:"Warschauer"},
  {name:"Alexanderplatz",accent:0x1a5fb4,line:"U2 · U5 · U8",mural:"fernsehturm",npcs:["handy","rentnerin","laermtyp"],guards:2,final:true,short:"Alex"},
 ];
 let stationIndex=0;
@@ -863,7 +863,7 @@ function loadStation(i){
     const label=makeTextPlane(st.name,512,86,"#ffffff",null,52); label.scale.set(5.1,0.86,1); label.position.z=0.07; g.add(label);
     g.position.set(sx,3.4,HALF_Z+3.65); g.rotation.y=Math.PI; stationGroup.add(g);
   }
-  const tags=["KREUZBERG36","U1","BERLIN","XBERG","MATE","TÜPÜÜ","1UP"];
+  const tags=["KREUZBERG36","U8","BERLIN","XBERG","MATE","TÜPÜÜ","1UP"];
   for(let k=0;k<4;k++) graffiti(-24+k*16+(i*3),HALF_Z+3.7,2.4+((k+i)%2),["#ff3b7b","#3bd1ff","#f3d000","#8bff5a"][(k+i)%4],tags[(k+i)%tags.length],stationGroup);
   for(let k=0;k<3;k++){ const pp=POSTERS[(k+i)%POSTERS.length]; poster(-20+k*20,HALF_Z+3.72,pp[0],pp[1],pp[2],stationGroup); }
   // Lustige Werbetafeln an der Wand, wo die U-Bahn einfährt (gut sichtbar über dem Zug)
@@ -1412,13 +1412,13 @@ function updateObjective(){
   else if(!ticketBought && stationIndex===0) t=`🎫 Fahrschein kaufen – dann 🚪 raus!`;
   else if(!streetVisited[stationIndex]) t=`🚪 Erst raus an die Oberfläche (Ausgang)!`;
   else t=`🚇 U-Bahn Richtung ${STATIONS[Math.min(stationIndex+1,STATIONS.length-1)].short}!`;
-  elObj.innerHTML=`<small>U1 · HALT ${stationIndex+1}/${STATIONS.length}</small>${t}`;
+  elObj.innerHTML=`<small>U8 · HALT ${stationIndex+1}/${STATIONS.length}</small>${t}`;
 }
 function updateBoard(status){
   const st=STATIONS[stationIndex], next=STATIONS[Math.min(stationIndex+1,STATIONS.length-1)];
   boardCtx.fillStyle='#0a0d14'; boardCtx.fillRect(0,0,512,140);
   boardCtx.fillStyle='#f3a51a'; boardCtx.font='900 30px Consolas, monospace'; boardCtx.textAlign='left';
-  boardCtx.fillText('U1  '+(st.final?'Endstation':next.name),16,44);
+  boardCtx.fillText('U8  '+(st.final?'Endstation':next.name),16,44);
   boardCtx.font='700 24px Consolas, monospace';
   let s=status||(trainState==='arriving'?'einfahrend':trainState==='waiting'?'Türen offen':trainState==='departing'?'Abfahrt':'2 min');
   boardCtx.fillStyle=(s==='einfahrend'||s==='Türen offen')?'#4ade80':'#f3a51a'; boardCtx.fillText('▶ '+s,16,90);
@@ -1556,7 +1556,7 @@ function endGame(win,title,sub,text){ ended=true;
 function winGame(){ const bonus=ticketBought?"Und mit gültigem Fahrschein – vorbildlich!":"Ganz ohne Fahrschein durch – mutig. Sehr berlinerisch.";
   say("Endstation Alexanderplatz. Alles aussteigen bitte!");
   endGame(true,"🏙️ Endstation Alex!","„Alles aussteigen, bitte!“",
-    `Du hast die ganze U1 vom Kotti bis zum Alex überlebt, ${momente} Berlin-Momente erlebt und jeden Zug erwischt. `+bonus+` 🐻`); }
+    `Du hast die ganze U8 vom Kotti bis zum Alex überlebt, ${momente} Berlin-Momente erlebt und jeden Zug erwischt. `+bonus+` 🐻`); }
 function caughtGame(){ say("Fahrscheine bitte! Erhöhtes Beförderungsentgelt, sechzig Euro!");
   endGame(false,"👮 Erwischt!","„Fahrscheine, bitte!“","Ohne Fahrschein geschnappt: 60 € erhöhtes Beförderungsentgelt. Tipp: am Kotti den Automaten 🎫 nicht vergessen!"); }
 
@@ -2559,7 +2559,7 @@ function miniVerspaetung(){
     const showPanel=()=>{ panelEl().innerHTML=`<h2>🚇💥 Totales Chaos!</h2><div style="font-size:56px;color:#ff5a3a;font-weight:900">🕐 +${delayMin} min</div><div style="font-size:40px;margin:2px">🤝😎😎</div><div class="miniDesc"><i>„Wieder nüscht jemacht — und trotzdem Boni. Feierabend!"</i> — die BVG-Chefetage klatscht ab.<br>Verärgerung auf 100%! Rekord von <b>${delayMin} Minuten</b> in ${rolls} Würfen. Die <b>Anzeigetafel</b> glüht, draußen hängt die <b>Schandtafel</b>! 😈</div><button class="mBtn big" id="ok">😈 Legendär (+2 🌟)</button>`;
       document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🎲 Rekord: +'+delayMin+' min! Die Anzeigetafel glüht. 🔥');}); };
     // Kurzes „Video": Anzeigetafel voll mit +99, Zug gerammelt voll
-    const st=performance.now(); const rows=['U1  +99','U2  +99','U5 ⚠ +99','U8  Ausfall','S+U +99','Bus  hä?'];
+    const st=performance.now(); const rows=['U8  +99','U2  +99','U5 ⚠ +99','U9  Ausfall','S+U +99','Bus  hä?'];
     const faces=['🧍','😰','😤','🥵','🧓','🧑','😑','🧕'];
     (function anim(now){ if(!miniActive)return; const el=(now-st)/1000, shk=Math.max(0,1.4-el);
       ctx.save(); ctx.translate((Math.random()-.5)*shk*6,(Math.random()-.5)*shk*6);

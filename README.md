@@ -53,9 +53,9 @@ Der **Aktions-Knopf ist kontextabhängig** und erscheint nur, wenn wirklich etwa
 in der Nähe ist – z. B. `HOCH`, `RUNTER`, `EINSTEIGEN`, `AUTOMAT`, `SCHMIEREN`,
 `START`, `REIN`.
 
-## Ziel – die ganze Linie U1 fahren
+## Ziel – die ganze Linie U8 fahren
 
-Fahr die **U1** über **4 Stationen**: **Kottbusser Tor → Görlitzer Bahnhof →
+Fahr die **U8** über **4 Stationen**: **Kottbusser Tor → Görlitzer Bahnhof →
 Warschauer Straße → Alexanderplatz**. An jeder Station:
 
 **Wichtig:** An jeder Station musst du **erst raus an die Oberfläche** (🚪
@@ -108,7 +108,7 @@ In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli
 Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich, 📋 Bürgeramt,
 🕶️ Berlin-Look) plus den **🚌 SEV-Bus** am Straßenrand.
 
-- 🚌 **Schienenersatzverkehr** (überarbeitet – jetzt echtes Gameplay): Die U1
+- 🚌 **Schienenersatzverkehr** (überarbeitet – jetzt echtes Gameplay): Die U8
   fällt aus – **du fährst den gelben SEV-Bus** zum Alex. Drei Mechaniken
   greifen ineinander: **Lenken** (◀ ▶ / A D / ziehen) um Baustellen 🚧, Staus
   🚗 & Schlaglöcher 🕳️, **📣 Hupen** (Leertaste/Knopf) scheucht Radler 🚴 &
@@ -293,4 +293,4 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 - Grafik aus einfachen Formen (Low-Poly-Berlin), Sound live im Browser generiert
   (U-Bahn-Rumpeln, Türgong, Quietschen, Jingles) plus deutsche Sprachausgabe.
 
-Viel Spaß auf der U1! 🐻
+Viel Spaß auf der U8! 🐻
