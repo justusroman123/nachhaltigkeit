@@ -228,7 +228,12 @@ Dazu Currywurst-Imbiss & Späti zum „Einkaufen". Jede Begegnung zählt als
 - **Absurde Wahlplakat-Billboards** an der Straße: „Ich verspreche Ihnen das Blau
   vom Himmel!", „Der BER wird fertig – versprochen²", „Bezahlbare Miete für alle
   (ab 2045)" … samt Kleingedrucktem zum Mitlesen.
-- **Echte U-Bahn**, die einfährt, hält, die Türen öffnet und mit dir losfährt.
+- **Echte U-Bahn** mit **sichtbaren Türen zur Bahnsteigseite** (Türfenster,
+  Gummidichtung/Mittelspalt, Zugziel-Anzeige), die beim Halten **aufgehen**,
+  den beleuchteten Innenraum zeigen und mit dir losfahren.
+- **Sonnenschatten oben**: scheint draußen die Sonne, **werfen du, die
+  Passant:innen, Bäume, Autos, Stände & Häuser echte Schatten** auf den Gehweg –
+  gibt der Szene richtig Tiefe.
 - **Berlin-Panorama am Horizont**: ein Skydome mit **Fernsehturm, Reichstag,
   Brandenburger Tor, Berliner Dom & Siegessäule** als Silhouette – kein leeres
   Blau mehr. Davor eine **Hochhaus-Skyline** und **fahrender Verkehr** (Autos

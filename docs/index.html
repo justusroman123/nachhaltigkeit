@@ -314,7 +314,13 @@ keyLight.shadow.camera.left=-50; keyLight.shadow.camera.right=50;
 keyLight.shadow.camera.top=26; keyLight.shadow.camera.bottom=-26;
 scene.add(keyLight);
 const sunLight = new THREE.DirectionalLight(0xfff4d8, 0.9);
-sunLight.position.set(-18,30,20); sunLight.visible=false; scene.add(sunLight);
+sunLight.position.set(-22,34,26); sunLight.visible=false; scene.add(sunLight);
+sunLight.castShadow=true; sunLight.shadow.mapSize.set(2048,2048);
+sunLight.shadow.camera.near=1; sunLight.shadow.camera.far=150;
+sunLight.shadow.camera.left=-62; sunLight.shadow.camera.right=62;
+sunLight.shadow.camera.top=50; sunLight.shadow.camera.bottom=-42;
+sunLight.shadow.bias=-0.0006; sunLight.shadow.normalBias=0.02;
+sunLight.target.position.set(0,0,9); scene.add(sunLight.target);
 
 /* ---------- Constants ---------- */
 const HALF_X = 34, HALF_Z = 5;
@@ -432,6 +438,7 @@ function makePerson(o){
       {color:o.accent, emissive:o.accentE||0x000000, emissiveIntensity:o.accentE?0.8:0}),0.6*bodyW,1.0,0.15));
   g.scale.set(o.w||1, o.h||1, o.w||1);
   g.userData={legL,legR,armL,armR,head,torso,eyeL:head.userData.eyeL,eyeR:head.userData.eyeR,mouth:head.userData.mouth};
+  g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });   // jede Figur wirft einen Schatten
   return g;
 }
 
@@ -584,23 +591,29 @@ function buildTrain(bodyColor,dest){
   box(L,0.4,2.4,mat(0x8a8f99),0,3.15,0,0,g);
   box(L,0.28,2.63,mat(0x7a2b8e),0,2.75,0,0,g);
   const winMat=new THREE.MeshStandardMaterial({color:0x9fd8ff,emissive:0x2a4a66,emissiveIntensity:0.5});
-  const doorMat=mat(0x11151f);
-  const interior=box(L-2,2.2,0.1,new THREE.MeshStandardMaterial({color:0xfff4d6,emissive:0xffe9b0,emissiveIntensity:0}),0,1.7,-0.2,0,g);
+  const doorMat=new THREE.MeshStandardMaterial({color:0x2b3038,metalness:0.35,roughness:0.5});
+  const doorWinMat=new THREE.MeshStandardMaterial({color:0x1a2a38,emissive:0x0a1622,emissiveIntensity:0.4});
+  const sealMat=mat(0x0a0c10);
+  const interior=box(L-2,2.2,0.1,new THREE.MeshStandardMaterial({color:0xfff4d6,emissive:0xffe9b0,emissiveIntensity:0}),0,1.7,0,0,g);
   const doorXs=[-16,-8,0,8,16], doors=[];
-  for(let x=-20;x<=20;x+=2){ if(doorXs.some(dx=>Math.abs(x-dx)<1.1))continue;
-    box(1.5,1.1,0.05,winMat,x,1.95,-1.34,0,g); }
-  for(const dx of doorXs){
-    const lp=box(0.9,2.3,0.08,doorMat,dx-0.46,1.35,-1.33,0,g);
-    const rp=box(0.9,2.3,0.08,doorMat,dx+0.46,1.35,-1.33,0,g);
-    doors.push({l:lp,r:rp,bl:dx-0.46,br:dx+0.46});
+  // Fenster + Türen auf BEIDEN Seiten (die zum Bahnsteig zeigende Seite ist so immer sichtbar)
+  for(const side of [-1.34,1.34]){ const sgn=side>0?1:-1;
+    for(let x=-20;x<=20;x+=2){ if(doorXs.some(dx=>Math.abs(x-dx)<1.1))continue; box(1.5,1.1,0.05,winMat,x,1.95,side,0,g); }
+    for(const dx of doorXs){
+      box(2.06,2.5,0.03,mat(0x3a3f47),dx,1.45,side-sgn*0.02,0,g);                 // heller Türrahmen/Nische
+      box(0.07,2.42,0.11,sealMat,dx,1.42,side+sgn*0.02,0,g);                       // Mittelspalt/Gummi
+      const lp=box(0.86,2.3,0.08,doorMat,dx-0.47,1.4,side,0,g); box(0.6,0.9,0.02,doorWinMat,0,0.5,sgn*0.045,0,lp);   // Türfenster als Kind (bewegt sich mit)
+      const rp=box(0.86,2.3,0.08,doorMat,dx+0.47,1.4,side,0,g); box(0.6,0.9,0.02,doorWinMat,0,0.5,sgn*0.045,0,rp);
+      doors.push({l:lp,r:rp,bl:dx-0.47,br:dx+0.47});
+    }
+    const zt=makeTextPlane(dest||"U1  Alexanderplatz",256,48,"#ffcc33","#111111",30);
+    zt.scale.set(3.0,0.55,1); zt.position.set(0,2.55,side+sgn*0.04); if(sgn<0)zt.rotation.y=Math.PI; g.add(zt);
   }
   for(const ex of [-1,1]){
     box(1.4,2.6,2.5,bmat,ex*(L/2-0.7),1.5,0,0,g);
     box(0.1,0.9,2.0,winMat,ex*(L/2),2.1,0,0,g);
     box(0.1,0.25,0.25,new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff2c0,emissiveIntensity:1}),ex*(L/2+0.02),0.7,ex>0?0.8:-0.8,0,g);
   }
-  const zt=makeTextPlane(dest||"U1  Alexanderplatz",256,48,"#ffcc33","#111111",30);
-  zt.scale.set(3.0,0.55,1); zt.position.set(0,2.55,-1.36); g.add(zt);
   g.userData={doors,interior,openAmt:0,openTarget:0};
   return g;
 }
@@ -1332,6 +1345,12 @@ function buildStreet(i){
   groupShoutT=3;
   hazards=[]; hazards.push(makeHazard('scooter',6,15)); hazards.push(makeHazard('cyclist',9,-11.5));
   buildStreetExtras(i);
+  // Sonnen-Schatten: Boden empfängt, aufrechte Objekte werfen Schatten (Flaches/Wolken/Sonne nicht)
+  streetGroup.traverse(o=>{ if(!o.isMesh)return; o.receiveShadow=true;
+    if(o.userData.noShadow){ o.castShadow=false; return; }
+    const gp=o.geometry&&o.geometry.parameters;
+    const tall = gp && ((gp.height>0.55)||(gp.radius>0.4)||(gp.radiusTop>0.06));
+    if(tall) o.castShadow=true; });
 }
 
 /* ============================================================
@@ -1906,12 +1925,12 @@ const cloudMeshes=[];
 function cloud(x,y,z,p){ const g=new THREE.Group();
   const m=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x223044,emissiveIntensity:0.05});
   ball(1.6,m,0,0,0,g); ball(1.2,m,1.5,-0.2,0,g); ball(1.2,m,-1.5,-0.1,0,g); ball(1.0,m,0.6,0.5,0.4,g);
-  g.position.set(x,y,z); g.scale.set(1,0.55,1); p.add(g); return g; }
+  g.position.set(x,y,z); g.scale.set(1,0.55,1); g.traverse(o=>{if(o.isMesh)o.userData.noShadow=true;}); p.add(g); return g; }
 function buildStreetExtras(i){
   streetInteract=[]; cloudMeshes.length=0;
   for(let k=0;k<8;k++){ const c=cloud(-46+k*13+(i*4),17+((k*5)%6),2+((k%4)*6),streetGroup); c.scale.set(0.8+((k%3)*0.4),0.5,0.8+((k%3)*0.4)); cloudMeshes.push(c); }
   const sun=new THREE.Mesh(new THREE.SphereGeometry(2.4,12,10),new THREE.MeshBasicMaterial({color:0xfff2b0}));
-  sun.position.set(32,27,42); streetGroup.add(sun);
+  sun.position.set(32,27,42); sun.userData.noShadow=true; streetGroup.add(sun);
   const wx=-38, wz=15;
   box(4.2,4.6,0.5,mat(0x7a5330),wx,2.3,wz,0,streetGroup);
   box(1.7,2.8,0.2,mat(0x281a10),wx,1.4,wz-0.36,0,streetGroup);
