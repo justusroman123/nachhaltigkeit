@@ -108,6 +108,8 @@
     width:96px;height:96px;background:rgba(243,208,0,.9);color:#231c00;font-size:15px;}
   #btnRun{right:calc(env(safe-area-inset-right,0) + 132px);bottom:calc(env(safe-area-inset-bottom,0) + 40px);
     width:74px;height:74px;}
+  #btnDance{right:calc(env(safe-area-inset-right,0) + 26px);bottom:calc(env(safe-area-inset-bottom,0) + 226px);
+    width:64px;height:64px;font-size:24px;background:rgba(170,51,170,.85);}
   #looklayer{position:absolute;right:0;top:0;width:55%;height:74%;pointer-events:auto;}
 
   #sound{position:fixed;top:calc(env(safe-area-inset-top,0) + 12px);right:12px;z-index:30;
@@ -217,6 +219,7 @@
   <div id="looklayer"></div>
   <div id="stick"><div class="nub"></div></div>
   <div class="tbtn" id="btnRun">RENN</div>
+  <div class="tbtn" id="btnDance">💃</div>
   <div class="tbtn" id="btnAct">SPRECHEN</div>
 </div>
 
@@ -244,11 +247,11 @@
     </div>
     <div class="keys" id="deskKeys">
       <span class="kbd">W A S D / Pfeile = laufen</span><span class="kbd">Maus ziehen = Kamera drehen</span>
-      <span class="kbd">E = machen</span><span class="kbd">Shift = rennen</span>
+      <span class="kbd">E = machen</span><span class="kbd">Shift = rennen</span><span class="kbd">F = tanzen 💃</span>
     </div>
     <div class="keys" id="touchKeys" style="display:none">
       <span class="kbd">Linker Stick = laufen</span><span class="kbd">Wischen = Kamera drehen</span>
-      <span class="kbd">Aktions-Knopf = machen</span>
+      <span class="kbd">Aktions-Knopf = machen</span><span class="kbd">💃 = tanzen</span>
     </div>
     <button class="btn" id="startBtn" style="margin-top:14px">▶ Losfahren</button>
     <div class="hint">Läuft direkt im Browser · Handy &amp; Desktop · kein Download</div>
@@ -1386,7 +1389,10 @@ const elPrompt=document.getElementById('prompt'), elDialogue=document.getElement
       elLine=document.getElementById('line');
 const momBadge=document.createElement('div'); momBadge.className='badge'; momBadge.id='momBadge';
 document.getElementById('objective').appendChild(momBadge);
-let dialogueTimer=0, toastTimer=0;
+let dialogueTimer=0, toastTimer=0, dialogueNPC=null;
+let danceT=0, danceFx=false, danceEmitT=0;   // Tanz-Move
+function dance(){ if(!started||ended||miniActive||transitioning||hitT>0)return; if(danceT>0){danceT=0;return;} danceT=3.0; danceEmitT=0;
+  burstEmoji(P.x,2.9,P.z,'🎶',4); melody([[523,150],[659,150],[784,150],[659,150],[784,300]],'square',0.09); }
 
 /* State */
 let started=false, ended=false, ticketBought=false, collected=0, stationTotal=0, momente=0, transitioning=false;
@@ -1401,11 +1407,11 @@ function updateLineHud(){ [...elLine.children].forEach((el,i)=>{
   el.className='stop'+(i<stationIndex?' done':'')+(i===stationIndex?' here':''); }); }
 function updateMomente(){ momBadge.innerHTML=`<small>ERLEBT</small>🌟 ${momente} Berlin-Momente`; }
 function toast(msg){ elToast.textContent=msg; elToast.classList.add('on'); toastTimer=2.8; }
-function showDialogue(name,line,actions){ elDSpeaker.textContent=name; elDText.textContent=line;
-  elDBtns.innerHTML=''; elDialogue.classList.add('on'); say(line);
-  if(actions&&actions.length){ dialogueTimer=14;
+function showDialogue(name,line,actions,npc){ elDSpeaker.textContent=name; elDText.textContent=line;
+  elDBtns.innerHTML=''; elDialogue.classList.add('on'); dialogueNPC=npc||null; say(line);
+  if(actions&&actions.length){ dialogueTimer=8;
     actions.forEach(a=>{ const b=document.createElement('button'); if(a.alt)b.className='alt'; b.textContent=a.label;
-      b.addEventListener('click',e=>{ e.stopPropagation(); dialogueTimer=6; try{a.run&&a.run();}catch(_){} }); elDBtns.appendChild(b); });
+      b.addEventListener('click',e=>{ e.stopPropagation(); try{a.run&&a.run();}catch(_){} elDBtns.innerHTML=''; dialogueTimer=1.8; }); elDBtns.appendChild(b); });
   } else dialogueTimer=4.6; }
 function updateObjective(){
   const st=STATIONS[stationIndex]; let t;
@@ -1511,7 +1517,7 @@ function collectNPC(n){
   }
   if(n) n.talkUntil=clock.elapsedTime+2.4;
   const acts = NPC_ACTIONS[n.name] ? NPC_ACTIONS[n.name](n) : null;
-  showDialogue(n.name, pick(n.lines), acts);
+  showDialogue(n.name, pick(n.lines), acts, n);
 }
 
 /* Interaktion */
@@ -1697,7 +1703,7 @@ document.getElementById('sound').addEventListener('click',()=>{ soundOn=!soundOn
 
 /* ---------- Input ---------- */
 const keys={};
-addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='e')tryInteract(); });
+addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); keys[k]=true; if(k==='e')tryInteract(); if(k==='f'&&!miniActive)dance(); });
 addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 let dragging=false,lastX=0,lastY=0;
 const introHintEl=document.getElementById('introHint');
@@ -1729,6 +1735,7 @@ if(IS_TOUCH){ touchUI.style.display='block';
   rb.addEventListener('touchstart',e=>{keys['shift']=true;rb.style.background='rgba(243,208,0,.9)';e.preventDefault();},{passive:false});
   rb.addEventListener('touchend',e=>{keys['shift']=false;rb.style.background='rgba(20,27,57,.8)';});
   const ab=document.getElementById('btnAct'); ab.addEventListener('touchstart',e=>{tryInteract();e.preventDefault();},{passive:false});
+  const db=document.getElementById('btnDance'); db.addEventListener('touchstart',e=>{dance();e.preventDefault();},{passive:false});
 }
 
 document.getElementById('startBtn').addEventListener('click',()=>{
@@ -1829,6 +1836,9 @@ function animate(){
     if(IS_TOUCH){ix+=move.x;iz+=move.y;}
     if(hitT>0){ ix=0; iz=0; }
     let mag=Math.hypot(ix,iz); const running=keys['shift'];
+    if(mag>0.02) danceT=0;                 // Laufen bricht den Tanz ab
+    if(celebT>0)celebT-=dt; if(danceT>0)danceT-=dt;
+    const dancing = danceT>0 && mag<=0.02 && hitT<=0;
     if(mag>0.02){ const nm=Math.max(mag,1); ix/=nm; iz/=nm;
       const cos=Math.cos(camYaw),sin=Math.sin(camYaw);
       const wx=-ix*cos-iz*sin, wz=ix*sin-iz*cos;   // camera-relativ: vor = in den Bildschirm, links = Bildschirm-links
@@ -1838,15 +1848,21 @@ function animate(){
       const sw=Math.sin(t*(running?16:11))*(running?0.9:0.6);
       player.userData.legL.rotation.x=sw; player.userData.legR.rotation.x=-sw;
       player.userData.armL.rotation.x=-sw*0.7; player.userData.armR.rotation.x=sw*0.7;
+    } else if(dancing){ const bt=t*9;      // Tanz-Move 💃
+      player.userData.legL.rotation.x=Math.sin(bt*0.5)*0.5; player.userData.legR.rotation.x=-Math.sin(bt*0.5)*0.5;
+      player.userData.armL.rotation.x=0; player.userData.armR.rotation.x=0;
     } else { player.userData.legL.rotation.x*=0.8; player.userData.legR.rotation.x*=0.8;
       player.userData.armL.rotation.x*=0.8; player.userData.armR.rotation.x*=0.8; }
-    if(celebT>0)celebT-=dt;
-    const hopY = celebT>0 ? Math.abs(Math.sin(t*11))*0.28 : 0;
-    player.position.set(P.x, (hitT>0?-0.12*Math.min(1,hitT*1.5):0)+hopY, P.z); player.rotation.y=P.yaw;
+    const hopY = celebT>0 ? Math.abs(Math.sin(t*11))*0.28 : (dancing ? Math.abs(Math.sin(t*9))*0.16 : 0);
+    player.position.set(P.x, (hitT>0?-0.12*Math.min(1,hitT*1.5):0)+hopY, P.z);
+    player.rotation.y = P.yaw + (dancing ? Math.sin(t*3)*0.5 : 0);
     player.rotation.z = hitT>0 ? -1.05*Math.min(1,hitT*1.5) : 0;
     if(celebT>0){ player.userData.armL.rotation.z=0.9+Math.sin(t*11)*0.4; player.userData.armR.rotation.z=-0.9-Math.sin(t*11)*0.4; }
+    else if(dancing){ const bt=t*9; player.userData.armL.rotation.z=0.7+Math.sin(bt)*0.9; player.userData.armR.rotation.z=-0.7-Math.sin(bt)*0.9; }
+    else { player.userData.armL.rotation.z=0; player.userData.armR.rotation.z=0; }
     if(player.userData.eyeL){ const _b=(Math.sin(t*2.4)>0.93)?0.14:1; player.userData.eyeL.scale.y=_b; player.userData.eyeR.scale.y=_b; }
-    if(player.userData.mouth){ player.userData.mouth.scale.y = hitT>0 ? 2.2 : (celebT>0?1.8:1); }   // Schock beim Angefahrenwerden / Freude beim Sieg
+    if(player.userData.mouth){ player.userData.mouth.scale.y = hitT>0 ? 2.2 : ((celebT>0||dancing)?1.8:1); }
+    if(dancing && !danceFx){ danceFx=true; } if(dancing){ danceEmitT-=dt; if(danceEmitT<=0){ danceEmitT=0.5; burstEmoji(P.x,2.8,P.z,'🎵',2); } } else danceFx=false;
 
     // NPC-Verhalten
     for(const n of npcs) animateNPC(n,t);
@@ -1945,7 +1961,9 @@ function animate(){
     else elPrompt.classList.remove('on');
     if(IS_TOUCH){ const ab=document.getElementById('btnAct'); if(pv){ ab.textContent=aLabel; ab.style.display='flex'; } else ab.style.display='none'; }
 
-    if(dialogueTimer>0){dialogueTimer-=dt; if(dialogueTimer<=0){elDialogue.classList.remove('on'); elDBtns.innerHTML='';}}
+    if(dialogueTimer>0){ dialogueTimer-=dt;
+      if(dialogueNPC && Math.hypot(P.x-dialogueNPC.x,P.z-dialogueNPC.z)>3.6) dialogueTimer=Math.min(dialogueTimer,0.15);  // weggelaufen → schnell zu
+      if(dialogueTimer<=0){elDialogue.classList.remove('on'); elDBtns.innerHTML=''; dialogueNPC=null;} }
     if(toastTimer>0){toastTimer-=dt; if(toastTimer<=0)elToast.classList.remove('on');}
   } else if(transitioning&&place==='underground'){
     train.position.x+=(-70-train.position.x)*Math.min(1,dt*1.4); const u=train.userData;

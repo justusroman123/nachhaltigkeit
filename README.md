@@ -36,7 +36,13 @@ Tag?" – und du bekommst **sofort einen Willkommens-Moment geschenkt** 🌟. De
 | Ansicht drehen / neigen | Maus ziehen | Rechts über den Screen wischen |
 | Interagieren | `E` | **Aktions-Knopf** (Label passt sich an) |
 | Rennen | `Shift` | **RENN**-Knopf |
+| Tanzen 💃 | `F` | **💃-Knopf** |
 | Ton an/aus | 🔊-Button oben rechts | 🔊-Button oben rechts |
+
+Sprichst du eine Figur an, kannst du oft **zwischen Aktionen wählen** (z. B. bei
+Döner-Ali einen Döner nehmen 🥙, Tauben füttern, mittanzen). Sobald du eine Option
+wählst – oder einfach weggehst – **verschwindet das Sprechfenster sofort**, kein
+lästiges Nachhängen mehr.
 
 Am Start wählst du deine **Spielfigur** aus (Kreuzberg-Kid, Techno-Raverin,
 Rave-Oma, Sterni-Opa, Touristin, Currywurst-Renate, Döner-Ali, Fixie-Hipster).
