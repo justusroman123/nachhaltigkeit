@@ -18,17 +18,19 @@ dreh die Ansicht wie du willst – **„vorwärts" geht immer in den Bildschirm
 hinein**, **links ist wirklich bildschirm-links, rechts bildschirm-rechts**. So
 kannst du die Kamera einmal ausrichten und dann intuitiv navigieren.
 
-Beim Start erklärt ein **Tipp-Banner**, dass man mit **Maus ziehen / Wischen die
-Kamera dreht** – das war vorher nicht offensichtlich.
+## 🎬 Der Auftakt (optimierter erster Eindruck)
 
-## 🎬 Der Auftakt (sofort Spaß)
+Der **Startbildschirm** ist kurz & knackig: Titel, ein Einzeiler und **drei
+Schritt-Chips** (1. 🗣️ Leute anquatschen · 2. 🚪 hoch = 🎮 Minispiele · 3. 🎫 &
+ab in die 🚇) statt einer Textwand – der erste Eindruck zählt.
 
-Direkt nach dem Start läuft eine kleine **Comedy-Show**: eine absurde
-BVG-Durchsage („Wir entschuldigen uns für die Vergangenheit, die Gegenwart und
-die Zukunft."), der **🥙 Döner-Ali** steht direkt vor dir und ruft „Ey, mit
-alles?", eine 🐀 grinst „Miete? Kenn ick nich.", Techno-Klaus fragt „welcher
-Tag?" – und du bekommst **sofort einen Willkommens-Moment geschenkt** 🌟. Der
-**Aktions-Knopf zeigt von der ersten Sekunde an**, wen du ansprechen kannst.
+Sobald es losgeht, steht der **🥙 Döner-Ali direkt vor dir** und ruft „Ey, komm
+ma her!", über ihm winkt ein **pulsierendes 👋**, und der **Aktions-Knopf
+erscheint sofort** – du weißt vom ersten Moment an, was zu tun ist. Ein kleiner
+**Kamera-Tipp** liegt als **schlankes Banner unten** (blockiert die Sicht nicht
+mehr). Dazu läuft die übliche **Comedy-Show**: absurde BVG-Durchsage, eine 🐀
+(„Miete? Kenn ick nich.") – und du bekommst **sofort einen Willkommens-Moment
+geschenkt** 🌟.
 
 | Aktion | Desktop | Handy |
 | --- | --- | --- |
