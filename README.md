@@ -138,10 +138,15 @@ U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
 - 🚔 **Kontrolle-Schleichen** (neu, echtes Stealth): Ohne Ticket zum Ausgang
   schleichen, aus dem **Sichtkegel** des Kontrolleurs bleiben, hinter Säulen
   verstecken. (Erwischt dich unten ein Kontrolleur, startet die Flucht direkt.)
-Beim **Verspätungen-Würfeln** blenden jetzt **übertriebene Reaktions-Karten** ein
-(„DER BAHNSTEIG KOCHT! 🤬😡🤯", „Signalstörung. Wie üblich.", bei Sieg klatscht die
-**BVG-Chefetage ab**: „Wieder nüscht jemacht — und trotzdem Boni. Feierabend!"
-🤝😎😎) – satirisch auf die Spitze getrieben.
+Beim **Verspätungen-Würfeln** werfen jetzt **zwei BVG-Mitarbeiter die Würfel
+rein** 🤾, bei fetten Würfen ertönt **fieses Lachen** „muä-ha-ha", und es blenden
+**übertriebene Reaktions-Karten** ein („DER BAHNSTEIG KOCHT! 🤬😡🤯"). Beim Sieg
+läuft ein kurzes **„Video": die Anzeigetafel glüht voll mit +99 min und ein
+rammelvoller Zug** quetscht sich vorbei – danach klatscht die **BVG-Chefetage
+ab** („Wieder nüscht jemacht — Feierabend!" 🤝😎😎).
+Beim **Länderfinanzausgleich** siehst du beim Sieg eine kurze Animation: **in
+Bayern wird ein Haus abgebaut, die Goldtaler fliegen rüber und in Berlin wächst
+ein Hochhaus** („Bayern zahlt 💸 Berlin baut! 🏗️").
 
 - 🎲 **Verspätungen würfeln** (neu): Als BVG-Leitstelle hohe Zahlen würfeln, um
   die **Verärgerung der Fahrgäste auf 100 %** zu treiben. Ein großer Zähler
@@ -176,6 +181,13 @@ Was du in den Minispielen schaffst, siehst du danach im Kiez:
   mit dem Berliner Bären 🐻 die Goldtaler von **Bayern, Ba-Wü & Niedersachsen**,
   aber lass die **Bürokratie 📄** fallen – satirisch, wie sich die Stadt
   mitfinanziert.
+
+Beim Ansprechen vieler Leute gibt's jetzt **anklickbare Aktions-Optionen** mit
+kleinen Animationen statt nur einem Spruch: 🥙 **Döner-Ali** gibt dir einen Döner
+(du kaust ihn, 😋-Partikel fliegen), 🐦 **Tauben-Fütterer** – „Tauben füttern"
+lässt einen Taubenschwarm auffliegen, 🍺 **Sterni-Opa** anstoßen, 🌭
+**Currywurst-Renate** essen, 🕺 **Techno-Klaus** mittanzen, 🐕 **Punk mit Hund**
+streicheln, 🎸 **Straßenmusiker** was spenden – jeweils mit Sound & Effekt.
 
 Und du kannst mehr als nur reden – je nach Gestalt eine eigene **Aktivität**:
 
