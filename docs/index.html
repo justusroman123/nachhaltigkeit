@@ -1531,7 +1531,7 @@ function tryInteract(){
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='buero') miniBuero(); else if(nearSI.kind==='outfit') miniOutfit(); else if(nearSI.kind==='bus') miniBus(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='buero') miniBuero(); else if(nearSI.kind==='outfit') miniOutfit(); else if(nearSI.kind==='bus') miniBus(); else if(nearSI.kind==='zuzug') miniZuzug(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1840,9 +1840,13 @@ function animate(){
       player.userData.armL.rotation.x=-sw*0.7; player.userData.armR.rotation.x=sw*0.7;
     } else { player.userData.legL.rotation.x*=0.8; player.userData.legR.rotation.x*=0.8;
       player.userData.armL.rotation.x*=0.8; player.userData.armR.rotation.x*=0.8; }
-    player.position.set(P.x, hitT>0?-0.12*Math.min(1,hitT*1.5):0, P.z); player.rotation.y=P.yaw;
+    if(celebT>0)celebT-=dt;
+    const hopY = celebT>0 ? Math.abs(Math.sin(t*11))*0.28 : 0;
+    player.position.set(P.x, (hitT>0?-0.12*Math.min(1,hitT*1.5):0)+hopY, P.z); player.rotation.y=P.yaw;
     player.rotation.z = hitT>0 ? -1.05*Math.min(1,hitT*1.5) : 0;
+    if(celebT>0){ player.userData.armL.rotation.z=0.9+Math.sin(t*11)*0.4; player.userData.armR.rotation.z=-0.9-Math.sin(t*11)*0.4; }
     if(player.userData.eyeL){ const _b=(Math.sin(t*2.4)>0.93)?0.14:1; player.userData.eyeL.scale.y=_b; player.userData.eyeR.scale.y=_b; }
+    if(player.userData.mouth){ player.userData.mouth.scale.y = hitT>0 ? 2.2 : (celebT>0?1.8:1); }   // Schock beim Angefahrenwerden / Freude beim Sieg
 
     // NPC-Verhalten
     for(const n of npcs) animateNPC(n,t);
@@ -2039,6 +2043,13 @@ function buildStreetExtras(i){
   makeFloatIcon("🕶️",oxp,3.2,ozp,streetGroup);
   streetColl.push({x:oxp,z:ozp,r:0.6});
   streetInteract.push({x:oxp,z:ozp,r:1.4,name:"Berlin-Look zusammenstellen",verb:"STYLEN",kind:'outfit'});
+  // Zuzugsstopp – Berlin schlechtreden
+  const zxp=-4, zzp=6;
+  box(1.1,1.7,0.6,mat(0x5a1a1a),zxp,0.85,zzp,0,streetGroup); box(0.9,0.6,0.05,mat(0xff5a5a),zxp,1.4,zzp+0.32,0,streetGroup);
+  const zsg=makeTextPlane("🙅 ZUZUGSSTOPP",256,64,"#fff","#c2183a",30); zsg.scale.set(2.9,0.72,1); zsg.position.set(zxp,2.4,zzp-0.32); streetGroup.add(zsg);
+  makeFloatIcon("🙅",zxp,3.0,zzp,streetGroup);
+  streetColl.push({x:zxp,z:zzp,r:0.7});
+  streetInteract.push({x:zxp,z:zzp,r:1.4,name:"Berlin schlechtreden (Zuzugsstopp)",verb:"MECKERN",kind:'zuzug'});
   // SEV-Bus (Mesh wird in buildStreet gebaut, hier nur der Einsteig-Punkt)
   streetInteract.push({x:-40,z:4.7,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
   // ===== Sichtbare Belohnungen =====
@@ -2070,14 +2081,17 @@ function buildStreetExtras(i){
 /* ---------- Rahmen ---------- */
 const panelEl=()=>document.getElementById('miniPanel');
 function mOn(t,ev,fn,opts){ t.addEventListener(ev,fn,opts); miniListeners.push([t,ev,fn,opts]); }
-function openMini(){ miniActive=true; document.getElementById('mini').classList.add('on');
+let miniStartMomente=0, celebT=0;
+function openMini(){ miniActive=true; miniStartMomente=momente; document.getElementById('mini').classList.add('on');
   elPrompt.classList.remove('on'); elDialogue.classList.remove('on');
   if(IS_TOUCH) document.getElementById('btnAct').style.display='none';
   if(window.speechSynthesis) speechSynthesis.cancel(); }
-function closeMini(){ miniActive=false; document.getElementById('mini').classList.remove('on'); panelEl().innerHTML='';
+function closeMini(){ const won=started&&momente>miniStartMomente; miniActive=false; document.getElementById('mini').classList.remove('on'); panelEl().innerHTML='';
   if(miniRAF){cancelAnimationFrame(miniRAF); miniRAF=null;}
   miniListeners.forEach(([t,ev,fn,o])=>t.removeEventListener(ev,fn,o)); miniListeners=[];
-  if(IS_TOUCH) document.getElementById('btnAct').style.display='none'; }
+  if(IS_TOUCH) document.getElementById('btnAct').style.display='none';
+  if(won) celebrate(); }
+function celebrate(){ celebT=1.6; try{ burstEmoji(P.x,2.8,P.z,'🎉',7); floatSay(P.x,3.05,P.z,'🙌 Geschafft!'); cheer(); }catch(e){} }
 
 /* ---------- MG4: Automat reparieren (Szene) ---------- */
 function miniAutomat(){
@@ -2256,9 +2270,11 @@ function miniWohnung(){
     ctx.font='700 10px Segoe UI'; ctx.fillStyle='#222'; ctx.fillText('WOHNUNG',W-22,H*0.30-6);
     const playerX=26+prog*(W-100)/100;
     for(const c of crowd){ const jig=Math.sin(now/300+c.ph)*3; let cx=c.bx, cy=c.by+jig;
-      const near=Math.abs(cx-playerX); if(near<42&&prog<100){ cx+=(cx>=playerX?1:-1)*(42-near)*0.5*(0.6+lunge); }
-      ctx.font='28px serif'; ctx.fillText(c.e,cx,cy);
-      if(c.glare&&near<95){ ctx.font='14px serif'; ctx.fillText('💢',cx+13,cy-15); } }
+      const near=Math.abs(cx-playerX); const pushed=(near<48&&prog<100); if(pushed){ cx+=(cx>=playerX?1:-1)*(48-near)*0.5*(0.6+lunge); }
+      // Gesicht reagiert: erschrocken beim Drängeln, sonst genervt/normal
+      const em=(pushed&&lunge>0.3&&near<40)?'😱':(near<70?(c.glare?'😡':'😠'):c.e);
+      ctx.save(); ctx.translate(cx,cy); if(pushed&&lunge>0.3) ctx.rotate(Math.sin(now/40)*0.12); ctx.font='28px serif'; ctx.fillText(em,0,0); ctx.restore();
+      if(near<95){ ctx.font='13px serif'; ctx.fillText((pushed&&lunge>0.3)?'"Ey!"':'💢',cx+14,cy-16); } }
     ctx.font='34px serif'; ctx.fillText('🧍',playerX,H-40-lunge*8);
     if(lunge>0){ ctx.font='18px serif'; ctx.fillText('💪',playerX+17,H-52); }
     for(const f of floaters){ ctx.globalAlpha=Math.max(0,f.life); ctx.fillStyle='#2a2a2a'; ctx.font='700 12px Segoe UI'; ctx.fillText(f.t,f.x,f.y-(1-f.life)*18); ctx.globalAlpha=1; }
@@ -2268,13 +2284,25 @@ function miniWohnung(){
   miniRAF=requestAnimationFrame(loop);
   function landlord(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
     const buy=hasBaurecht?`<button class="mBtn big" id="buy">🏗️ Einfach kaufen (Baurecht)</button>`:'';
-    panelEl().innerHTML=`<h2>🤵 Der Vermieter</h2><div style="font-size:60px">🤵</div>
-      <div class="miniDesc"><i>„40 andere wollen die Bude auch. Warum Sie?"</i></div>
+    panelEl().innerHTML=`<h2>🤵 Der Vermieter</h2><div id="llFace" style="font-size:66px;line-height:1.1">🤵</div>
+      <div class="miniDesc"><i id="llText">„40 andere wollen die Bude auch. Warum ausgerechnet Sie?"</i></div>
       ${buy}<button class="mBtn big" id="bribe">💶 Vermieter bestechen</button>
       <button class="mBtn alt" id="honest">📄 Ehrlich sein (Schufa)</button><div id="miniResult"></div>`;
-    if(hasBaurecht) document.getElementById('buy').addEventListener('click',()=>got("Mit Baurecht kaufst du das Haus gleich mit. Der Vermieter is jetzt DEIN Mieter. 😎"));
-    document.getElementById('bribe').addEventListener('click',()=>got("Ein Kuvert später gehört die Wohnung dir. Willkommen in Berlin. 🔑"));
-    document.getElementById('honest').addEventListener('click',()=>{ if(Math.random()<0.35) got("Ehrlichkeit! Er ist gerührt. Unrealistisch, aber schön."); else rej(); }); }
+    const face=document.getElementById('llFace'), llText=document.getElementById('llText');
+    const dis=()=>['bribe','honest','buy'].forEach(id=>{const b=document.getElementById(id); if(b)b.disabled=true;});
+    // animierte Reaktion: 'shake' (Kopfschütteln, nein), 'nod' (Nicken, ja), 'greedy' (gierig)
+    function react(emoji,kind,cb){ face.textContent=emoji; const st=performance.now();
+      (function a(now){ const el=(now-st)/1000;
+        if(kind==='shake') face.style.transform='rotate('+Math.sin(el*24)*17+'deg)';
+        else if(kind==='nod') face.style.transform='translateY('+Math.abs(Math.sin(el*12))*9+'px)';
+        else face.style.transform='scale('+(1+Math.abs(Math.sin(el*15))*0.14)+')';
+        if(el<0.95){ miniRAF=requestAnimationFrame(a); } else { face.style.transform=''; cb&&cb(); }
+      })(performance.now()); }
+    if(hasBaurecht) document.getElementById('buy').addEventListener('click',()=>{ dis(); llText.textContent='„…Sie kaufen das GANZE Haus?! 😳"'; coin(); react('😎','greedy',()=>got("Mit Baurecht kaufst du das Haus gleich mit. Der Vermieter is jetzt DEIN Mieter. 😎")); });
+    document.getElementById('bribe').addEventListener('click',()=>{ dis(); llText.textContent='„…na gut, für DIE Summe drück ick ein Auge zu. 🤫"'; coin(); react('🤑','greedy',()=>got("Ein Kuvert später gehört die Wohnung dir. Willkommen in Berlin. 🔑")); });
+    document.getElementById('honest').addEventListener('click',()=>{ dis();
+      if(Math.random()<0.35){ llText.textContent='„…Ehrlichkeit? Bin ich gerührt."'; react('🥹','nod',()=>got("Ehrlichkeit! Er ist gerührt. Unrealistisch, aber schön.")); }
+      else { llText.textContent='„Ohne Schufa, Bürgen & drei Gehaltsnachweise? 🙅"'; boo(); react('🙅‍♂️','shake',()=>rej()); } }); }
   function got(m){ hasFlat=true; momente+=3; updateMomente(); jingle();
     panelEl().innerHTML=`<h2>🔑 Wohnung bekommen!</h2><div style="font-size:60px">🎉🔑</div><div class="miniDesc">${m}</div><button class="mBtn big" id="ok">🎉 Endlich! (+3 🌟)</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();toast('🔑 Eigene Wohnung in Berlin – Legende!');}); }
@@ -2925,6 +2953,67 @@ function miniBus(){
   function loseMood(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} stopEng(); boo(); say("Fahrgastaufstand. Bitte alle aussteigen.");
     panelEl().innerHTML=`<h2>😤 Fahrgast-Aufstand!</h2><div style="font-size:52px">🧍😤🚌</div><div class="miniDesc">Zu lahm, zu ruckelig, zu viel gehupt – das Berliner Publikum meutert: „FARIKAAARTE!" und „Können Se ma anhalten?!". Alle steigen aus und laufen. Zu Fuß is eh schneller.</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniBus();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
+}
+
+/* ---------- MG13: Zuzugsstopp – Berlin schlechtreden ---------- */
+function miniZuzug(){
+  openMini();
+  panelEl().innerHTML=`<h2>🙅 Zuzugsstopp!</h2>
+    <div class="miniDesc">Alle wollen nach Berlin – Miete explodiert! <b>Rede die Stadt schlecht</b>, damit die Zugezogenen 🧳 kehrtmachen, bevor sie sich <b>🏠 anmelden</b>. Klick das passende <b>Klischee</b> auf den vordersten Typ – triffst du seine <b>Schwäche</b> 💥, flieht er sofort. Wimmel <b>${12}</b> ab!</div>
+    <canvas id="mCanvas" width="360" height="330"></canvas>
+    <div class="mBar"><i id="zBar" style="background:#e0466a"></i><div class="lbl" id="zLbl">Zuzug 0%</div></div>
+    <div id="zargs" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:6px"></div>
+    <div id="miniResult">Los, sei unhöflich!</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const zBar=document.getElementById('zBar'),zLbl=document.getElementById('zLbl'),res=document.getElementById('miniResult'),argsEl=document.getElementById('zargs');
+  const TYPES=[{e:'🧳',n:'Touri',w:'grau'},{e:'💼',n:'Startup-Bro',w:'invest'},{e:'🎧',n:'Techno-Touri',w:'berghain'},
+    {e:'🤳',n:'Influencer',w:'netz'},{e:'👨‍👩‍👧',n:'Familie',w:'kita'},{e:'🧽',n:'Schwabe',w:'kehr'}];
+  const ARGS=[{k:'grau',t:'🌧️ Immer grau'},{k:'invest',t:'💸 Keine Investoren'},{k:'berghain',t:'🚪 Berghain: Nein'},
+    {k:'netz',t:'📵 Kein Netz'},{k:'kita',t:'👶 Kita erst 2035'},{k:'kehr',t:'🧹 Keiner kehrt'}];
+  let list=[], spawnT=0.6, zuzug=0, over=false, goal=12, fended=0, shake=0, fl=[];
+  const LINE=H-40;
+  function spawn(){ const ty=TYPES[(Math.random()*TYPES.length)|0]; list.push({ty,x:34+Math.random()*(W-68),y:-18,v:16+Math.random()*8+fended*0.9,hp:2,flee:0,wob:Math.random()*6}); }
+  function hit(arg){ if(over)return; let target=null; for(const p of list){ if(p.flee)continue; if(!target||p.y>target.y)target=p; }
+    if(!target){ res.textContent='Keiner da – warte kurz…'; return; }
+    if(target.ty.w===arg.k){ target.hp=0; target.flee=1; fended++; boo(); fl.push({t:'😱 „Ok, dann Leipzig!"',x:target.x,y:target.y,life:1.1});
+      res.textContent='💥 Volltreffer! '+target.ty.n+' flieht! ('+fended+'/'+goal+')'; }
+    else { target.hp-=1; beep(300,0.06,'square',0.08); fl.push({t:'😒 -1',x:target.x,y:target.y,life:0.7});
+      if(target.hp<=0){ target.flee=1; fended++; fl.push({t:'👋 „Zu anstrengend hier."',x:target.x,y:target.y,life:1}); res.textContent='👋 '+target.ty.n+' abgewimmelt! ('+fended+'/'+goal+')'; }
+      else res.textContent='😒 '+target.ty.n+' zögert… (Schwäche: '+target.ty.w+'?)'; }
+    if(fended>=goal){ over=true; return win(); } }
+  ARGS.forEach(a=>{ const b=document.createElement('button'); b.className='mBtn alt'; b.style.cssText='margin:0;font-size:12px;padding:7px 9px'; b.textContent=a.t; mOn(b,'click',()=>hit(a)); argsEl.appendChild(b); });
+  let last=performance.now();
+  function loop(now){ if(!miniActive)return; let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05;
+    if(!over){ spawnT-=dt; if(spawnT<=0){ spawnT=Math.max(0.5,1.3-fended*0.06); spawn(); }
+      for(const p of list){ if(p.flee){ p.y-=90*dt; p.flee+=dt; } else p.y+=p.v*dt; }
+      for(const p of list){ if(!p.flee && p.y>=LINE){ p.done=true; zuzug=Math.min(100,zuzug+9); shake=8; beep(160,0.2,'sawtooth',0.14); fl.push({t:'🏠 zieht her!',x:p.x,y:LINE-6,life:1}); } }
+      list=list.filter(p=>!p.done && p.y>-40 && !(p.flee&&p.flee>1.3));
+      if(zuzug>=100){ over=true; return lose(); }
+    }
+    for(const f of fl) f.life-=dt; fl=fl.filter(f=>f.life>0);
+    zBar.style.width=zuzug+'%'; zLbl.textContent='Zuzug '+(zuzug|0)+'% · abgewimmelt '+fended+'/'+goal;
+    ctx.save(); if(shake>0){ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake); shake-=dt*40; if(shake<0)shake=0;}
+    ctx.fillStyle='#16233f'; ctx.fillRect(0,0,W,H);
+    // Anmeldungs-Zone unten (die wollen da hin)
+    ctx.fillStyle='#3a1220'; ctx.fillRect(0,LINE,W,H-LINE); ctx.fillStyle='#ff8a8a'; ctx.font='700 15px Segoe UI'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏠 BÜRGERAMT – ANMELDUNG (hier NICHT durchlassen!)', W/2, LINE+(H-LINE)/2);
+    // Zugezogene
+    ctx.textBaseline='middle';
+    for(const p of list){ ctx.globalAlpha=p.flee?Math.max(0,1.3-p.flee):1;
+      ctx.font='30px serif'; ctx.fillText(p.ty.e, p.x+Math.sin(now/200+p.wob)*3, p.y);
+      ctx.globalAlpha*=1; ctx.font='700 10px Segoe UI'; ctx.fillStyle='#cfe0ff'; ctx.fillText(p.ty.n, p.x, p.y+20);
+      if(!p.flee){ ctx.fillStyle='#ff6b8a'; for(let h=0;h<p.hp;h++) ctx.fillRect(p.x-6+h*7,p.y-22,5,3); }
+      ctx.globalAlpha=1; }
+    for(const f of fl){ ctx.globalAlpha=Math.max(0,f.life); ctx.fillStyle='#ffe9a8'; ctx.font='700 12px Segoe UI'; ctx.fillText(f.t,f.x,f.y-(1-f.life)*16); ctx.globalAlpha=1; }
+    ctx.restore();
+    miniRAF=requestAnimationFrame(loop); }
+  miniRAF=requestAnimationFrame(loop);
+  function win(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} momente+=2; updateMomente(); fanfare();
+    panelEl().innerHTML=`<h2>🙅 Berlin gerettet!</h2><div style="font-size:52px">🧳💨🚫</div><div class="miniDesc">${goal} Zugezogene erfolgreich vergrault – Berlin bleibt <b>schön grau, kaputt & (halbwegs) günstig</b>. Die Miete steigt heute nur um 4 %. Ein voller Erfolg! <i>(Du bist jetzt selbst Alteingesessener. Herzlichen Glückwunsch, du meckerst ab sofort über Zugezogene.)</i></div><button class="mBtn big" id="ok">😎 Ur-Berliner (+2 🌟)</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini(); toast('🙅 Zuzug gestoppt – Berlin bleibt Berlin!');}); }
+  function lose(){ if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;} beep(170,0.5,'sawtooth',0.2); boo();
+    panelEl().innerHTML=`<h2>🏙️ Berlin ist voll!</h2><div style="font-size:52px">🧳🏠📈</div><div class="miniDesc">Zu viele haben sich angemeldet – die Mieten explodieren, der Kotti wird Latte-Land, überall Concept-Stores. „Ick zieh nach Leipzig." 😔</div><button class="mBtn big" id="ok">🔁 Nochmal</button><button class="mBtn alt" id="c">Aufgeben</button>`;
+    document.getElementById('ok').addEventListener('click',()=>{closeMini();miniZuzug();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
 </script>

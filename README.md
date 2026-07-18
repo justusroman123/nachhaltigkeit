@@ -128,6 +128,17 @@ U-Bahnhof** (die Kontrolleure schnappen dich am Bahnsteig).
 - 🕶️ **Berlin-Look-Battle** (neu): Kombinier ein **so absurdes Outfit** wie
   möglich (Bauchfrei-Netzhemd, Sandalen mit Socken, Taube auf der Schulter …).
   Genug Absurditäts-Punkte = Ikone von Kreuzberg. „Is dit Kunst oder kann dit weg?"
+- 🙅 **Zuzugsstopp** (neu): Alle wollen nach Berlin – **rede die Stadt schlecht**,
+  damit die Zugezogenen 🧳 kehrtmachen, bevor sie sich beim Bürgeramt **anmelden**!
+  Klick das passende Klischee („🌧️ Immer grau", „🚪 Berghain: Nein", „👶 Kita erst
+  2035" …) auf den vordersten Typ – triffst du seine **Schwäche** 💥, flieht er
+  („Ok, dann Leipzig!"). Wimmel 12 ab, sonst explodieren die Mieten.
+
+Beim **Gewinnen macht deine Figur draußen einen kleinen Freuden-Hüpfer** 🙌
+(🎉-Konfetti), beim **Angefahrenwerden reißt sie schockiert den Mund auf**. In der
+**Wohnungsbesichtigung reagiert der Vermieter jetzt animiert** – er **schüttelt
+den Kopf** 🙅 (Absage), **nickt gerührt** 🥹 (Ehrlichkeit) oder wird **gierig** 🤑
+(Bestechung) – und die drängelnden Bewerber:innen erschrecken sichtbar („Ey!" 😱).
 - 👁️ **Blickduell in der U-Bahn** (neu): In Berlin gilt **zu langer Blickkontakt
   = Aggression**. Starr den Fahrgast an, solange er **wegschaut** (😌), und
   **lös den Blick sofort**, wenn er **zurückschaut** (👀) – sonst steht er auf:
