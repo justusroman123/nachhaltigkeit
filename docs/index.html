@@ -1148,7 +1148,7 @@ const KIEZ=[
  {land:'oberbaum', pool:['bear','statue','buergeramt','makler','schwabe','passant']},
  {land:'fernsehturm', pool:['politiker','raveoma','tauben','meckerrentner','bear','schwabe']},
 ];
-const STREET_SPOTS=[{x:-18,z:6},{x:-4,z:5},{x:4,z:6.5},{x:16,z:6},{x:-8,z:9},{x:14,z:9},{x:-20,z:9}];
+const STREET_SPOTS=[{x:-18,z:6},{x:4,z:5.5},{x:22,z:6},{x:42,z:7},{x:-18,z:15},{x:8,z:15},{x:38,z:13}];
 
 function landmark(kind,p){
   if(kind==='fernsehturm'){ cyl(0.9,1.4,26,mat(0xcfd6e2),-30,13,20,p); ball(2.6,mat(0xd0d8e6),-30,25,20,p);
@@ -1308,21 +1308,21 @@ function buildStreet(i){
   // U-Bahn-Eingang
   uEntranceStreet(ST_ENTRANCE.x,ST_ENTRANCE.z,streetGroup);
   streetColl.push({x:ST_ENTRANCE.x,z:ST_ENTRANCE.z,r:1.7});
-  // Späti + Imbiss mit Details (Schaufenster mit Innenleben)
-  shopFront(-32,14,6,3,0x2b6b3a,0x2b6b3a,'SPÄTI 24h',0xf3d000,'spaeti'); streetColl.push({x:-32,z:14,r:3});
-  box(1.3,1.2,0.8,mat(0xff8800),-28.4,0.6,11.4,0,streetGroup);
-  shopFront(22,14,5.4,2.9,0xcc2222,0xffcc33,'🌭 IMBISS',0xffcc33,'imbiss'); streetColl.push({x:22,z:14,r:2.8});
-  // Deko
-  litfass(12,9,streetGroup);
-  for(const tx of [-20,-4,10,30]) { tree(tx,3.4,streetGroup); streetColl.push({x:tx,z:3.4,r:0.6}); }
-  for(const lx of [-26,-10,6,24]) streetlamp(lx,1.2,streetGroup);
-  car(-40,-4.4,0x2a2a2a,Math.PI,streetGroup); car(42,-1.7,0x555b66,0,streetGroup); // geparkt
+  // Späti + Imbiss an der Häuserzeile (weit auseinander)
+  shopFront(-30,15,6,3,0x2b6b3a,0x2b6b3a,'SPÄTI 24h',0xf3d000,'spaeti'); streetColl.push({x:-30,z:15,r:3});
+  box(1.3,1.2,0.8,mat(0xff8800),-26,0.6,15,0,streetGroup);   // Getränkekiste vorm Späti
+  shopFront(26,15,5.4,2.9,0xcc2222,0xffcc33,'🌭 IMBISS',0xffcc33,'imbiss'); streetColl.push({x:26,z:15,r:2.8});
+  // Deko am Bordstein (vorne, weg von den Ständen)
+  litfass(-8,3.2,streetGroup);
+  for(const tx of [-36,-16,6,24]) { tree(tx,3.4,streetGroup); streetColl.push({x:tx,z:3.4,r:0.6}); }
+  for(const lx of [-42,-20,10,38]) streetlamp(lx,1.5,streetGroup);
+  car(-44,-4.4,0x2a2a2a,Math.PI,streetGroup); car(44,-1.7,0x555b66,0,streetGroup); // geparkt
   buildTraffic();
-  // SEV-Bus am Straßenrand (viel Abstand zu den Ständen); Interakt-Eintrag folgt in buildStreetExtras
-  sevBus(-30,4.6,streetGroup);
-  // E-Scooter-Haufen
-  for(let k=0;k<4;k++) box(0.2,0.9,1.4,mat([0x22aa88,0xff5533,0x5533ff,0x22aa88][k]),34+k*0.15,0.45+k*0.05,6+k*0.2,0.3*k,streetGroup);
-  streetColl.push({x:34.3,z:6.3,r:1.1});
+  // SEV-Bus am west-Straßenrand; Interakt-Eintrag folgt in buildStreetExtras
+  sevBus(-40,4.7,streetGroup);
+  // E-Scooter-Haufen am Bordstein
+  for(let k=0;k<4;k++) box(0.2,0.9,1.4,mat([0x22aa88,0xff5533,0x5533ff,0x22aa88][k]),16+k*0.15,0.45+k*0.05,3+k*0.2,0.3*k,streetGroup);
+  streetColl.push({x:16.3,z:3.3,r:1.1});
   // Parkbank – ordentlich an der Häuserzeile, mit Blick zur Straße (nicht mitten im Weg)
   function bench(bx,bz){
     box(2.2,0.12,0.66,mat(0x6b4a2a),bx,0.5,bz,0,streetGroup);       // Sitzfläche
@@ -1330,10 +1330,10 @@ function buildStreet(i){
     for(const lx of [-0.9,0.9]){ box(0.1,0.5,0.5,mat(0x33383f),bx+lx,0.25,bz,0,streetGroup); } // Beine
     streetColl.push({x:bx,z:bz,r:1.2});
   }
-  bench(-16.5,15.6); bench(9,15.6);
+  bench(-24,16.4); bench(14,16.6);
   // Mülleimer neben der Bank an der Häuserzeile
-  box(0.5,0.9,0.5,mat(0x2f6a3a),-13.6,0.45,15.6,0,streetGroup); box(0.5,0.14,0.5,mat(0x224a28),-13.6,0.95,15.6,0,streetGroup);
-  streetColl.push({x:-13.6,z:15.6,r:0.5});
+  box(0.5,0.9,0.5,mat(0x2f6a3a),-21,0.45,16.4,0,streetGroup); box(0.5,0.14,0.5,mat(0x224a28),-21,0.95,16.4,0,streetGroup);
+  streetColl.push({x:-21,z:16.4,r:0.5});
   // Graffiti an Hauswand-Basis
   for(let k=0;k<5;k++) graffiti(-40+k*20,16.9,3,["#ff3b7b","#3bd1ff","#f3d000","#8bff5a","#ff8a3b"][k],["BERLIN","XBERG","ACAB♥","1UP","MATE"][k],streetGroup);
   // Weird Gestalten
@@ -1341,13 +1341,13 @@ function buildStreet(i){
     const n=addPersonNPC(npcs,streetGroup,def,spot.x,spot.z,Math.PI,streetColl);
     if(streetDone[i].has(def.name)){ n.collected=true; streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }
   });
-  // Dealer-Ecke: zwei/drei stehen zusammen und fiepen im Chor 🐹
-  groupDealers=[]; groupCenter={x:0,z:5.5};
-  const clump=[['dealerXtrem',-1.4,5],['dealer',1.4,5],['dealerBank',0,6.6]];
+  // Dealer-Ecke: an der Häuserwand, klar abseits vom Ausgang – eigener „Görli-Corner" 🐹
+  groupDealers=[]; groupCenter={x:-6,z:15.5};
+  const clump=[['dealerXtrem',-7.6,15],['dealer',-4.4,15],['dealerBank',-6,16.6]];
   clump.forEach(([key,cx,cz])=>{ const def=STREET_POOL[key]; const n=addPersonNPC(npcs,streetGroup,def,cx,cz,Math.PI,streetColl);
     if(streetDone[i].has(def.name)){ n.collected=true; streetGroup.remove(n.icon); n.icon=makeFloatIcon("✅",n.x,2.7,n.z,streetGroup); }
     groupDealers.push(n); });
-  makeFloatIcon("🐹",0,3.2,4.4,streetGroup);
+  makeFloatIcon("🐹",-6,3.6,14.2,streetGroup);
   groupShoutT=3;
   hazards=[]; hazards.push(makeHazard('scooter',6,15)); hazards.push(makeHazard('cyclist',9,-11.5));
   buildStreetExtras(i);
@@ -1978,7 +1978,7 @@ function buildStreetExtras(i){
   for(let k=0;k<8;k++){ const c=cloud(-46+k*13+(i*4),17+((k*5)%6),2+((k%4)*6),streetGroup); c.scale.set(0.8+((k%3)*0.4),0.5,0.8+((k%3)*0.4)); cloudMeshes.push(c); }
   const sun=new THREE.Mesh(new THREE.SphereGeometry(2.4,12,10),new THREE.MeshBasicMaterial({color:0xfff2b0}));
   sun.position.set(32,27,42); sun.userData.noShadow=true; streetGroup.add(sun);
-  const wx=-38, wz=15;
+  const wx=-40, wz=15;
   box(4.2,4.6,0.5,mat(0x7a5330),wx,2.3,wz,0,streetGroup);
   box(1.7,2.8,0.2,mat(0x281a10),wx,1.4,wz-0.36,0,streetGroup);
   const wsign=makeTextPlane("🏠 BESICHTIGUNG",256,64,"#ffffff","#101010",40); wsign.scale.set(3.6,0.9,1);
@@ -1989,7 +1989,7 @@ function buildStreetExtras(i){
     pr.position.set(px,0,pz); pr.rotation.y=Math.PI; pr.scale.set(0.95,0.95,0.95); streetGroup.add(pr); }
   makeFloatIcon("🏠",wx,4.0,wz-1.4,streetGroup); streetColl.push({x:wx,z:wz,r:2.6});
   streetInteract.push({x:wx,z:11.6,r:2.2,name:"Wohnungsbesichtigung",verb:"REIN",kind:'wohnung'});
-  const sx=28, sz=11;
+  const sx=34, sz=6;
   for(const cxx of [sx-0.5,sx+0.5]) cyl(0.02,0.34,0.7,mat(0xff7a1a),cxx,0.35,sz,streetGroup);
   const ssign=makeTextPlane("🛴 SLALOM",256,64,"#111111","#f3d000",44); ssign.scale.set(2.6,0.7,1);
   ssign.position.set(sx,1.7,sz); streetGroup.add(ssign);
@@ -1997,7 +1997,7 @@ function buildStreetExtras(i){
   streetColl.push({x:sx,z:sz,r:0.7});
   streetInteract.push({x:sx,z:sz,r:1.9,name:"Gehweg-Slalom",verb:"START",kind:'dodge'});
   // Länderfinanzausgleich-Stand
-  const fx=-24, fz=7;
+  const fx=-30, fz=6;
   box(1.6,1.0,1.0,mat(0x2a5a3a),fx,0.5,fz,0,streetGroup);
   for(let k=0;k<5;k++) box(0.22,0.22,0.22,new THREE.MeshStandardMaterial({color:0xf3c000,emissive:0x8a6a00,emissiveIntensity:0.4}),fx-0.5+k*0.25,1.12,fz,0,streetGroup);
   const fsign=makeTextPlane("💰 FINANZAUSGLEICH",256,64,"#111111","#f3c000",34); fsign.scale.set(2.9,0.72,1); fsign.position.set(fx,1.9,fz); streetGroup.add(fsign);
@@ -2005,42 +2005,42 @@ function buildStreetExtras(i){
   streetColl.push({x:fx,z:fz,r:1.0});
   streetInteract.push({x:fx,z:fz,r:1.9,name:"Länderfinanzausgleich",verb:"KLAUEN",kind:'finanz'});
   // Politiker-Schmieren-Stand (in JEDEM Kiez findbar)
-  const bxp=-14, bzp=11;
+  const bxp=-24, bzp=10.5;
   box(1.2,2.2,0.8,mat(0x14141f),bxp,1.1,bzp,0,streetGroup);
   const bsg=makeTextPlane("💼 POLITIKER",256,64,"#fff","#7a2b8e",34); bsg.scale.set(2.9,0.72,1); bsg.position.set(bxp,2.7,bzp-0.42); streetGroup.add(bsg);
   makeFloatIcon("💼",bxp,3.3,bzp,streetGroup);
   streetColl.push({x:bxp,z:bzp,r:0.8});
   streetInteract.push({x:bxp,z:bzp,r:1.4,name:"Politiker schmieren",verb:"SCHMIEREN",kind:'bribe'});
   // Görli bei Nacht – durch die Dealer schleichen (Fahrkartenkontrolle ist jetzt unten im U-Bahnhof!)
-  const kxp=8, kzp=11;
+  const kxp=12, kzp=6;
   box(1.0,1.6,0.6,mat(0x14261a),kxp,0.8,kzp,0,streetGroup);
   const ksg=makeTextPlane("🌙 GÖRLI NACHTS",256,64,"#fff","#1c7a3a",30); ksg.scale.set(2.9,0.72,1); ksg.position.set(kxp,2.2,kzp-0.32); streetGroup.add(ksg);
   makeFloatIcon("🌙",kxp,2.8,kzp,streetGroup);
   streetColl.push({x:kxp,z:kzp,r:0.7});
   streetInteract.push({x:kxp,z:kzp,r:1.4,name:"Görli bei Nacht durchqueren",verb:"SCHLEICHEN",kind:'nightpark'});
   // Verspätungen würfeln (BVG-Leitstelle, auch draußen)
-  const vxp=18, vzp=7;
+  const vxp=18, vzp=10.5;
   box(1.1,1.5,0.6,mat(0x7a2b8e),vxp,0.75,vzp,0,streetGroup);
   const vsg=makeTextPlane("🎲 VERSPÄTUNG",256,64,"#fff","#f3a51a",32); vsg.scale.set(2.9,0.72,1); vsg.position.set(vxp,2.1,vzp-0.32); streetGroup.add(vsg);
   makeFloatIcon("🎲",vxp,2.7,vzp,streetGroup);
   streetColl.push({x:vxp,z:vzp,r:0.7});
   streetInteract.push({x:vxp,z:vzp,r:1.4,name:"Verspätungen würfeln",verb:"WÜRFELN",kind:'versp'});
   // Bürgeramt – Bürokratie-Turm bauen
-  const uxp=-4, uzp=7;
+  const uxp=-12, uzp=10.5;
   box(1.2,1.7,0.7,mat(0x3a4a6a),uxp,0.85,uzp,0,streetGroup); box(0.9,0.6,0.05,mat(0xdfe6ee),uxp,1.4,uzp+0.37,0,streetGroup);
   const usg=makeTextPlane("📋 BÜRGERAMT",256,64,"#fff","#1a5fb4",32); usg.scale.set(2.9,0.72,1); usg.position.set(uxp,2.4,uzp-0.32); streetGroup.add(usg);
   makeFloatIcon("📋",uxp,3.0,uzp,streetGroup);
   streetColl.push({x:uxp,z:uzp,r:0.7});
   streetInteract.push({x:uxp,z:uzp,r:1.4,name:"Bürokratie-Turm bauen",verb:"STAPELN",kind:'buero'});
   // Berlin-Look – absurdes Outfit zusammenstellen
-  const oxp=40, ozp=8;
+  const oxp=28, ozp=10.5;
   box(0.9,2.0,0.5,mat(0x2a2f38),oxp,1.0,ozp,0,streetGroup); box(0.7,1.1,0.06,mat(0xff5aa0),oxp,1.5,ozp+0.28,0,streetGroup);
   const osg=makeTextPlane("🕶️ BERLIN-LOOK",256,64,"#111","#ff5aa0",30); osg.scale.set(2.9,0.72,1); osg.position.set(oxp,2.6,ozp-0.3); streetGroup.add(osg);
   makeFloatIcon("🕶️",oxp,3.2,ozp,streetGroup);
   streetColl.push({x:oxp,z:ozp,r:0.6});
   streetInteract.push({x:oxp,z:ozp,r:1.4,name:"Berlin-Look zusammenstellen",verb:"STYLEN",kind:'outfit'});
   // SEV-Bus (Mesh wird in buildStreet gebaut, hier nur der Einsteig-Punkt)
-  streetInteract.push({x:-30,z:4.6,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
+  streetInteract.push({x:-40,z:4.7,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
   // ===== Sichtbare Belohnungen =====
   const hx=40, hz=18;
   if(hasFlat){
@@ -2058,12 +2058,12 @@ function buildStreetExtras(i){
     makeFloatIcon("🏗️",hx,6.2,hz-3,streetGroup);
     streetColl.push({x:hx,z:hz,r:3.6});
   }
-  if(verspaetRecord>0){
-    box(0.3,5,0.3,mat(0x222222),0,2.5,13,0,streetGroup);
-    box(5.0,2.0,0.16,mat(0x0a0d14),0,5.4,13.02,0,streetGroup);
-    streetColl.push({x:0,z:13,r:0.5});
-    const bd=makeTextPlane("🚇 +"+verspaetRecord+" min",256,96,"#ff5a3a",null,54); bd.scale.set(4.7,1.85,1); bd.position.set(0,5.4,12.92); streetGroup.add(bd);
-    const bl=makeTextPlane("REKORD-VERSPÄTUNG",256,40,"#ffd23f",null,28); bl.scale.set(4.2,0.7,1); bl.position.set(0,6.55,12.92); streetGroup.add(bl);
+  if(verspaetRecord>0){ const rx=42;
+    box(0.3,5,0.3,mat(0x222222),rx,2.5,17,0,streetGroup);
+    box(5.0,2.0,0.16,mat(0x0a0d14),rx,5.4,17.02,0,streetGroup);
+    streetColl.push({x:rx,z:17,r:0.5});
+    const bd=makeTextPlane("🚇 +"+verspaetRecord+" min",256,96,"#ff5a3a",null,54); bd.scale.set(4.7,1.85,1); bd.position.set(rx,5.4,16.92); streetGroup.add(bd);
+    const bl=makeTextPlane("REKORD-VERSPÄTUNG",256,40,"#ffd23f",null,28); bl.scale.set(4.2,0.7,1); bl.position.set(rx,6.55,16.92); streetGroup.add(bl);
   }
 }
 
