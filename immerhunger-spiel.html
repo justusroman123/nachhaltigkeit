@@ -86,7 +86,8 @@
     letter-spacing:.02em; color:#ff6b5e; text-shadow:0 3px 0 rgba(90,0,0,.8); margin-bottom:8px;}
   #overreason{font-size:clamp(14px,4vw,17px); color:#ffcf9e; margin-bottom:18px; max-width:38ch;}
   .credit{position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); font-size:11px;
-    letter-spacing:.18em; color:#8a93ad; text-transform:uppercase;}
+    letter-spacing:.18em; color:#8a93ad; text-transform:uppercase; pointer-events:none;}
+  .screen{overflow-y:auto;}
   .btn:focus-visible,#mute:focus-visible{outline:3px solid #ffe9a8; outline-offset:3px;}
 </style>
 
@@ -107,9 +108,9 @@
 <button id="mute" class="hidden" aria-label="Ton an/aus">🔊</button>
 
 <div id="start" class="screen">
-  <div class="kicker">König der Kirschen · Berlin</div>
+  <div class="kicker">Der Anti-Superheld aus Berlin</div>
   <h1 class="logo">Immer<br>Hunger</h1>
-  <div class="tag">Ick habe IMMERHUNGER!</div>
+  <div class="tag">Andere Helden retten die Stadt. Du frisst se.</div>
   <div class="mascot">🍒👑</div>
   <p class="howto">
     <b>Steuerung:</b> Leg den Finger irgendwo aufs Display und zieh in eine
@@ -123,7 +124,10 @@
     <b>Goldene Currywurst 👑</b> (friss ALLES!), <b>Späti-Magnet 🧲</b> und
     <b>Berghain-Modus 🪩</b> (dreifache Punkte)!<br>
     Die goldenen Pfeile führen dich zu den Sehenswürdigkeiten, von
-    <b>Spandau bis Neukölln</b>. Und denk dran: Der Hunger-Balken darf NIE leer werden!
+    <b>Spandau bis Neukölln</b>. Ab einer jewissen Größe kommen die
+    <b>Endgegner</b>: Mega-Baustelle 🚧, Miethai 🦈 und der Amtsschimmel 🐴.
+    Und nach’m Fernsehturm? <b>Runde 2</b> – allet uff Anfang, aber die Punkte zählen doppelt!
+    Der Hunger-Balken darf NIE leer werden!
   </p>
   <button class="btn" id="startbtn">Los geht’s!</button>
   <div class="credit">Immerhunger · Berlin Edition</div>
@@ -188,7 +192,7 @@ function sndOver(){ [392,330,262,196].forEach((f,i)=>beep(f,0.22,'triangle',0.15
 muteBtn.addEventListener('click',()=>{ muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; });
 
 /* ---------------- Sprüche ---------------- */
-const SAY_IDLE=['ICK HABE IMMERHUNGER!','Ick hab immer Hunger. IMMER. HUNGER.','Hunger? IMMER!','IMMERHUNGER is keen Hobby – dit is Lebenseinstellung!','Wo is dit Essen, ey?','Dit is meine Stadt!','Icke. Fresse. Allet.','Berlin, ick fress dir!','Hunger! Und zwar dolle!','Wat kiekste? Ick ess nur.','Dit Knurren? Dit is mein Magen!','Berlin is schön. Und lecker!','Frühstück, Mittach, Abendbrot – und dazwischen: ICK!','Kalorien zählen? Ick zähl nur Opfer.','Mein Ernährungsplan: JA.','Die Stadt gehört denen, die se fressen!'];
+const SAY_IDLE=['ICK HABE IMMERHUNGER!','Ick hab immer Hunger. IMMER. HUNGER.','Hunger? IMMER!','IMMERHUNGER is keen Hobby – dit is Lebenseinstellung!','Wo is dit Essen, ey?','Dit is meine Stadt!','Icke. Fresse. Allet.','Berlin, ick fress dir!','Hunger! Und zwar dolle!','Wat kiekste? Ick ess nur.','Dit Knurren? Dit is mein Magen!','Berlin is schön. Und lecker!','Frühstück, Mittach, Abendbrot – und dazwischen: ICK!','Kalorien zählen? Ick zähl nur Opfer.','Mein Ernährungsplan: JA.','Die Stadt gehört denen, die se fressen!','Andere Helden retten die Stadt. Ick fress se.','Superkraft? Verdauung.','Mit großem Hunger kommt große Verantwortungslosigkeit.','Batman hat’n Butler. Ick hab’n Späti.','Wowereit hatte recht: arm, aber sexy. Ick: satt UND sexy.','Der Senat diskutiert noch. Ick esse schon.'];
 const SAY_EAT=['Knorke!','Lecker, wa?','Hamma!','Dit schmeckt!','Läuft bei mir!','Jut!','Mehr davon!','Nom nom nom!','Watt’n Happen!','Da hamse wat Jutes!','Und ick hab IMMER noch Hunger!','Dit war’n Anfang!','Nachschlag, bitte!','Vorspeise. Klar, wa?','Runter damit!','Schmeckt nach mehr. Allet schmeckt nach mehr.'];
 const SAY_SPECIFIC={
   '🌯':['Mit alles und scharf!','Der beste Döner is der in mir!','Döner macht schöner. Kiek mich an!'],
@@ -223,7 +227,13 @@ const SAY_SPECIFIC={
   '🏪':['Späti-Snack, jeil!','Der Späti hatte offen. Sein Fehler.'],
   '🍦':['Softeis am Alex!','Hirnfrost? Hab keen Hirn, nur Hunger!'],
   '🥐':['Frühstück!','Croissant – très jut!'],
-  '🗑️':['Pfand jehört dazu!','Mülltrennung: allet in mich.']
+  '🗑️':['Pfand jehört dazu!','Mülltrennung: allet in mich.'],
+  '🚶':['Tschuldigung! Stand im Weg.','Passant? Passiert.','Der wollte eh zur Tram. Kommt eh nich.'],
+  '🏃':['Jogger – schmeckt nach Elektrolyten.','10.000 Schritte? Alle in mir.'],
+  '🕺':['Der wollte ins Berghain. Ick bin dunkler.','Afterhour is jetzt Innereien-Hour.'],
+  '🤳':['Influencer: endlich Content mit Substanz. In mir.','Dit Reel wird nie fertig. Sorry, Follower.','#foodporn – wörtlich jenommen.'],
+  '🤹':['Applaus, Applaus – und Abgang!','Straßenshow vorbei. Für immer.'],
+  '🪧':['AfD-Plakat jefressen – endlich ma ne Abschiebung, die klappt!','AfD-Plakat? Schmeckt braun und ranzig. Runterjewürgt – für Berlin!','CDU-Plakat: schmeckt wie die 90er. Trocken.','SPD-Plakat – außen rot, innen heiße Luft.','Grünen-Plakat: bio, regional, jefressen!','FDP-Plakat? Digital first, Jeschmack second.','Linken-Plakat: Enteignung? Ick fang beim Plakat an.','Wahlversprechen schmecken am besten VOR der Wahl!','Koalitionsverhandlungen? Ick verhandle nich. Ick fresse.','Politiker-Plakate: dit einzige Versprechen, dit ick halte: FRESSEN.']
 };
 const SAY_STAGE=['ICK HABE IMMERHUNGER – UND WIE!','Größer! Hungriger! ICKE!','Ick wachse wie die Mieten!','Noch lange nich satt!','Berlin, mach dir keene Sorgen. Doch.','Krone sitzt, Hunger bleibt!','Der BER wurde ooch ma fertig. Ick nie!','Wachstum! Ohne Fördermittel!'];
 const SAY_HUNGRY=['ICK HABE IMMERHUNGER! Futter, zack zack!','Magen leer! Allet leer! HUNGER!','Ohne Mampf keen Dampf!','SOS – Kirsche braucht Kalorien!','Gleich fress ick den Asphalt!'];
@@ -233,10 +243,13 @@ const SAY_ENEMY_EAT={
   '🐻':['Sorry Bärchen – Berlin jehört jetzt mir!','Dit Wappen brauch’n neuet Tier.','Bärendienst? Bärenmahlzeit!'],
   '👮':['Knöllchen? Jefressen!','Dit Ordnungsamt is jetzt Innereiensache.','Falschparken? Für immer erledigt.'],
   '🛴':['Roller-Rowdy verputzt!','Ein E-Roller weniger uffm Gehweg!','9 km/h Restgeschwindigkeit. In mir.'],
-  '🐀':['Ratte? Schmeckt nach U8!','Kanalratte – jetzt Kirschenratte.','Ratatouille, Berliner Art.']
+  '🐀':['Ratte? Schmeckt nach U8!','Kanalratte – jetzt Kirschenratte.','Ratatouille, Berliner Art.'],
+  '🚧':['Baustelle fertich – ick bin schneller als die Bahn!','Nach 20 Jahren: Baustelle abjeschlossen. Von mir.','Der BER hat länger jedauert!'],
+  '🐴':['Amtsschimmel jefressen – Antrag jenehmicht!','Formular A38? Verdaut!','Die Bürokratie is jetzt in Bearbeitung. In meinem Magen.'],
+  '🦈':['Miethai verputzt – Mietendeckel von innen!','Kaution? Kriegste nie wieder. Wie immer.','Eigenbedarf: MEIN Bedarf.']
 };
 const SAY_GIVEUP=['Na jut, hau ab...','Keene Lust mehr!','Puh... zu schnell!','Feierabend!','Ick mach Pause. Gewerkschaft.'];
-const OVER_HUNGER=['Verhungert! In Berlin! Wie is dit möglich?!','Der Magen war leer – dit war’s, Digga!','Ohne Futter keene Krone. Schade, wa?','Zu langsam jefressen – Berlin vergisst nich!','Verhungert. Die Tauben kreisen schon...','Berlin frisst seine Kinder. Heute: dich.','Dit Ordnungsamt hat schon den Parkschein für deine Grabstelle jeschrieben.'];
+const OVER_HUNGER=['Verhungert! In Berlin! Wie is dit möglich?!','Der Magen war leer – dit war’s, Digga!','Ohne Futter keene Krone. Schade, wa?','Zu langsam jefressen – Berlin vergisst nich!','Verhungert. Die Tauben kreisen schon...','Berlin frisst seine Kinder. Heute: dich.','Dit Ordnungsamt hat schon den Parkschein für deine Grabstelle jeschrieben.','Held? Nee. Legende? Vielleicht. Satt? Niemals.','Der Senat hat dein Ableben zur Kenntnis jenommen. Bearbeitungszeit: 14 Jahre.'];
 
 // pick() never repeats the last few lines – immer wat Neuet
 const recentSays=[];
@@ -290,12 +303,13 @@ const WORLD=6000, CELL=500, STREET=90;
 const RIVER={y0:2680, y1:2960};
 function hash2(a,b){ let h=(a*374761393+b*668265263)^0x5bf03635; h=(h^(h>>13))*1274126177; h^=h>>16; return (h>>>0)/4294967295; }
 
-const LABELS={'🏪':'SPÄTI 24/7','🚃':'U-BAHN','🚚':'DÖNER-TRUCK','🚌':'BVG'};
+const LABELS={'🏪':'SPÄTI 24/7','🚃':'U-BAHN','🚚':'DÖNER-TRUCK','🚌':'BVG',
+  '🚶':'PASSANT','🏃':'JOGGER','🕺':'TECHNO-TOURI','🤳':'INFLUENCER','🤹':'STRASSENKÜNSTLER','🪧':'WAHLPLAKAT'};
 const TIERS=[
   {min:5, max:8,  e:['🍪','🍬','🍓','🥜','🍇'], flee:false},
   {min:10,max:14, e:['🥨','🍩','🧁','🥐','🍦','🧇','🥟'], flee:false},
   {min:16,max:22, e:['🍕','🍔','🌭','🌯','🍗','🍟'], flee:false},
-  {min:26,max:36, e:['🐦','🛴','🚲','🗑️','🐈'], flee:true},
+  {min:26,max:36, e:['🐦','🛴','🚲','🗑️','🐈','🚶','🏃','🕺','🤳','🤹','🪧'], flee:true},
   {min:45,max:62, e:['🚗','🚕','🚙','🌳','🚚'], flee:false, drive:true},
   {min:70,max:92, e:['🚌','🚚','🚃','🚛'], flee:false, drive:true},
   {min:110,max:150,e:['🏠','🏘️','⛪','🏪'], flee:false},
@@ -308,7 +322,11 @@ const ENEMY_TYPES=[
   {e:'🐀', r:24,  sp:135, aggro:300, name:'KANALRATTE', count:7,  shrink:0.97},
   {e:'🛴', r:46,  sp:180, aggro:380, name:'ROLLER-ROWDY', count:5, shrink:0.95},
   {e:'👮', r:85,  sp:105, aggro:420, name:'ORDNUNGSAMT', count:4, shrink:0.94},
-  {e:'🐻', r:132, sp:90,  aggro:470, name:'BERLINER BÄR', count:3, shrink:0.92}
+  {e:'🐻', r:132, sp:90,  aggro:470, name:'BERLINER BÄR', count:3, shrink:0.92},
+  // Endgegner – tauchen erst auf, wenn du groß genug bist, um Ärger zu verdienen
+  {e:'🚧', r:270, sp:75,  aggro:700, name:'MEGA-BAUSTELLE', count:0, shrink:0.90, boss:true, minR:200, intro:'ENDGEGNER: DIE MEGA-BAUSTELLE! (seit 2006 im Bau)'},
+  {e:'🦈', r:330, sp:150, aggro:850, name:'DER MIETHAI', count:0, shrink:0.87, boss:true, minR:280, intro:'ENDGEGNER: DER MIETHAI! Er will deine Kaution!'},
+  {e:'🐴', r:390, sp:120, aggro:900, name:'DER AMTSSCHIMMEL', count:0, shrink:0.85, boss:true, minR:340, intro:'ENDGEGNER: DER AMTSSCHIMMEL! Er wiehert in Formularen!'}
 ];
 const CHASE_MAX=3.5, CHASE_COOL=6, GRACE=12;
 
@@ -339,7 +357,7 @@ let score=0, best=0, foodsEaten=0, combo=0, comboTimer=0, hunger=100, stageIdx=0
 let objects=[], parts=[], pops=[], msgs=[], respawnQ=[];
 let shake=0, bubble=null, idleT=6;
 let buffs={garlic:0,double:0,turbo:0,royal:0,magnet:0,rave:0}, puTimer=9, hungryWarned=false, lastBuffLine='';
-let curDistrict='';
+let curDistrict='', round=1, roundResetT=0, spawnedBosses=[];
 try{ best=parseInt(localStorage.getItem('immerhunger_best2')||'0',10)||0; }catch(e){}
 
 const player={ x:3000, y:3600, r:16, vx:0, vy:0, mouth:0, chomp:0, wob:0, face:1, hurt:0, moving:false };
@@ -402,6 +420,7 @@ function resetGame(){
   parts=[]; pops=[]; msgs=[]; respawnQ=[]; shake=0; tGlobal=0; bubble=null; idleT=5;
   buffs={garlic:0,double:0,turbo:0,royal:0,magnet:0,rave:0}; puTimer=9; hungryWarned=false; lastBuffLine='';
   curDistrict=districtAt(player.x,player.y);
+  round=1; roundResetT=0; spawnedBosses=[];
   player.x=3000; player.y=3600; player.r=16; player.hurt=0; player.chomp=0; player.vx=0; player.vy=0;
   joy.active=false;
   zoom=Math.min(1.3,(H*0.115)/player.r);
@@ -412,7 +431,7 @@ function resetGame(){
 function fmtSize(){ return (player.r/16).toFixed(player.r<160?1:0); }
 function updateHud(){
   scoreEl.textContent=score;
-  stageEl.textContent=STAGES[stageIdx].n+(curDistrict?' · '+curDistrict:'');
+  stageEl.textContent=(round>1?'RUNDE '+round+' · ':'')+STAGES[stageIdx].n+(curDistrict?' · '+curDistrict:'');
   comboEl.textContent=((combo>=2?('FRESS-COMBO ×'+combo+'  '):'')+lastBuffLine).trim();
   hungerFill.style.width=Math.max(0,Math.min(100,hunger))+'%';
   sizeEl.textContent='🍒 '+fmtSize()+'×';
@@ -506,8 +525,38 @@ function update(dt){
     updateHud();
   }
 
+  // next round countdown after the tower is eaten
+  if(roundResetT>0){
+    roundResetT-=dt;
+    if(roundResetT<=0){
+      round++; won=false; stageIdx=0; spawnedBosses=[];
+      player.r=16; hunger=100; combo=0;
+      buildWorld();
+      announce('RUNDE '+round+' – DER HUNGER KEHRT ZURÜCK!',true);
+      announce('Alle Punkte zählen jetzt ×'+round+'!',false);
+      say('Kater. Allet uff Anfang. Aber der Hunger BLEIBT!');
+      sndStage(); updateHud();
+    }
+  }
+
+  // Endgegner spawnen, sobald du groß genug für Ärger bist
+  for(let ti=0;ti<ENEMY_TYPES.length;ti++){
+    const T=ENEMY_TYPES[ti];
+    if(!T.boss||spawnedBosses.includes(ti)||player.r<T.minR) continue;
+    spawnedBosses.push(ti);
+    const b=makeEnemy(ti);
+    for(let k=0;k<25;k++){
+      if(Math.hypot(b.x-player.x,b.y-player.y)>1400) break;
+      const p2=randPos(b.r); b.x=p2.x; b.y=p2.y;
+    }
+    objects.push(b);
+    announce(T.intro,true);
+    say('Na endlich ma’ne Herausforderung!');
+    sndBad(); shake=Math.max(shake,8);
+  }
+
   // hunger
-  hunger-=dt*(2.4+stageIdx*0.5);
+  hunger-=dt*(2.4+stageIdx*0.5+(round-1)*0.6);
   if(hunger<=0){ gameOver(pick(OVER_HUNGER)); return; }
   if(hunger<30 && !hungryWarned){ hungryWarned=true; say(pick(SAY_HUNGRY)); }
   if(hunger>50) hungryWarned=false;
@@ -567,29 +616,31 @@ function update(dt){
     // motion
     if(o.enemy){
       const T=ENEMY_TYPES[o.et];
+      const esp=T.sp*(1+(round-1)*0.15); // jede Runde werden se fixer
+      const chaseMax=T.boss?CHASE_MAX*2:CHASE_MAX; // Endgegner sind hartnäckiger
       const fd=Math.hypot(o.x-player.x,o.y-player.y)||1;
       if(o.cool>0) o.cool-=dt;
       const scared=edible||buffs.garlic>0;
       if(scared){ // flees once you outgrow it (or garlic breath!)
         o.chasing=false; o.chaseT=0;
         if(fd<o.r+380){
-          o.x+=(o.x-player.x)/fd*(T.sp*0.9)*dt; o.y+=(o.y-player.y)/fd*(T.sp*0.9)*dt;
+          o.x+=(o.x-player.x)/fd*(esp*0.9)*dt; o.y+=(o.y-player.y)/fd*(esp*0.9)*dt;
           o.a+=dt*8;
         }
       } else if(o.cool<=0 && tGlobal>GRACE && fd<T.aggro+player.r){
         o.chasing=true;
         o.chaseT+=dt;
-        if(o.chaseT>CHASE_MAX){ // gives up, needs a breather
-          o.chasing=false; o.chaseT=0; o.cool=CHASE_COOL;
+        if(o.chaseT>chaseMax){ // gives up, needs a breather
+          o.chasing=false; o.chaseT=0; o.cool=T.boss?CHASE_COOL*0.5:CHASE_COOL;
           pop(o.x,o.y-o.r*1.2,pick(SAY_GIVEUP),'#8a93ad');
         } else {
-          o.x-=(o.x-player.x)/fd*T.sp*dt; o.y-=(o.y-player.y)/fd*T.sp*dt;
+          o.x-=(o.x-player.x)/fd*esp*dt; o.y-=(o.y-player.y)/fd*esp*dt;
           o.a+=dt*10;
         }
       } else {
         o.chasing=false; o.chaseT=0;
         o.head+=(Math.random()-0.5)*dt*3;
-        o.x+=Math.cos(o.head)*T.sp*0.35*dt; o.y+=Math.sin(o.head)*T.sp*0.35*dt;
+        o.x+=Math.cos(o.head)*esp*0.35*dt; o.y+=Math.sin(o.head)*esp*0.35*dt;
       }
       o.x=Math.max(o.r,Math.min(WORLD-o.r,o.x));
       o.y=Math.max(o.r,Math.min(WORLD-o.r,o.y));
@@ -609,7 +660,7 @@ function update(dt){
           o.x-=(o.x-player.x)/md*pull; o.y-=(o.y-player.y)/md*pull;
         }
       }
-      if(o.flee){
+      if(o.flee && o.e!=='🪧'){
         const fd=Math.hypot(o.x-player.x,o.y-player.y);
         if(fd<player.r+340 && player.r>o.r*0.8 && fd>1){
           const fs=130+player.r*0.2;
@@ -651,7 +702,7 @@ function update(dt){
         objects.splice(i,1);
         combo++; comboTimer=1.8;
         if(combo>0&&combo%10===0){ announce('IMMERHUNGER-COMBO ×'+combo+'!',true); say('ICK HABE IMMERHUNGER!'); }
-        const mult=(1+Math.floor(combo/6))*(buffs.double>0?2:1)*(buffs.rave>0?3:1);
+        const mult=(1+Math.floor(combo/6))*(buffs.double>0?2:1)*(buffs.rave>0?3:1)*round;
         const pts=Math.round((o.pts||(o.enemy?o.r*2:o.r)))*mult;
         score+=pts; foodsEaten++;
         hunger=Math.min(100,hunger+Math.max(4,Math.min(45,o.r*0.6)));
@@ -662,14 +713,14 @@ function update(dt){
         if(o.landmark){
           announce('👑 '+o.name+' VERPUTZT!',true); sndWin();
           say('Denkmalschutz? Kenn ick nich!');
-          if(o.landmark==='turm'&&!won){ won=true; announce('DU HAST GANZ BERLIN GEFRESSEN!',true); }
+          if(o.landmark==='turm'&&!won){ won=true; roundResetT=5; announce('DU HAST GANZ BERLIN GEFRESSEN!',true); }
         } else if(o.enemy){
           announce(ENEMY_TYPES[o.et].name+' GEFRESSEN!',false);
           say(pick(SAY_ENEMY_EAT[o.e]||SAY_EAT)); sndBig();
-          respawnQ.push({enemy:o.et,t:18+Math.random()*10});
+          if(!ENEMY_TYPES[o.et].boss) respawnQ.push({enemy:o.et,t:18+Math.random()*10});
         } else {
           if(o.r>60) sndBig(); else sndEat(o.r);
-          if(SAY_SPECIFIC[o.e]&&Math.random()<0.55) say(pick(SAY_SPECIFIC[o.e]));
+          if(SAY_SPECIFIC[o.e]&&(o.e==='🪧'||Math.random()<0.55)) say(pick(SAY_SPECIFIC[o.e]));
           else if(Math.random()<0.18) say(pick(SAY_EAT));
           if(o.tier>=0&&o.tier<TIERS.length) respawnQ.push({tier:o.tier,t:5+Math.random()*8});
         }
@@ -1268,7 +1319,7 @@ function gameOver(reason){
   if(score>best){ best=score; try{ localStorage.setItem('immerhunger_best2',String(best)); }catch(e){} }
   document.getElementById('overreason').textContent=reason;
   document.getElementById('finalscore').textContent=score;
-  document.getElementById('finalfoods').textContent=foodsEaten+' Dinge gefressen · Endgröße '+fmtSize()+'× · '+STAGES[stageIdx].n;
+  document.getElementById('finalfoods').textContent=foodsEaten+' Dinge gefressen · Runde '+round+' · Endgröße '+fmtSize()+'× · '+STAGES[stageIdx].n;
   document.getElementById('bestline').textContent='👑 Rekord: '+best;
   hud.classList.add('hidden');
   overScreen.classList.remove('hidden');
