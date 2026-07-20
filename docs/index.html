@@ -411,24 +411,67 @@ function pick(a){ if(!a||!a.length)return''; let i=(Math.random()*a.length)|0; i
 
 /* ---------- Person builder (viel Variation!) ---------- */
 function mat(c){ return new THREE.MeshStandardMaterial({color:c, roughness:0.8}); }
+/* ---- Detaillierte gemalte Gesichter (statt Kästchen-Augen) ---- */
+function _rgb(hex,f){ f=f||1; return [Math.round(Math.max(0,Math.min(255,(hex>>16&255)*f))),Math.round(Math.max(0,Math.min(255,(hex>>8&255)*f))),Math.round(Math.max(0,Math.min(255,(hex&255)*f)))]; }
+function _css(hex,f){ const c=_rgb(hex,f); return 'rgb('+c[0]+','+c[1]+','+c[2]+')'; }
+function _rgba(hex,f,a){ const c=_rgb(hex,f); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+function _rr(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.fill(); }
+function _drawEye(x,cx,cy,f,iris){ const ew=12, eh=(f==='shock')?9.5:7;
+  x.fillStyle='rgba(90,70,55,0.16)'; x.beginPath(); x.ellipse(cx,cy,14,10,0,0,7); x.fill();     // Augenhöhle
+  x.fillStyle='#f3efe7'; x.beginPath(); x.ellipse(cx,cy,ew,eh,0,0,7); x.fill();                 // Sklera
+  const ir=6; x.fillStyle=_css(iris,1); x.beginPath(); x.arc(cx,cy+1,ir,0,7); x.fill();          // Iris
+  x.strokeStyle=_css(iris,0.55); x.lineWidth=1.4; x.beginPath(); x.arc(cx,cy+1,ir,0,7); x.stroke();
+  x.fillStyle='#100e0c'; x.beginPath(); x.arc(cx,cy+1,3,0,7); x.fill();                          // Pupille
+  x.fillStyle='rgba(255,255,255,0.92)'; x.beginPath(); x.arc(cx-2,cy-1.5,1.8,0,7); x.fill();     // Glanzpunkt
+  x.strokeStyle='rgba(35,22,14,0.65)'; x.lineWidth=2.2; x.beginPath(); x.ellipse(cx,cy-1.5,ew,eh,0,Math.PI*1.03,Math.PI*1.97); x.stroke(); // oberes Lid
+  x.strokeStyle='rgba(0,0,0,0.13)'; x.lineWidth=1; x.beginPath(); x.ellipse(cx,cy+2,ew,eh,0,0.12,Math.PI-0.12); x.stroke(); }
+function _drawBrow(x,cx,f,side){ const y=40,o=12,inX=cx-o*side,outX=cx+o*side; x.beginPath();
+  if(f==='angry'){ x.moveTo(outX,y-2); x.lineTo(inX,y+6); }
+  else if(f==='sad'){ x.moveTo(outX,y+5); x.lineTo(inX,y-3); }
+  else { x.moveTo(outX,y+2); x.quadraticCurveTo(cx,y-4,inX,y+2); }
+  x.stroke(); }
+function _drawMouth(x,cx,cy,f,skin){ x.lineCap='round'; x.lineWidth=3;
+  if(f==='grin'){ x.fillStyle='#7a2b2b'; x.beginPath(); x.ellipse(cx,cy,14,8,0,0,Math.PI); x.fill(); x.fillStyle='#f6f2ea'; _rr(x,cx-11,cy-1,22,4,2); }
+  else if(f==='shock'){ x.fillStyle='#5a2020'; x.beginPath(); x.ellipse(cx,cy+2,7,10,0,0,7); x.fill(); }
+  else if(f==='angry'){ x.strokeStyle='#7a2b2b'; x.beginPath(); x.moveTo(cx-11,cy+3); x.quadraticCurveTo(cx,cy-2,cx+11,cy+3); x.stroke(); }
+  else if(f==='sad'){ x.strokeStyle='#7a2b2b'; x.beginPath(); x.moveTo(cx-11,cy+1); x.quadraticCurveTo(cx,cy+9,cx+11,cy+1); x.stroke(); }
+  else { x.strokeStyle=_rgba(0x7a2b2b,1,0.92); x.beginPath(); x.moveTo(cx-12,cy); x.quadraticCurveTo(cx,cy+6,cx+12,cy); x.stroke();
+    x.strokeStyle=_rgba(skin,0.72,0.5); x.beginPath(); x.moveTo(cx-10,cy-3); x.quadraticCurveTo(cx,cy-1,cx+10,cy-3); x.stroke(); } }
+const IRISES=[0x5a3b1f,0x3a2512,0x4a6a4a,0x3a5a7a,0x6a4a2a,0x2a2018];
+function faceTex(o){
+  const skin=o.skin!==undefined?o.skin:0xe6b58a, f=o.face||'smile';
+  const hairCol=(o.hair!==undefined&&o.hair!==null)?o.hair:0x2a1c10;
+  const iris=(o.eyes!==undefined)?o.eyes:IRISES[(skin^hairCol)%IRISES.length];
+  const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,128); g.addColorStop(0,_css(skin,1.11)); g.addColorStop(0.5,_css(skin,1.0)); g.addColorStop(1,_css(skin,0.85));
+  x.fillStyle=g; x.fillRect(0,0,128,128);
+  for(const cx of [40,88]){ const rg=x.createRadialGradient(cx,76,2,cx,76,20); rg.addColorStop(0,_rgba(0xd07a6a,1,0.26)); rg.addColorStop(1,_rgba(0xd07a6a,1,0)); x.fillStyle=rg; x.beginPath(); x.arc(cx,76,20,0,7); x.fill(); }
+  { const rg=x.createRadialGradient(64,28,2,64,28,28); rg.addColorStop(0,_rgba(0xffffff,1,0.15)); rg.addColorStop(1,_rgba(0xffffff,1,0)); x.fillStyle=rg; x.beginPath(); x.arc(64,28,28,0,7); x.fill(); }
+  { const rg=x.createRadialGradient(64,118,2,64,120,30); rg.addColorStop(0,_rgba(skin,0.7,0.35)); rg.addColorStop(1,_rgba(skin,0.7,0)); x.fillStyle=rg; x.beginPath(); x.arc(64,120,30,0,7); x.fill(); }
+  for(let k=0;k<240;k++){ x.fillStyle=_rgba(0x000000,1,Math.random()*0.05); x.fillRect(Math.random()*128,20+Math.random()*100,1,1); }
+  x.strokeStyle=_rgba(skin,0.78,0.5); x.lineWidth=3; x.lineCap='round'; x.beginPath(); x.moveTo(61,54); x.lineTo(58,79); x.stroke();
+  x.fillStyle=_rgba(skin,1.13,0.55); x.beginPath(); x.ellipse(66,77,4,3,0,0,7); x.fill();
+  x.fillStyle=_rgba(0x000000,1,0.26); x.beginPath(); x.ellipse(58,83,2.4,1.5,0,0,7); x.fill(); x.beginPath(); x.ellipse(70,83,2.4,1.5,0,0,7); x.fill();
+  const sun=o.sunglasses||o.shades;
+  if(sun){ x.fillStyle='#141414'; _rr(x,26,45,30,17,7); _rr(x,72,45,30,17,7); x.fillRect(56,51,16,4);
+    x.fillStyle='rgba(255,255,255,0.16)'; x.beginPath(); x.moveTo(30,49); x.lineTo(40,49); x.lineTo(33,59); x.lineTo(27,59); x.fill(); x.beginPath(); x.moveTo(76,49); x.lineTo(86,49); x.lineTo(79,59); x.lineTo(73,59); x.fill(); }
+  else { _drawEye(x,44,54,f,iris); _drawEye(x,84,54,f,iris);
+    x.strokeStyle=_css(hairCol,0.85); x.lineWidth=4.5; x.lineCap='round'; _drawBrow(x,44,f,-1); _drawBrow(x,84,f,1); }
+  _drawMouth(x,64,97,f,skin);
+  if(o.beard){ const bc=(o.beard===true?hairCol:o.beard);
+    x.fillStyle=_rgba(bc,0.85,0.9); x.beginPath(); x.moveTo(28,84); x.quadraticCurveTo(30,122,64,126); x.quadraticCurveTo(98,122,100,84); x.quadraticCurveTo(90,104,64,106); x.quadraticCurveTo(38,104,28,84); x.fill();
+    for(let k=0;k<150;k++){ x.fillStyle=_rgba(0x000000,1,Math.random()*0.14); x.fillRect(30+Math.random()*68,86+Math.random()*38,1,2); } }
+  else if(o.stubble){ for(let k=0;k<170;k++){ x.fillStyle=_rgba(0x2a1c10,1,Math.random()*0.11); x.fillRect(34+Math.random()*60,90+Math.random()*30,1,1); } }
+  if(o.mustache){ x.fillStyle=_css(o.mustache===true?0x2a1c10:o.mustache,0.85); _rr(x,48,89,32,7,3); }
+  return new THREE.CanvasTexture(c);
+}
 function addFace(head,o){ o=o||{};
-  const dark=mat(0x1b1b1b), white=mat(0xf4f4f4), mouthc=mat(0x8a3b3b);
-  const f=o.face||'smile'; let eL=null,eR=null,mo=null;
-  if(o.sunglasses||o.shades){ box(0.46,0.14,0.05,mat(0x111111),0,0.05,0.26,0,head); }
-  else {
-    eL=box(0.13,0.15,0.05,white,-0.12,0.05,0.25,0,head); eR=box(0.13,0.15,0.05,white,0.12,0.05,0.25,0,head);
-    box(0.06,0.07,0.03,dark,-0.12,0.04,0.285,0,head); box(0.06,0.07,0.03,dark,0.12,0.04,0.285,0,head);
-    if(f==='angry'){ const bL=box(0.17,0.05,0.04,dark,-0.12,0.17,0.26,0,head); bL.rotation.z=-0.5;
-      const bR=box(0.17,0.05,0.04,dark,0.12,0.17,0.26,0,head); bR.rotation.z=0.5; }
-    if(f==='shock'){ eL.scale.set(1.3,1.4,1); eR.scale.set(1.3,1.4,1); }
-  }
-  if(f==='grin') mo=box(0.3,0.11,0.04,white,0,-0.12,0.26,0,head);
-  else if(f==='shock') mo=box(0.12,0.15,0.04,mouthc,0,-0.13,0.26,0,head);
-  else if(f==='angry') mo=box(0.22,0.05,0.04,mouthc,0,-0.15,0.26,0,head);
-  else if(f==='sad'){ mo=box(0.19,0.06,0.04,mouthc,0,-0.15,0.26,0,head); mo.rotation.z=Math.PI; }
-  else mo=box(0.17,0.06,0.04,mouthc,0,-0.14,0.26,0,head);
-  if(o.mustache) box(0.28,0.07,0.04,mat(o.mustache===true?0x2a1c10:o.mustache),0,-0.06,0.27,0,head);
-  head.userData.eyeL=eL; head.userData.eyeR=eR; head.userData.mouth=mo;
+  const fp=new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.5), new THREE.MeshStandardMaterial({map:faceTex(o),roughness:0.72,metalness:0}));
+  fp.position.set(0,0,0.251); head.add(fp);
+  // Mund-Overlay: im Ruhezustand quasi unsichtbar, öffnet sich beim Sprechen
+  const mo=box(0.16,0.12,0.02, new THREE.MeshStandardMaterial({color:0x40201c,roughness:0.6}),0,-0.145,0.256,0,head);
+  mo.scale.y=0.05;
+  head.userData.eyeL=null; head.userData.eyeR=null; head.userData.mouth=mo;
 }
 function makePerson(o){
   o=o||{};
@@ -1202,6 +1245,22 @@ const KIEZ=[
 const STREET_SPOTS=[{x:-18,z:6},{x:4,z:5.5},{x:22,z:6},{x:42,z:7},{x:-18,z:15},{x:8,z:15},{x:38,z:13}];
 
 function landmark(kind,p){
+  if(kind==='kotti'){
+    // Neues Kreuzberger Zentrum (NKZ) – langer, gestaffelter Betonblock als Kulisse hinter der Fahrbahn
+    for(let s=0;s<3;s++){ box(44,5.4,6, new THREE.MeshStandardMaterial({color:s%2?0xc2beb2:0xb4b0a4,roughness:0.95}), -2, 2.7+s*5, -15-s*2, 0, p);
+      for(let wx=-20;wx<=20;wx+=3.2) for(let wy=0;wy<2;wy++) box(1.7,1.5,0.1, new THREE.MeshStandardMaterial({color:0x2a3644,emissive:0x0c1622,emissiveIntensity:0.35}), -2+wx, 1.8+s*5+wy*2.2, -15-s*2+3.05, 0, p); }
+    // Ikonisches Hochbahn-Viadukt (grün-graues Stahl) ÜBER der Skalitzer Straße – wie am echten Kotti
+    const steel=()=>new THREE.MeshStandardMaterial({color:0x466f60,metalness:0.5,roughness:0.5});
+    box(96,1.2,3.0, steel(), 0, 7.7, -3, 0, p);                        // Stahldeck über der Fahrbahn
+    for(let x=-40;x<=40;x+=8){ box(1.5,7.7,1.5, steel(), x, 3.85, -3, 0, p);       // Mittelstützen
+      box(7.2,0.7,1.4, steel(), x+4, 7.0, -3, 0, p); }                 // Trägerband
+    for(const zz of [-4.4,-1.6]) box(96,0.6,0.22, steel(), 0, 8.7, zz, 0, p);      // Geländer
+    // gelbe U-Bahn oben drauf
+    box(22,2.8,2.3, new THREE.MeshStandardMaterial({color:0xf3d000,metalness:0.35,roughness:0.4}), -6, 9.7, -3, 0, p);
+    box(21.2,1.2,2.36, new THREE.MeshStandardMaterial({color:0x16222e,metalness:0.2,roughness:0.3,emissive:0x0a1622,emissiveIntensity:0.25}), -6, 10.1, -3, 0, p); // Fensterband
+    box(0.25,2.8,2.36, mat(0xcc2222), -17.4, 9.7, -3, 0, p);           // rote Front
+    return;
+  }
   if(kind==='fernsehturm'){ cyl(0.9,1.4,26,mat(0xcfd6e2),-30,13,20,p); ball(2.6,mat(0xd0d8e6),-30,25,20,p);
     cyl(0.2,0.2,6,mat(0xd23b3b),-30,30,20,p); }
   else if(kind==='oberbaum'){ box(2,14,2,mat(0x8a4a3a),34,7,19,0,p); box(2.6,3,2.6,mat(0x6a3a2a),34,14.5,19,0,p);
@@ -1675,7 +1734,7 @@ function animateNPC(n,t){
     n.mesh.rotation.y+=dy*(dp<11?0.14:0.05);             // näher = schneller herdrehen
   }
   if(u.eyeL){ const bl=(Math.sin(t*2.6+ph*5)>0.93)?0.14:1; u.eyeL.scale.y=bl; u.eyeR.scale.y=bl; }
-  if(u.mouth){ u.mouth.scale.y=(n.talkUntil&&t<n.talkUntil)?(1+Math.abs(Math.sin(t*17))*1.2):1; }
+  if(u.mouth){ u.mouth.scale.y=(n.talkUntil&&t<n.talkUntil)?(0.6+Math.abs(Math.sin(t*17))*1.6):0.05; }
 }
 
 /* ---------- Audio ---------- */
@@ -1926,7 +1985,7 @@ function animate(){
     else if(dancing){ const bt=t*9; player.userData.armL.rotation.z=0.7+Math.sin(bt)*0.9; player.userData.armR.rotation.z=-0.7-Math.sin(bt)*0.9; }
     else { player.userData.armL.rotation.z=0; player.userData.armR.rotation.z=0; }
     if(player.userData.eyeL){ const _b=(Math.sin(t*2.4)>0.93)?0.14:1; player.userData.eyeL.scale.y=_b; player.userData.eyeR.scale.y=_b; }
-    if(player.userData.mouth){ player.userData.mouth.scale.y = hitT>0 ? 2.2 : ((celebT>0||dancing)?1.8:1); }
+    if(player.userData.mouth){ player.userData.mouth.scale.y = hitT>0 ? 2.2 : ((celebT>0||dancing)?1.8:0.05); }
     if(dancing && !danceFx){ danceFx=true; } if(dancing){ danceEmitT-=dt; if(danceEmitT<=0){ danceEmitT=0.5; burstEmoji(P.x,2.8,P.z,'🎵',2); } } else danceFx=false;
 
     // NPC-Verhalten

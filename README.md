@@ -27,10 +27,27 @@ grundierteren, realistischeren Look (statt Flat-Cartoon):
   **Asphalt-Fahrbahn** bekommen echtes **Oberflächen-Relief** unter dem Licht.
 - **Atmosphärischer Nebel** für Tiefe (dumpfe Tunnel-Haze unten, Dunst außen).
 
-> Hinweis: Eine *einzelne, komplett prozedural gebaute* HTML-Datei kann keine
-> fotorealistische Grafik wie ein echter Game-Engine-Build mit gescannten
-> 3D-Assets liefern – die Figuren bleiben bewusst stilisiert. Der Pass hebt
-> aber Licht, Material und Oberflächen spürbar Richtung „echt".
+### Detaillierte Gesichter
+
+Statt Kästchen-Augen bekommen **alle Figuren gemalte Gesichts-Texturen**:
+Haut mit Verlauf & Wangen-Rouge, **echte Augen** (Iris, Pupille, Glanzpunkt,
+Lidschatten), stimmungsabhängige **Augenbrauen** (froh/wütend/traurig/schockiert),
+Nase mit Schatten & Nasenlöchern, Lippen, **Bart/Stoppeln**, Sonnenbrillen mit
+Reflex. Beim Sprechen bewegt sich der Mund weiterhin.
+
+### Kottbusser Tor als Wahrzeichen
+
+Der Kotti-Kiez hat jetzt sein **ikonisches Hochbahn-Viadukt** (grün-graue
+Stahlstützen **über der Skalitzer Straße**) mit einer **gelben U-Bahn** oben
+drauf, dazu den **NKZ-Betonblock** (Neues Kreuzberger Zentrum) als Kulisse –
+so wird der Ort wiedererkennbar.
+
+> Hinweis zu „echten Fotos": Echte Fotografien von Kottbusser Tor lassen sich
+> nicht einbauen (Urheberrecht + Dateigröße in einer einzelnen HTML-Datei).
+> Stattdessen ist der Ort **prozedural im Foto-Stil** nachgebaut. Und eine
+> komplett prozedural gebaute Datei kann keine fotorealistische Engine-Grafik
+> mit gescannten 3D-Assets ersetzen – der Pass hebt Licht, Material,
+> Oberflächen und Gesichter aber spürbar Richtung „echt".
 
 ## Steuerung
 
