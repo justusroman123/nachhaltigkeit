@@ -400,11 +400,13 @@ function heightToNormal(w,h,drawFn,strength,rx,ry){
   const t=new THREE.CanvasTexture(out); t.encoding=THREE.LinearEncoding;
   t.wrapS=t.wrapT=THREE.RepeatWrapping; if(rx)t.repeat.set(rx,ry||rx); return t;
 }
+let floatIcons=[];
 function makeFloatIcon(emoji,x,y,z,parent){
   const s=new THREE.Sprite(new THREE.SpriteMaterial(
     {map:emojiTex(emoji),transparent:true,depthTest:false,sizeAttenuation:false}));
-  s.scale.set(0.072,0.072,0.072); s.position.set(x,y,z); s.renderOrder=5;
-  (parent||scene).add(s); return s;
+  s.scale.set(0.06,0.06,0.06); s.position.set(x,y,z); s.renderOrder=5;
+  s.userData.floatIcon=true; s.userData.baseScale=0.06;
+  (parent||scene).add(s); floatIcons.push(s); return s;
 }
 function clearGroup(g){ while(g.children.length) g.remove(g.children[g.children.length-1]); }
 function pick(a){ if(!a||!a.length)return''; let i=(Math.random()*a.length)|0; if(a.length>1&&i===a._l)i=(i+1)%a.length; a._l=i; return a[i]; }
@@ -1233,7 +1235,8 @@ const STREET_POOL={
    lines:["Wheek. Wheek. …na, alles jut bei dir?","Ick steh hier und fiepe. Rein zufällig. Den ganzen Tag.","WHEEK! …dit war jetzt Absicht."]},
 };
 
-const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma."];
+const GENERIC=["Wa willste?","Kannste ma gucken wo de hinläufst?","Berlin, wa? Läuft irgendwie.","Haste ma Feuer?","Nee, heute nich.","Alles Banane hier.","Ick mein ja nur.","Typisch, wa.","Wat 'n Wetter.","Sonntag – alles zu, außer Späti.","Bin eijentlich gar nich von hier.","Miete? Frag lieber nich.","Digga, echt jetzt?","Kannste knicken.","Läuft bei dir?","Nremm's mit Humor.","Wa? Nochma.",
+  "Ick wart seit 2019 auf'n Anschluss.","Mein Späti kennt meinen Namen. Und meine Schulden.","Der Fahrstuhl is Deko, wa.","BVG-App sacht: gleich da. Seit 40 Minuten.","Kreuzberg is teuer geworden – frag mein Balkon-Kräutergarten.","Ick bin hier nur wegen'm Bier, nich wegen dir.","Haste 'n Ladekabel? Nee? Dann tschüss.","Die Bahn is voll – wie immer, wie überall, wie ick.","Ick globe, ick brauch 'n Döner. Oder drei.","Neubau? Über meine Leiche – oder meinen Altbau.","Bio? Ick ess Currywurst mit Umweltbewusstsein.","Zugezogene? Kenn ick keene. Nur Nachbarn seit gestern."];
 for(const d of Object.values(NPC_POOL)) d.lines=d.lines.concat(GENERIC);
 for(const d of Object.values(STREET_POOL)) if(d.lines) d.lines=d.lines.concat(GENERIC);
 const KIEZ=[
@@ -1654,7 +1657,7 @@ function tryInteract(){
       else boardTrain(); return; }
   } else {
     if(nearEntrance){ goDown(); return; }
-    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='buero') miniBuero(); else if(nearSI.kind==='outfit') miniOutfit(); else if(nearSI.kind==='bus') miniBus(); else if(nearSI.kind==='zuzug') miniZuzug(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
+    if(nearSI){ if(nearSI.kind==='dodge') miniDodge(); else if(nearSI.kind==='wohnung') miniWohnung(); else if(nearSI.kind==='finanz') miniFinanz(); else if(nearSI.kind==='bribe') miniBribe(null); else if(nearSI.kind==='nightpark') miniNightPark(); else if(nearSI.kind==='buero') miniBuero(); else if(nearSI.kind==='outfit') miniOutfit(); else if(nearSI.kind==='bus') miniBus(); else if(nearSI.kind==='zuzug') miniZuzug(); else if(nearSI.kind==='fress') miniFress(); else if(nearSI.kind==='versp') miniVerspaetung(); return; }
     if(nearStand){ const s=nearStand;
       if(!s.done){ s.done=true; momente++; updateMomente(); toast("🌟 "+s.gain); }
       showDialogue(s.name, s.line); return; }
@@ -1930,6 +1933,12 @@ function animate(){
       if(tgt){ beckonSpr.visible=true; beckonSpr.position.set(tgt.x,3.5+Math.abs(Math.sin(t*4))*0.3,tgt.z); beckonSpr.scale.setScalar(0.09+Math.abs(Math.sin(t*4))*0.03); }
       else beckonSpr.visible=false;
     } else if(beckonSpr) beckonSpr.visible=false; }
+  // Icon-Entrümpelung (GTA-Style): auf der Straße nur nahe Marker zeigen, entfernte sanft ausblenden
+  if(place==='street'){ for(const s of floatIcons){ if(s.parent!==streetGroup) continue;
+    const d=Math.hypot(P.x-s.position.x,P.z-s.position.z);
+    if(d>10.5){ s.visible=false; }
+    else { s.visible=true; const o=Math.max(0,Math.min(1,(10.5-d)/5)); s.material.opacity=o;
+      const near=d<3.2; s.scale.setScalar(s.userData.baseScale*(0.8+0.35*o)*(near?1+Math.abs(Math.sin(t*5))*0.12:1)); } } }
   // Werbetafeln wechseln ab und zu ihren Spruch (lockert auf)
   if(place==='underground'&&ugAdBoards.length){ adRotT-=dt; if(adRotT<=0){ adRotT=6+Math.random()*5;
     const bd=ugAdBoards[(Math.random()*ugAdBoards.length)|0];
@@ -2192,6 +2201,17 @@ function buildStreetExtras(i){
   makeFloatIcon("🙅",zxp,3.0,zzp,streetGroup);
   streetColl.push({x:zxp,z:zzp,r:0.7});
   streetInteract.push({x:zxp,z:zzp,r:1.4,name:"Berlin schlechtreden (Zuzugsstopp)",verb:"MECKERN",kind:'zuzug'});
+  // Fress-Bude – Imbiss zum Durchfuttern (Fress-Marathon)
+  const frx=44, frz=8;
+  box(3.2,2.6,1.7,mat(0xcc3a2a),frx,1.3,frz,0,streetGroup);                         // Bude
+  box(3.6,0.24,2.0,mat(0xf4f4f4),frx,2.7,frz,0,streetGroup);                        // Dach
+  box(3.6,0.24,0.5,mat(0xcc3a2a),frx,2.55,frz+0.9,0,streetGroup);                   // Markise vorn
+  box(3.0,0.16,0.9,mat(0x8a5a32),frx,1.5,frz+0.85,0,streetGroup);                   // Tresen
+  for(let k=0;k<3;k++) box(0.34,0.34,0.34,new THREE.MeshStandardMaterial({color:[0xf3c000,0xcc2222,0xe8a83a][k],emissive:0x1a1200,emissiveIntensity:0.2}),frx-0.8+k*0.8,1.75,frz+0.85,0,streetGroup);
+  const frsg=makeTextPlane("🍔 FRESS-BUDE",256,64,"#fff","#cc2222",34); frsg.scale.set(3.1,0.78,1); frsg.position.set(frx,3.3,frz-0.9); streetGroup.add(frsg);
+  makeFloatIcon("🍔",frx,3.7,frz,streetGroup);
+  streetColl.push({x:frx,z:frz,r:1.5});
+  streetInteract.push({x:frx,z:frz+1.6,r:1.9,name:"Fress-Marathon 🍔",verb:"FRESSEN",kind:'fress'});
   // SEV-Bus (Mesh wird in buildStreet gebaut, hier nur der Einsteig-Punkt)
   streetInteract.push({x:-40,z:4.7,r:2.6,name:"SEV-Bus fahren (Schienenersatzverkehr)",verb:"EINSTEIGEN",kind:'bus'});
   // ===== Sichtbare Belohnungen =====
@@ -2279,6 +2299,129 @@ function miniAutomat(){
       beep(523,0.1,'square',0.14); setTimeout(()=>beep(784,0.22,'square',0.14),110);
       document.getElementById('miniResult').textContent='🎫 Fahrschein AB gezogen!';
       setTimeout(()=>{ closeMini(); toast('🎫 Automat repariert & Ticket gezogen!'); updateObjective(); },800); }); }
+}
+
+/* ---------- MG14: Fress-Marathon (komplex, viel Animation) ---------- */
+function miniFress(){
+  openMini();
+  const FOODS=[
+    {e:'🍔',k:'burger',fill:15,chew:5,n:'Burger'},
+    {e:'🌭',k:'curry', fill:11,chew:4,n:'Currywurst'},
+    {e:'🥙',k:'doener',fill:18,chew:6,n:'Döner mit alles'},
+    {e:'🍟',k:'pommes',fill:8, chew:3,n:'Pommes Schranke'},
+    {e:'🥨',k:'brezel',fill:7, chew:3,n:'Brezel'},
+    {e:'🌶️',k:'scharf',fill:10,chew:4,spicy:28,n:'Scharfe Currywurst'},
+  ];
+  const goal=12;
+  let eaten=0, tLeft=58, fullness=0, heat=0, combo=0, score=0, over=false;
+  let belt=[], spawnT=0.5, craveGap=0;
+  let crave=FOODS[(Math.random()*4)|0];
+  let chewing=null, chewHave=0, chewNeed=0, mouthOpen=0.15, chewAnim=0, headBob=0;
+  let drinkCool=0, fx=[], burpT=0, flash=0, flashCol='255,255,255', sweatT=0;
+  panelEl().innerHTML=`<h2>🍔 Fress-Marathon</h2>
+    <div class="miniDesc">Berlin frisst! Tippe das <b>verlangte Essen</b> 👇 vom Band → dann <b>KAUEN</b> bis leer. Zu voll 🤢 oder zu scharf 🥵? <b>TRINKEN</b> 🍺. Schaff <b>${goal}</b> – aber <b>platz nicht</b>! 💥</div>
+    <canvas id="mCanvas" width="360" height="272"></canvas>
+    <div class="mBar"><i id="fBar" style="background:linear-gradient(90deg,#e0a03a,#e0602a);width:0%"></i><div class="lbl" id="fLbl">🤢 Völle 0%</div></div>
+    <div class="mBar"><i id="hBar" style="background:linear-gradient(90deg,#e0803a,#e0344a);width:0%"></i><div class="lbl" id="hLbl">🌶️ Schärfe 0%</div></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="mBtn big" id="chewBtn" style="flex:2">😋 KAUEN</button>
+      <button class="mBtn" id="drinkBtn" style="flex:1">🍺 TRINKEN</button></div>
+    <div id="miniResult">Iss: ${crave.e} ${crave.n}</div>`;
+  const cv=document.getElementById('mCanvas'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const fBar=document.getElementById('fBar'),hBar=document.getElementById('hBar'),fLbl=document.getElementById('fLbl'),hLbl=document.getElementById('hLbl'),res=document.getElementById('miniResult');
+  const beltY=196, faceX=W/2, faceY=78;
+  function setCrave(){ let n; do{ n=FOODS[(Math.random()*FOODS.length)|0]; }while(n.k===crave.k&&Math.random()<0.6); crave=n;
+    res.style.color='#e8eefc'; res.textContent='Iss: '+crave.e+' '+crave.n+(crave.spicy?' 🥵':''); craveGap=0; }
+  function spawn(){ let f; if(craveGap>2.0||Math.random()<0.45){ f=crave; craveGap=0; } else f=FOODS[(Math.random()*FOODS.length)|0];
+    belt.push({f,x:-26,y:beltY,r:22,v:64+eaten*4.2+Math.random()*18}); }
+  function crumbs(cx,cy,em,n){ for(let k=0;k<(n||8);k++) fx.push({x:cx,y:cy,vx:(Math.random()-0.5)*170,vy:-50-Math.random()*130,life:0.6+Math.random()*0.5,e:em}); }
+  function eat(item){ chewing=item; chewNeed=item.f.chew; chewHave=0; mouthOpen=0.9; crumbs(faceX,faceY+8,item.f.e,4); beep(520,0.05,'square',0.1); }
+  function swallow(){ const it=chewing; chewing=null; mouthOpen=0.15;
+    fullness=Math.min(130,fullness+it.f.fill); if(it.f.spicy) heat=Math.min(130,heat+it.f.spicy);
+    eaten++; combo++; score+=Math.round(10*(1+combo*0.15)); headBob=1; burpT=0.18;
+    beep(190,0.13,'sine',0.14); if(combo>=3){ coin(); crumbs(faceX,faceY+18,'✨',7); } else crumbs(faceX,faceY+18,'✨',4);
+    res.style.color='#8effa8'; res.textContent=(combo>=3?('🔥 Combo x'+combo+'! '):'Runter! ')+eaten+'/'+goal;
+    setTimeout(()=>{ if(!over){ res.style.color='#e8eefc'; res.textContent='Iss: '+crave.e+' '+crave.n+(crave.spicy?' 🥵':''); } },650);
+    if(eaten>=goal){ win(); return; }
+    setCrave();
+    if(fullness>=100){ lose('💥 GEPLATZT! Ein Döner zu viel.'); } }
+  function tap(cx,cy){ if(over)return;
+    if(chewing){ res.style.color='#ffd27a'; res.textContent='Erst fertig kauen! 😤'; return; }
+    let hit=null; for(let i=belt.length-1;i>=0;i--){ const b=belt[i]; if(Math.hypot(cx-b.x,cy-b.y)<b.r+6){ hit=i; break; } }
+    if(hit===null) return; const b=belt[hit];
+    if(b.f.k===crave.k){ belt.splice(hit,1); eat(b); }
+    else { combo=0; flash=1; flashCol='224,70,74'; boo(); res.style.color='#ff8a9a'; res.textContent='Bäh! Nich '+b.f.n+' 🤮'; } }
+  function chew(){ if(over||!chewing)return; chewHave++; chewAnim=1; mouthOpen=0.95;
+    beep(280+chewHave*44,0.04,'square',0.09); if(chewHave>=chewNeed) swallow(); }
+  function drink(){ if(over||drinkCool>0)return; drinkCool=2.6; fullness=Math.max(0,fullness-26); heat=Math.max(0,heat-42); burpT=0.55;
+    crumbs(faceX,faceY,'💨',5); beep(420,0.1,'sine',0.12); setTimeout(()=>beep(300,0.16,'sine',0.12),90);
+    res.style.color='#8ed4ff'; res.textContent='🍺 Gluck gluck… puh!'; }
+  function endScreen(win_,title,txt,col){ over=true; if(miniRAF){cancelAnimationFrame(miniRAF);miniRAF=null;}
+    panelEl().innerHTML=`<h2 style="color:${col}">${title}</h2>
+      <div style="font-size:52px;margin:6px 0">${win_?'🏆🍔🥙🌭':'🤢💥'}</div>
+      <div class="miniDesc">${txt}</div>
+      <div id="miniResult" style="color:${col}">Gefuttert: ${eaten}/${goal} · Punkte: ${score}</div>
+      <button class="mBtn big" id="fEnd">${win_?'😎 Weiter':'↩ Zurück'}</button>`;
+    document.getElementById('fEnd').addEventListener('click',()=>{ closeMini(); if(win_) toast('🍔 Fress-Marathon geschafft – Berlin ist satt!'); });
+  }
+  function win(){ momente+=2; updateMomente(); fanfare?fanfare():cheer(); cheer();
+    endScreen(true,'🏆 Durchgefuttert!','Respekt, du hast dich durch ganz Berlin gefressen – Döner, Currywurst, Pommes Schranke, alles weg. Die Bude macht heut früh zu.','#8effa8'); }
+  function lose(txt){ boo(); endScreen(false,'😵 Vollgefressen!',txt,'#ff8a9a'); }
+  function loop(now){ if(!miniActive||over)return; const dt=Math.min((now-last)/1000,0.05); last=now;
+    tLeft-=dt; craveGap+=dt; if(drinkCool>0)drinkCool-=dt; if(flash>0)flash-=dt*2.6; if(burpT>0)burpT-=dt;
+    if(headBob>0)headBob-=dt*3; if(chewAnim>0)chewAnim-=dt*4.5; sweatT+=dt;
+    fullness=Math.max(0,fullness-1.6*dt); heat=Math.max(0,heat-6*dt);
+    spawnT-=dt; if(spawnT<=0){ spawnT=Math.max(0.55,1.15-eaten*0.045); spawn(); }
+    for(let i=belt.length-1;i>=0;i--){ const b=belt[i]; b.x+=b.v*dt; b.y=beltY+Math.sin((b.x+i*40)*0.05)*3;
+      if(b.x>W+26){ if(b.f.k===crave.k) combo=0; belt.splice(i,1); } }
+    mouthOpen+=(( chewing?(0.35+chewAnim*0.55):0.12) - mouthOpen)*Math.min(1,dt*14);
+    for(let i=fx.length-1;i>=0;i--){ const p=fx[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=440*dt; if(p.life<=0)fx.splice(i,1); }
+    if(heat>=100){ lose('🥵 MUND BRENNT! Die scharfe Currywurst hat dich besiegt.'); return; }
+    if(fullness>=100){ lose('💥 GEPLATZT! Zu viel auf einmal reingeschoben.'); return; }
+    if(tLeft<=0){ if(eaten>=goal) win(); else lose('⏰ Zeit um! Nur '+eaten+' von '+goal+' geschafft.'); return; }
+    draw();
+    fBar.style.width=Math.min(100,fullness)+'%'; fLbl.textContent='🤢 Völle '+Math.round(Math.min(100,fullness))+'%';
+    hBar.style.width=Math.min(100,heat)+'%'; hLbl.textContent='🌶️ Schärfe '+Math.round(Math.min(100,heat))+'%';
+    miniRAF=requestAnimationFrame(loop); }
+  function draw(){ const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#20263e'); g.addColorStop(1,'#131829'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // HUD
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.font='700 15px Segoe UI'; ctx.fillStyle='#ffd23f'; ctx.fillText('⏱ '+Math.ceil(tLeft)+'s',10,22);
+    ctx.textAlign='center'; ctx.fillStyle='#e8eefc'; ctx.font='800 17px Segoe UI'; ctx.fillText('Iss:  '+crave.e+'  '+crave.n,W/2,22);
+    ctx.textAlign='right'; ctx.fillStyle='#9ad0ff'; ctx.fillText(eaten+'/'+goal,W-10,22);
+    if(combo>=2){ ctx.textAlign='right'; ctx.fillStyle='#ffae3a'; ctx.font='800 14px Segoe UI'; ctx.fillText('🔥 x'+combo,W-10,40); }
+    // Fressender Kopf
+    const bob=Math.sin(sweatT*8)*headBob*3; const cy=faceY+bob;
+    ctx.fillStyle='#e6b58a'; ctx.beginPath(); ctx.ellipse(faceX,cy,40+(chewing?3:0),42,0,0,7); ctx.fill();
+    // Wangen (bei Kauen dick)
+    if(chewing){ ctx.fillStyle='#dca97e'; ctx.beginPath(); ctx.arc(faceX-30,cy+8,12,0,7); ctx.arc(faceX+30,cy+8,12,0,7); ctx.fill(); }
+    // Augen
+    ctx.fillStyle='#f3efe7'; ctx.beginPath(); ctx.ellipse(faceX-15,cy-8,7,fullness>80?4:8,0,0,7); ctx.ellipse(faceX+15,cy-8,7,fullness>80?4:8,0,0,7); ctx.fill();
+    ctx.fillStyle='#25190f'; ctx.beginPath(); ctx.arc(faceX-15,cy-7,3.2,0,7); ctx.arc(faceX+15,cy-7,3.2,0,7); ctx.fill();
+    ctx.strokeStyle='#7a5a3a'; ctx.lineWidth=3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(faceX-24,cy-20); ctx.lineTo(faceX-7,cy-19); ctx.moveTo(faceX+7,cy-19); ctx.lineTo(faceX+24,cy-20); ctx.stroke();
+    // Mund
+    const mo=6+mouthOpen*26; ctx.fillStyle='#5a1f1f'; ctx.beginPath(); ctx.ellipse(faceX,cy+18,17,mo/2,0,0,7); ctx.fill();
+    ctx.fillStyle='#d05a5a'; ctx.beginPath(); ctx.ellipse(faceX,cy+18+mo/4,9,mo/4,0,0,7); ctx.fill(); // Zunge
+    if(chewing){ ctx.font='20px serif'; ctx.textAlign='center'; ctx.fillText(chewing.f.e,faceX,cy+24); }
+    // Schweiß bei Völle/Schärfe
+    if(fullness>68||heat>45){ ctx.fillStyle='rgba(120,200,255,0.85)'; for(let k=0;k<3;k++){ const sx=faceX-30+k*30, sy=cy-24+((sweatT*40+k*20)%40); ctx.beginPath(); ctx.ellipse(sx,sy,2.5,4,0,0,7); ctx.fill(); } }
+    // Förderband
+    ctx.fillStyle='#2b3350'; ctx.fillRect(0,beltY-16,W,32);
+    ctx.strokeStyle='#4a5578'; ctx.lineWidth=2; for(let rx=((sweatT*60)% 26);rx<W;rx+=26){ ctx.beginPath(); ctx.moveTo(rx,beltY-16); ctx.lineTo(rx,beltY+16); ctx.stroke(); }
+    // Essen auf dem Band
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const b of belt){ if(b.f.k===crave.k){ ctx.strokeStyle='rgba(255,210,63,'+(0.55+Math.abs(Math.sin(sweatT*6))*0.45)+')'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(b.x,b.y,b.r+3,0,7); ctx.stroke(); }
+      ctx.font='34px serif'; ctx.fillText(b.f.e,b.x,b.y); }
+    // Partikel
+    ctx.font='16px serif'; for(const p of fx){ ctx.globalAlpha=Math.max(0,p.life); ctx.fillText(p.e,p.x,p.y); } ctx.globalAlpha=1;
+    if(flash>0){ ctx.fillStyle='rgba('+flashCol+','+(flash*0.35)+')'; ctx.fillRect(0,0,W,H); }
+    ctx.textBaseline='alphabetic';
+  }
+  let last=performance.now(); miniRAF=requestAnimationFrame(loop);
+  function xy(e){ const r=cv.getBoundingClientRect(); return [ (e.clientX-r.left)*(W/r.width), (e.clientY-r.top)*(H/r.height) ]; }
+  mOn(cv,'pointerdown',e=>{ e.preventDefault(); const p=xy(e); tap(p[0],p[1]); });
+  document.getElementById('chewBtn').addEventListener('click',chew);
+  document.getElementById('drinkBtn').addEventListener('click',drink);
+  mOn(window,'keydown',e=>{ if(e.code==='Space'){e.preventDefault();chew();} else if(e.key==='d'||e.key==='D'){drink();} });
 }
 
 /* ---------- MG1: Politiker schmieren (Szene) ---------- */

@@ -26,6 +26,9 @@ grundierteren, realistischeren Look (statt Flat-Cartoon):
   **Kachelwand** (echte Fugen-Rillen), der **Gehweg** (Plattenrelief) und die
   **Asphalt-Fahrbahn** bekommen echtes **Oberflächen-Relief** unter dem Licht.
 - **Atmosphärischer Nebel** für Tiefe (dumpfe Tunnel-Haze unten, Dunst außen).
+- **Aufgeräumtes HUD (GTA-Style)**: schwebende Emoji-Marker über Personen &
+  Ständen werden **nach Entfernung ausgeblendet** – nur was in der Nähe ist,
+  wird angezeigt (der nächste Marker pulsiert leicht). Kein Icon-Gewusel mehr.
 
 ### Detaillierte Gesichter
 
@@ -140,12 +143,21 @@ und ein **Erdgeschoss mit Ladentür & Schaufenstern (mit Markise)** – gleich b
 Rauskommen sieht der Kiez wohnlich aus. Die **Parkbänke** stehen ordentlich an
 der Häuserzeile (mit Blick zur Straße) statt mitten im Weg.
 
-## 🎮 12 Minispiele (visuelle Szenen)
+## 🎮 13 Minispiele (visuelle Szenen)
 
 In **jedem Kiez** findest du die Minispiel-Schilder (💼 Politiker, 🌙 Görli bei
 Nacht, 🎲 Verspätung, 🏠 Wohnung, 🛴 Slalom, 💰 Finanzausgleich, 📋 Bürgeramt,
-🕶️ Berlin-Look) plus den **🚌 SEV-Bus** am Straßenrand.
+🕶️ Berlin-Look, 🍔 Fress-Bude) plus den **🚌 SEV-Bus** am Straßenrand.
 
+- 🍔 **Fress-Marathon** (neu, komplex & animiert): Iss dich durch Berlin!
+  Auf einem **Förderband** rollt Essen vorbei – tippe genau das **verlangte
+  Gericht** (🍔 Burger, 🥙 Döner, 🌭 Currywurst, 🍟 Pommes, 🥨 Brezel, 🌶️ scharfe
+  Currywurst), dann **KAUEN** (mehrere Bisse pro Teil), bis es runter ist.
+  Eine **Völle-Anzeige** 🤢 steigt mit jedem Bissen – wird sie voll, **platzt**
+  du 💥. Scharfes 🌶️ treibt die **Schärfe-Anzeige** 🥵 hoch. Gegensteuern per
+  **TRINKEN** 🍺 (senkt Völle & Schärfe). **Combos** fürs schnelle richtige
+  Essen. Ein großer **kauender Kopf** mit Backen, Schweiß & Krümel-Partikeln.
+  Ziel: **12 Gerichte**, ohne zu platzen.
 - 🚌 **Schienenersatzverkehr** (überarbeitet – jetzt echtes Gameplay): Die U8
   fällt aus – **du fährst den gelben SEV-Bus** zum Alex. Drei Mechaniken
   greifen ineinander: **Lenken** (◀ ▶ / A D / ziehen) um Baustellen 🚧, Staus
