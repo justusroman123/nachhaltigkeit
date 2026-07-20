@@ -118,11 +118,12 @@
     vom Krümel über Döner, Autos und Häuser bis zum <b>Fernsehturm</b>! 🗼<br>
     Weiche <b>Bären 🐻, Ordnungsamt 👮, Rollern 🛴 und Ratten 🐀</b> aus –
     bis DU groß genug bist, SIE zu fressen.<br>
-    Schnapp dir Power-Ups: <b>Knobi-Döner 🥙</b> (alle fliehen!),
-    <b>Currywurst Spezial 🌭</b> (doppelte Punkte), <b>Club-Mate 🧃</b> (Turbo)
-    und <b>Riesen-Pommes 🍟</b> (Wachstumsschub)!<br>
-    Die goldenen Pfeile zeigen dir den Weg zu den Sehenswürdigkeiten.
-    Und denk dran: Der Hunger-Balken darf NIE leer werden!
+    Schnapp dir Power-Ups: <b>Knobi-Döner 🥙</b>, <b>Currywurst Spezial 🌭</b>,
+    <b>Club-Mate 🧃</b>, <b>Riesen-Pommes 🍟</b> – und die seltenen Super-Items:
+    <b>Goldene Currywurst 👑</b> (friss ALLES!), <b>Späti-Magnet 🧲</b> und
+    <b>Berghain-Modus 🪩</b> (dreifache Punkte)!<br>
+    Die goldenen Pfeile führen dich zu den Sehenswürdigkeiten, von
+    <b>Spandau bis Neukölln</b>. Und denk dran: Der Hunger-Balken darf NIE leer werden!
   </p>
   <button class="btn" id="startbtn">Los geht’s!</button>
   <div class="credit">Immerhunger · Berlin Edition</div>
@@ -187,38 +188,101 @@ function sndOver(){ [392,330,262,196].forEach((f,i)=>beep(f,0.22,'triangle',0.15
 muteBtn.addEventListener('click',()=>{ muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; });
 
 /* ---------------- Sprüche ---------------- */
-const SAY_IDLE=['ICK HABE IMMERHUNGER!','Ick hab immer Hunger. IMMER. HUNGER.','Hunger? IMMER!','IMMERHUNGER is keen Hobby – dit is Lebenseinstellung!','Wo is dit Essen, ey?','Dit is meine Stadt!','Icke. Fresse. Allet.','Berlin, ick fress dir!','Hunger! Und zwar dolle!','Wat kiekste? Ick ess nur.','Dit Knurren? Dit is mein Magen!','Berlin is schön. Und lecker!','Frühstück, Mittach, Abendbrot – und dazwischen: ICK!'];
-const SAY_EAT=['Knorke!','Lecker, wa?','Hamma!','Dit schmeckt!','Läuft bei mir!','Jut!','Mehr davon!','Nom nom nom!','Watt’n Happen!','Da hamse wat Jutes!','Und ick hab IMMER noch Hunger!','Dit war’n Anfang!','Nachschlag, bitte!'];
+const SAY_IDLE=['ICK HABE IMMERHUNGER!','Ick hab immer Hunger. IMMER. HUNGER.','Hunger? IMMER!','IMMERHUNGER is keen Hobby – dit is Lebenseinstellung!','Wo is dit Essen, ey?','Dit is meine Stadt!','Icke. Fresse. Allet.','Berlin, ick fress dir!','Hunger! Und zwar dolle!','Wat kiekste? Ick ess nur.','Dit Knurren? Dit is mein Magen!','Berlin is schön. Und lecker!','Frühstück, Mittach, Abendbrot – und dazwischen: ICK!','Kalorien zählen? Ick zähl nur Opfer.','Mein Ernährungsplan: JA.','Die Stadt gehört denen, die se fressen!'];
+const SAY_EAT=['Knorke!','Lecker, wa?','Hamma!','Dit schmeckt!','Läuft bei mir!','Jut!','Mehr davon!','Nom nom nom!','Watt’n Happen!','Da hamse wat Jutes!','Und ick hab IMMER noch Hunger!','Dit war’n Anfang!','Nachschlag, bitte!','Vorspeise. Klar, wa?','Runter damit!','Schmeckt nach mehr. Allet schmeckt nach mehr.'];
 const SAY_SPECIFIC={
-  '🌯':'Mit alles und scharf!','🌭':'Currywurst rot-weiß!','🥨':'Brezel? Ooch jut!',
-  '🍩':'Zucker, Baby!','🍕':'Mmmh, Pizza-Ecke!','🍔':'Dit is mal’n Burger!',
-  '🍗':'Broiler! Wie früher!','🍬':'Nascherei vom Späti!','🍓':'Beeren aus’m Mauerpark!',
-  '🐦':'Tschuldigung, Taube!','🐈':'Miez? Weg is se!','🚗':'Wieder’n Parkplatz frei!',
-  '🚕':'Taxi? Brauch ick nich!','🚌':'Schneller als die BVG!','🚃':'Ersatzverkehr, wa!',
-  '🚙':'SUV wech – Platz uffm Radweg!','🚛':'Umzugslaster? Umzug fällt aus!',
-  '🏠':'Miete gespart!','🏘️':'Kiez einverleibt!','🏢':'Bürokomplex? Komplex jefressen!',
-  '🏬':'KaDeWe – Kann Denn Wat Essen!','🏰':'Schloss? Jetzt Magenschloss!','🏛️':'Museumsinsel to go!',
-  '🚲':'Radweg is frei!','⛪':'Halleluja!','🌳':'Vitamine, ne?','🏪':'Späti-Snack, jeil!',
-  '🍦':'Softeis am Alex!','🥐':'Frühstück!','🗑️':'Pfand jehört dazu!'
+  '🌯':['Mit alles und scharf!','Der beste Döner is der in mir!','Döner macht schöner. Kiek mich an!'],
+  '🌭':['Currywurst rot-weiß!','Mit Darm oder ohne? EGAL!','Herta hätte jeweint.'],
+  '🥨':['Brezel? Ooch jut!','Laugenjebäck – wie Oma. Nur schneller.'],
+  '🍩':['Zucker, Baby!','Diabetes? Kenn ick nur vom Hörensagen.'],
+  '🍕':['Mmmh, Pizza-Ecke!','1-Euro-Pizza – jetzt 0 Euro!'],
+  '🍔':['Dit is mal’n Burger!','Fast Food? Ick bin schneller.'],
+  '🍗':['Broiler! Wie früher!','Dit Hähnchen hatte keene Chance.'],
+  '🍬':['Nascherei vom Späti!','Zähne sind eh überbewertet.'],
+  '🍓':['Beeren aus’m Mauerpark!','Bio? Weeß ick nich. Wech is se.'],
+  '🍟':['Pommes! Schranke!','Fettich!'],
+  '🥟':['Maultasche? Schmeckt trotzdem.','Dumplings ausm Foodtruck!'],
+  '🧇':['Waffel! Süß, wa?','Brunch is jefallen.'],
+  '🐦':['Tschuldigung, Taube!','Eine Taube weniger – Berlin dankt!','Friede sei mit dir. Guten Appetit.','Der Alexanderplatz atmet auf.'],
+  '🐈':['Miez? Weg is se!','Neun Leben? Jetzt keins mehr.'],
+  '🚗':['Wieder’n Parkplatz frei!','Der stand eh im Halteverbot!','Zweite Reihe? Nie wieder.'],
+  '🚕':['Taxi? Brauch ick nich!','Der Fahrer hatte Feierabend. Jetzt für immer... nee, Spaß.'],
+  '🚌':['Schneller als die BVG!','Der M29 kommt heute nich. Wieder ma.','Weil wir dich fressen – BVG!'],
+  '🚃':['Ersatzverkehr, wa!','U-Bahn jefressen – Störung im Betriebsablauf!','Bitte NICHT zurückbleiben!'],
+  '🚙':['SUV wech – Platz uffm Radweg!','Der wollte eh nach Brandenburg.'],
+  '🚛':['Umzugslaster? Umzug fällt aus!','Möbelspedition? Ick spediere in’ Magen.'],
+  '🏠':['Miete gespart!','Entmietung mal andersrum!','Eigenbedarf angemeldet: MEINER.'],
+  '🏘️':['Kiez einverleibt!','Gentrifizierung? Ick bin die Endstufe.'],
+  '🏢':['Bürokomplex? Komplex jefressen!','Home-Office für alle – dit Büro is wech.'],
+  '🏬':['KaDeWe – Kann Denn Wat Essen!','Shoppingcenter? Schluckcenter!'],
+  '🏰':['Schloss? Jetzt Magenschloss!','Preußens Gloria – runterjeschluckt.'],
+  '🏛️':['Museumsinsel to go!','Eintritt frei – für mich!'],
+  '🚲':['Radweg is frei!','Klingel nich, dit hilft nüscht.'],
+  '⛪':['Halleluja!','Der Herr sei deinem Türmchen gnädig.'],
+  '🌳':['Vitamine, ne?','Ein Baum weniger. Tschuldigung, Klima.'],
+  '🏪':['Späti-Snack, jeil!','Der Späti hatte offen. Sein Fehler.'],
+  '🍦':['Softeis am Alex!','Hirnfrost? Hab keen Hirn, nur Hunger!'],
+  '🥐':['Frühstück!','Croissant – très jut!'],
+  '🗑️':['Pfand jehört dazu!','Mülltrennung: allet in mich.']
 };
-const SAY_STAGE=['ICK HABE IMMERHUNGER – UND WIE!','Größer! Hungriger! ICKE!','Ick wachse wie die Mieten!','Noch lange nich satt!','Berlin, mach dir keene Sorgen. Doch.','Krone sitzt, Hunger bleibt!'];
-const SAY_HUNGRY=['ICK HABE IMMERHUNGER! Futter, zack zack!','Magen leer! Allet leer! HUNGER!','Ohne Mampf keen Dampf!','SOS – Kirsche braucht Kalorien!'];
-const SAY_HURT=['Aua, ey!','Pass uff, Alter!','Dit tat weh!','Ey, spinnst du?!','Nich mit mir, Freundchen!','Gleich biste Futter, warte ab!'];
-const SAY_JUNK=['Igitt, Socke!','Bäh! Dit is kein Essen!','Pfui Deibel!','Wer schmeißt denn sowat wech?!'];
+const SAY_STAGE=['ICK HABE IMMERHUNGER – UND WIE!','Größer! Hungriger! ICKE!','Ick wachse wie die Mieten!','Noch lange nich satt!','Berlin, mach dir keene Sorgen. Doch.','Krone sitzt, Hunger bleibt!','Der BER wurde ooch ma fertig. Ick nie!','Wachstum! Ohne Fördermittel!'];
+const SAY_HUNGRY=['ICK HABE IMMERHUNGER! Futter, zack zack!','Magen leer! Allet leer! HUNGER!','Ohne Mampf keen Dampf!','SOS – Kirsche braucht Kalorien!','Gleich fress ick den Asphalt!'];
+const SAY_HURT=['Aua, ey!','Pass uff, Alter!','Dit tat weh!','Ey, spinnst du?!','Nich mit mir, Freundchen!','Gleich biste Futter, warte ab!','Merk dir dit Jesicht – ick komm wieder!'];
+const SAY_JUNK=['Igitt, Socke!','Bäh! Dit is kein Essen!','Pfui Deibel!','Wer schmeißt denn sowat wech?!','Schmeckt wie Montagmorgen.'];
 const SAY_ENEMY_EAT={
-  '🐻':'Sorry Bärchen – Berlin jehört jetzt mir!','👮':'Knöllchen? Jefressen!',
-  '🛴':'Roller-Rowdy verputzt!','🐀':'Ratte? Schmeckt nach U8!'
+  '🐻':['Sorry Bärchen – Berlin jehört jetzt mir!','Dit Wappen brauch’n neuet Tier.','Bärendienst? Bärenmahlzeit!'],
+  '👮':['Knöllchen? Jefressen!','Dit Ordnungsamt is jetzt Innereiensache.','Falschparken? Für immer erledigt.'],
+  '🛴':['Roller-Rowdy verputzt!','Ein E-Roller weniger uffm Gehweg!','9 km/h Restgeschwindigkeit. In mir.'],
+  '🐀':['Ratte? Schmeckt nach U8!','Kanalratte – jetzt Kirschenratte.','Ratatouille, Berliner Art.']
 };
-const SAY_GIVEUP=['Na jut, hau ab...','Keene Lust mehr!','Puh... zu schnell!','Feierabend!'];
-const OVER_HUNGER=['Verhungert! In Berlin! Wie is dit möglich?!','Der Magen war leer – dit war’s, Digga!','Ohne Futter keene Krone. Schade, wa?','Zu langsam jefressen – Berlin vergisst nich!'];
-function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+const SAY_GIVEUP=['Na jut, hau ab...','Keene Lust mehr!','Puh... zu schnell!','Feierabend!','Ick mach Pause. Gewerkschaft.'];
+const OVER_HUNGER=['Verhungert! In Berlin! Wie is dit möglich?!','Der Magen war leer – dit war’s, Digga!','Ohne Futter keene Krone. Schade, wa?','Zu langsam jefressen – Berlin vergisst nich!','Verhungert. Die Tauben kreisen schon...','Berlin frisst seine Kinder. Heute: dich.','Dit Ordnungsamt hat schon den Parkschein für deine Grabstelle jeschrieben.'];
 
-/* ---------------- Power-Ups ---------------- */
+// pick() never repeats the last few lines – immer wat Neuet
+const recentSays=[];
+function pick(a){
+  if(!a||!a.length) return '';
+  let c=a.filter(x=>!recentSays.includes(x));
+  if(!c.length) c=a;
+  const s=c[Math.floor(Math.random()*c.length)];
+  recentSays.push(s); if(recentSays.length>6) recentSays.shift();
+  return s;
+}
+
+/* ---------------- Bezirke ---------------- */
+const DISTRICTS=[
+  ['SPANDAU','WEDDING','PRENZLAUER BERG'],
+  ['CHARLOTTENBURG','MITTE','FRIEDRICHSHAIN'],
+  ['SCHÖNEBERG','KREUZBERG','NEUKÖLLN']
+];
+const DISTRICT_SAY={
+  'SPANDAU':['Spandau? Zählt dit überhaupt zu Berlin?','Spandau: Hier is sogar dit Essen pünktlich.'],
+  'WEDDING':['Der Wedding kommt! Als Nachtisch.','Wedding: rau, aber herzlich. Und nahrhaft.'],
+  'PRENZLAUER BERG':['Prenzlberg: Bio, vegan – und trotzdem lecker!','Achtung, Lastenräder! Die schmecken nach Gewissen.'],
+  'CHARLOTTENBURG':['Charlottenburg: Heute Kaviar. Oder Currywurst.','West-Berlin! Hier schmeckt allet nach Kudamm.'],
+  'MITTE':['Mitte: Touris schmecken nach Selfie-Stick!','Mitte! Hier is nüscht bezahlbar – außer für MICH: allet umsonst!'],
+  'FRIEDRICHSHAIN':['Friedrichshain: Clubs, Kräne, Kalorien!','Hier tanzt man bis früh – ick fresse bis früh.'],
+  'SCHÖNEBERG':['Schöneberg: Ick bin een Berliner. Und du bist Futter.','Regenbogenkiez! Bunt wie mein Speiseplan.'],
+  'KREUZBERG':['Kreuzberg! Hier jibt’s den besten Döner der Welt!','X-Berg: Erst Demo, denn Döner.'],
+  'NEUKÖLLN':['Neukölln: Friss oder werd jefressen!','Neukölln! Hier hab sogar ICK Respekt.']
+};
+function districtAt(x,y){
+  const col=Math.min(2,Math.max(0,Math.floor(x/(WORLD/3))));
+  const row=Math.min(2,Math.max(0,Math.floor(y/(WORLD/3))));
+  return DISTRICTS[row][col];
+}
+
+/* ---------------- Power-Ups & Super-Items ---------------- */
 const POWERUPS=[
   {e:'🥙', name:'KNOBI-DÖNER',       kind:'garlic', dur:10, say:'Knoblauchfahne! ALLE WECH HIER!'},
   {e:'🌭', name:'CURRYWURST SPEZIAL', kind:'double', dur:12, say:'Currywurst Spezial – doppelte Punkte!'},
   {e:'🧃', name:'CLUB-MATE TURBO',    kind:'turbo',  dur:8,  say:'Club-Mate! ICK FLIEGE!'},
   {e:'🍟', name:'RIESEN-POMMES',      kind:'grow',   dur:0,  say:'Pommes-Power! Ick wachse!'}
+];
+const SUPERS=[
+  {e:'👑', name:'GOLDENE CURRYWURST', kind:'royal',  dur:8,  super:true, say:'KÖNIGLICH! Ick fress allet, wat nich niet- und nagelfest is!'},
+  {e:'🧲', name:'SPÄTI-MAGNET',       kind:'magnet', dur:10, super:true, say:'Allet kommt zu Papa!'},
+  {e:'🪩', name:'BERGHAIN-MODUS',     kind:'rave',   dur:10, super:true, say:'Einlass? Heute: JA! Dreifache Punkte!'}
 ];
 
 /* ---------------- World ---------------- */
@@ -229,8 +293,8 @@ function hash2(a,b){ let h=(a*374761393+b*668265263)^0x5bf03635; h=(h^(h>>13))*1
 const LABELS={'🏪':'SPÄTI 24/7','🚃':'U-BAHN','🚚':'DÖNER-TRUCK','🚌':'BVG'};
 const TIERS=[
   {min:5, max:8,  e:['🍪','🍬','🍓','🥜','🍇'], flee:false},
-  {min:10,max:14, e:['🥨','🍩','🧁','🥐','🍦'], flee:false},
-  {min:16,max:22, e:['🍕','🍔','🌭','🌯','🍗'], flee:false},
+  {min:10,max:14, e:['🥨','🍩','🧁','🥐','🍦','🧇','🥟'], flee:false},
+  {min:16,max:22, e:['🍕','🍔','🌭','🌯','🍗','🍟'], flee:false},
   {min:26,max:36, e:['🐦','🛴','🚲','🗑️','🐈'], flee:true},
   {min:45,max:62, e:['🚗','🚕','🚙','🌳','🚚'], flee:false, drive:true},
   {min:70,max:92, e:['🚌','🚚','🚃','🚛'], flee:false, drive:true},
@@ -274,7 +338,8 @@ let running=false, last=0, tGlobal=0;
 let score=0, best=0, foodsEaten=0, combo=0, comboTimer=0, hunger=100, stageIdx=0, won=false;
 let objects=[], parts=[], pops=[], msgs=[], respawnQ=[];
 let shake=0, bubble=null, idleT=6;
-let buffs={garlic:0,double:0,turbo:0}, puTimer=9, hungryWarned=false, lastBuffLine='';
+let buffs={garlic:0,double:0,turbo:0,royal:0,magnet:0,rave:0}, puTimer=9, hungryWarned=false, lastBuffLine='';
+let curDistrict='';
 try{ best=parseInt(localStorage.getItem('immerhunger_best2')||'0',10)||0; }catch(e){}
 
 const player={ x:3000, y:3600, r:16, vx:0, vy:0, mouth:0, chomp:0, wob:0, face:1, hurt:0, moving:false };
@@ -335,7 +400,8 @@ function buildWorld(){
 function resetGame(){
   score=0; foodsEaten=0; combo=0; comboTimer=0; hunger=100; stageIdx=0; won=false;
   parts=[]; pops=[]; msgs=[]; respawnQ=[]; shake=0; tGlobal=0; bubble=null; idleT=5;
-  buffs={garlic:0,double:0,turbo:0}; puTimer=9; hungryWarned=false; lastBuffLine='';
+  buffs={garlic:0,double:0,turbo:0,royal:0,magnet:0,rave:0}; puTimer=9; hungryWarned=false; lastBuffLine='';
+  curDistrict=districtAt(player.x,player.y);
   player.x=3000; player.y=3600; player.r=16; player.hurt=0; player.chomp=0; player.vx=0; player.vy=0;
   joy.active=false;
   zoom=Math.min(1.3,(H*0.115)/player.r);
@@ -346,7 +412,7 @@ function resetGame(){
 function fmtSize(){ return (player.r/16).toFixed(player.r<160?1:0); }
 function updateHud(){
   scoreEl.textContent=score;
-  stageEl.textContent=STAGES[stageIdx].n;
+  stageEl.textContent=STAGES[stageIdx].n+(curDistrict?' · '+curDistrict:'');
   comboEl.textContent=((combo>=2?('FRESS-COMBO ×'+combo+'  '):'')+lastBuffLine).trim();
   hungerFill.style.width=Math.max(0,Math.min(100,hunger))+'%';
   sizeEl.textContent='🍒 '+fmtSize()+'×';
@@ -387,13 +453,13 @@ function crumbs(x,y,r,gold){
   }
 }
 function pop(x,y,txt,col){ pops.push({x,y,txt,col:col||'#fff3dc',t:0,life:0.9}); }
-function announce(txt,big){ msgs.push({txt,t:0,life:big?3:2.2,big:!!big}); }
+function announce(txt,big){ msgs.push({txt,t:0,life:big?3:2.2,big:!!big}); if(msgs.length>5) msgs.splice(0,msgs.length-5); }
 function say(txt){ bubble={txt,t:0,life:2.4}; idleT=4.5+Math.random()*4; }
 
 /* ---------------- Update ---------------- */
 function damagePlayer(o,label,shrink){
   player.r=Math.max(13,player.r*shrink);
-  combo=0; player.hurt=1.2; shake=Math.max(shake,10);
+  combo=0; player.hurt=1.6; shake=Math.max(shake,10);
   hunger=Math.max(5,hunger-6);
   const d=Math.hypot(player.x-o.x,player.y-o.y)||1;
   const push=player.r+o.r*0.6;
@@ -425,9 +491,20 @@ function update(dt){
   if(player.chomp>0) player.chomp-=dt*5;
   if(player.hurt>0) player.hurt-=dt;
 
-  // camera zoom
-  const targetZoom=Math.max(0.13,Math.min(1.3,(H*0.115)/player.r));
+  // camera zoom – the cherry takes up less of the screen the bigger it gets,
+  // so you can always see the city around you
+  const sf=0.115*Math.pow(16/Math.max(16,player.r),0.22);
+  const targetZoom=Math.max(0.085,Math.min(1.3,(H*sf)/player.r));
   zoom+=(targetZoom-zoom)*Math.min(1,dt*3);
+
+  // Bezirk check
+  const dName=districtAt(player.x,player.y);
+  if(dName!==curDistrict && tGlobal>1.5){
+    curDistrict=dName;
+    announce('Willkommen in '+dName+'!',false);
+    if(DISTRICT_SAY[dName]) say(pick(DISTRICT_SAY[dName]));
+    updateHud();
+  }
 
   // hunger
   hunger-=dt*(2.4+stageIdx*0.5);
@@ -441,7 +518,10 @@ function update(dt){
   let bl='';
   if(buffs.garlic>0) bl+='🥙'+Math.ceil(buffs.garlic)+'s ';
   if(buffs.double>0) bl+='🌭×2 '+Math.ceil(buffs.double)+'s ';
-  if(buffs.turbo>0) bl+='🧃'+Math.ceil(buffs.turbo)+'s';
+  if(buffs.turbo>0) bl+='🧃'+Math.ceil(buffs.turbo)+'s ';
+  if(buffs.royal>0) bl+='👑'+Math.ceil(buffs.royal)+'s ';
+  if(buffs.magnet>0) bl+='🧲'+Math.ceil(buffs.magnet)+'s ';
+  if(buffs.rave>0) bl+='🪩×3 '+Math.ceil(buffs.rave)+'s';
   if(bl!==lastBuffLine){ lastBuffLine=bl; updateHud(); }
   if(buffs.turbo>0 && player.moving){
     parts.push({x:player.x-mx*player.r,y:player.y-my*player.r,vx:-mx*120,vy:-my*120,
@@ -452,7 +532,9 @@ function update(dt){
   puTimer-=dt;
   if(puTimer<=0){
     puTimer=12+Math.random()*7;
-    const pu=POWERUPS[Math.floor(Math.random()*POWERUPS.length)];
+    const pu=Math.random()<0.18
+      ? SUPERS[Math.floor(Math.random()*SUPERS.length)]
+      : POWERUPS[Math.floor(Math.random()*POWERUPS.length)];
     const ang=Math.random()*6.28, dd=350+Math.random()*550;
     const pr=Math.max(14,Math.min(80,player.r*0.55));
     let px=player.x+Math.cos(ang)*dd, py=player.y+Math.sin(ang)*dd;
@@ -477,9 +559,10 @@ function update(dt){
   }
 
   let near=0;
+  const eatFactor=buffs.royal>0?2.2:0.92; // Goldene Currywurst: fast allet is fressbar
   for(let i=objects.length-1;i>=0;i--){
     const o=objects[i];
-    const edible=!o.junk && o.r<player.r*0.92;
+    const edible=!o.junk && o.r<player.r*eatFactor;
 
     // motion
     if(o.enemy){
@@ -519,6 +602,13 @@ function update(dt){
         if(o.x<o.r||o.x>WORLD-o.r){ o.vx*=-1; o.x=Math.max(o.r,Math.min(WORLD-o.r,o.x)); }
         if(o.y<o.r||o.y>WORLD-o.r){ o.vy*=-1; o.y=Math.max(o.r,Math.min(WORLD-o.r,o.y)); }
       }
+      if(buffs.magnet>0 && edible && !o.landmark){
+        const md=Math.hypot(o.x-player.x,o.y-player.y);
+        if(md>1 && md<820){
+          const pull=(320+player.r*0.8)*dt;
+          o.x-=(o.x-player.x)/md*pull; o.y-=(o.y-player.y)/md*pull;
+        }
+      }
       if(o.flee){
         const fd=Math.hypot(o.x-player.x,o.y-player.y);
         if(fd<player.r+340 && player.r>o.r*0.8 && fd>1){
@@ -540,7 +630,7 @@ function update(dt){
         const pu=o.power;
         announce(pu.e+' '+pu.name+'!',true); say(pu.say); sndWin();
         crumbs(o.x,o.y,o.r,true); shake=Math.max(shake,6);
-        if(pu.kind==='grow'){ player.r=Math.min(600,player.r*1.13); hunger=Math.min(100,hunger+30); }
+        if(pu.kind==='grow'){ player.r=Math.min(620,player.r*1.13); hunger=Math.min(100,hunger+30); }
         else buffs[pu.kind]=pu.dur;
         if(pu.kind==='double') comboTimer=Math.max(comboTimer,2);
         while(stageIdx<STAGES.length-1 && player.r>=STAGES[stageIdx+1].r){
@@ -561,11 +651,11 @@ function update(dt){
         objects.splice(i,1);
         combo++; comboTimer=1.8;
         if(combo>0&&combo%10===0){ announce('IMMERHUNGER-COMBO ×'+combo+'!',true); say('ICK HABE IMMERHUNGER!'); }
-        const mult=(1+Math.floor(combo/6))*(buffs.double>0?2:1);
+        const mult=(1+Math.floor(combo/6))*(buffs.double>0?2:1)*(buffs.rave>0?3:1);
         const pts=Math.round((o.pts||(o.enemy?o.r*2:o.r)))*mult;
         score+=pts; foodsEaten++;
         hunger=Math.min(100,hunger+Math.max(4,Math.min(45,o.r*0.6)));
-        player.r=Math.sqrt(player.r*player.r + o.r*o.r*0.35);
+        player.r=Math.min(620,Math.sqrt(player.r*player.r + o.r*o.r*0.35));
         player.chomp=1; shake=Math.max(shake,Math.min(9,3+o.r*0.02));
         crumbs(o.x,o.y,o.r,o.tier>=6);
         pop(o.x,o.y,'+'+pts,o.tier>=6?'#ffdf7e':'#fff3dc');
@@ -575,11 +665,11 @@ function update(dt){
           if(o.landmark==='turm'&&!won){ won=true; announce('DU HAST GANZ BERLIN GEFRESSEN!',true); }
         } else if(o.enemy){
           announce(ENEMY_TYPES[o.et].name+' GEFRESSEN!',false);
-          say(SAY_ENEMY_EAT[o.e]||pick(SAY_EAT)); sndBig();
+          say(pick(SAY_ENEMY_EAT[o.e]||SAY_EAT)); sndBig();
           respawnQ.push({enemy:o.et,t:18+Math.random()*10});
         } else {
           if(o.r>60) sndBig(); else sndEat(o.r);
-          if(SAY_SPECIFIC[o.e]&&Math.random()<0.55) say(SAY_SPECIFIC[o.e]);
+          if(SAY_SPECIFIC[o.e]&&Math.random()<0.55) say(pick(SAY_SPECIFIC[o.e]));
           else if(Math.random()<0.18) say(pick(SAY_EAT));
           if(o.tier>=0&&o.tier<TIERS.length) respawnQ.push({tier:o.tier,t:5+Math.random()*8});
         }
@@ -936,6 +1026,30 @@ function draw(){
   const vx0=player.x-W/2/zoom-100, vx1=player.x+W/2/zoom+100;
   const vy0=player.y-H/2/zoom-100, vy1=player.y+H/2/zoom+100;
 
+  // Umland: Brandenburg (dunkler Wald, nüscht zu essen)
+  if(vx0<0||vy0<0||vx1>WORLD||vy1>WORLD){
+    ctx.fillStyle='#0c1410';
+    ctx.fillRect(vx0,vy0,vx1-vx0,vy1-vy0);
+    ctx.fillStyle='#132218';
+    const gs=420;
+    for(let gx=Math.floor(vx0/gs);gx<=Math.ceil(vx1/gs);gx++){
+      for(let gy=Math.floor(vy0/gs);gy<=Math.ceil(vy1/gs);gy++){
+        const wx=gx*gs, wy=gy*gs;
+        if(wx>0&&wx<WORLD&&wy>0&&wy<WORLD) continue;
+        if(hash2(gx,gy)<0.6){ ctx.beginPath(); ctx.arc(wx+hash2(gx,gy*3)*gs,wy+hash2(gx*5,gy)*gs,40+hash2(gx,gy)*50,0,7); ctx.fill(); }
+      }
+    }
+    if(zoom<0.3){
+      ctx.font='900 200px "Avenir Next","Segoe UI",sans-serif';
+      ctx.textAlign='center'; ctx.fillStyle='rgba(150,180,150,0.25)';
+      ctx.fillText('BRANDENBURG',WORLD/2,-400);
+      ctx.fillText('BRANDENBURG',WORLD/2,WORLD+560);
+      ctx.font='700 110px "Avenir Next","Segoe UI",sans-serif';
+      ctx.fillText('(hier jibt’s nüscht zu essen)',WORLD/2,-180);
+      ctx.fillText('(hier jibt’s nüscht zu essen)',WORLD/2,WORLD+740);
+    }
+  }
+
   drawGround(Math.max(0,vx0),Math.max(0,vy0),Math.min(WORLD,vx1),Math.min(WORLD,vy1));
 
   ctx.strokeStyle='rgba(245,181,46,0.35)'; ctx.lineWidth=14/zoom;
@@ -948,6 +1062,7 @@ function draw(){
     vis.push(o);
   }
   vis.sort((a,b)=>a.r-b.r);
+  const eatF=buffs.royal>0?2.2:0.92;
   let drewPlayer=false;
   for(const o of vis){
     if(!drewPlayer && o.r>player.r){ drawCherry(); drewPlayer=true; }
@@ -963,7 +1078,7 @@ function draw(){
       ctx.strokeStyle='rgba(255,223,126,0.8)'; ctx.lineWidth=Math.max(2/zoom,o.r*0.08);
       ctx.beginPath(); ctx.arc(0,0,o.r*1.4*pulse,0,7); ctx.stroke();
     }
-    const edible=!o.junk && o.r<player.r*0.92;
+    const edible=!o.junk && o.r<player.r*eatF;
     if(edible && o.r*zoom>3 && o.r>player.r*0.35){
       ctx.strokeStyle='rgba(255,223,126,0.35)'; ctx.lineWidth=Math.max(1.5/zoom,o.r*0.06);
       ctx.beginPath(); ctx.arc(0,0,o.r*1.25,0,7); ctx.stroke();
@@ -1019,6 +1134,25 @@ function draw(){
   const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.42,W/2,H/2,Math.max(W,H)*0.75);
   vg.addColorStop(0,'rgba(8,13,29,0)'); vg.addColorStop(1,'rgba(8,13,29,0.55)');
   ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  // Berghain-Modus: rotierendes Partylicht
+  if(buffs.rave>0){
+    const hue=(tGlobal*140)%360;
+    ctx.globalAlpha=0.14;
+    const rg1=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.8);
+    rg1.addColorStop(0,'hsl('+hue+',90%,55%)'); rg1.addColorStop(1,'hsl('+((hue+160)%360)+',90%,45%)');
+    ctx.fillStyle=rg1; ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=0.5;
+    for(let k=0;k<3;k++){
+      const ba=tGlobal*2+k*2.1;
+      ctx.fillStyle='hsla('+((hue+k*120)%360)+',95%,65%,0.25)';
+      ctx.beginPath();
+      ctx.moveTo(W/2,H/2);
+      ctx.arc(W/2,H/2,Math.max(W,H),ba,ba+0.35);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
 
   // compass arrows to the two nearest landmarks still standing
   const lms=[];
