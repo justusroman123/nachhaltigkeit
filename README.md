@@ -11,6 +11,27 @@ Einfach den GitHub-Pages-Link öffnen (oder `docs/index.html` im Browser) –
 läuft komplett im Browser, auf **Desktop und Smartphone**, kein Download,
 nichts umstellen.
 
+## 🎨 Grafik-Engine (Realismus-Pass)
+
+Das Spiel nutzt eine **modernisierte Render-Pipeline** für einen deutlich
+grundierteren, realistischeren Look (statt Flat-Cartoon):
+
+- **Filmisches Tone-Mapping** (ACES) + **sRGB-Farbpipeline** → natürliche
+  Kontraste, satte aber nicht überzeichnete Farben, weiche Lichter.
+- **Image-Based Lighting**: eine prozedurale **Environment-Map** (dumpfe
+  Bahnhofshalle unten, Himmel/Horizont oben) sorgt für **realistische
+  Reflexe & Umgebungslicht** auf Metall, Glas und Lack.
+- **Physikalisch korrektes Licht** + hochaufgelöste, weiche **Schatten**.
+- **Normal-Maps** auf den großen Flächen: der **Beton-Bahnsteig**, die
+  **Kachelwand** (echte Fugen-Rillen), der **Gehweg** (Plattenrelief) und die
+  **Asphalt-Fahrbahn** bekommen echtes **Oberflächen-Relief** unter dem Licht.
+- **Atmosphärischer Nebel** für Tiefe (dumpfe Tunnel-Haze unten, Dunst außen).
+
+> Hinweis: Eine *einzelne, komplett prozedural gebaute* HTML-Datei kann keine
+> fotorealistische Grafik wie ein echter Game-Engine-Build mit gescannten
+> 3D-Assets liefern – die Figuren bleiben bewusst stilisiert. Der Pass hebt
+> aber Licht, Material und Oberflächen spürbar Richtung „echt".
+
 ## Steuerung
 
 **Kamera-relative Steuerung mit frei drehbarer Ansicht** (mathematisch sauber):

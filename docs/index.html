@@ -297,7 +297,17 @@ const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:"high-
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// --- Realismus-Pipeline: physikalisch korrektes Licht, filmisches Tonemapping, sRGB ---
+renderer.physicallyCorrectLights = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 container.appendChild(renderer.domElement);
+// Alle Canvas-Texturen als Farb-(sRGB)-Texturen behandeln (korrekte Farben in der neuen Pipeline).
+// Normal-/Rauheits-Maps setzen ihre Encoding danach explizit auf Linear.
+(function(){ const _CT=THREE.CanvasTexture;
+  const W=function(cv){ const tx=new _CT(cv); tx.encoding=THREE.sRGBEncoding; tx.anisotropy=8; return tx; };
+  W.prototype=_CT.prototype; THREE.CanvasTexture=W; })();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0e1c);
@@ -322,6 +332,18 @@ sunLight.shadow.camera.left=-62; sunLight.shadow.camera.right=62;
 sunLight.shadow.camera.top=50; sunLight.shadow.camera.bottom=-42;
 sunLight.shadow.bias=-0.0006; sunLight.shadow.normalBias=0.02;
 sunLight.target.position.set(0,0,9); scene.add(sunLight.target);
+
+/* ---------- Image-Based Lighting (Environment) für realistische Reflexe/Ambient ---------- */
+const _pmrem = new THREE.PMREMGenerator(renderer); _pmrem.compileEquirectangularShader();
+function equirectGradient(stops){ // stops: [[t,'#rrggbb'],...] von oben (Himmel) nach unten (Boden)
+  const c=document.createElement('canvas'); c.width=512; c.height=256; const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,256); for(const s of stops) g.addColorStop(s[0],s[1]);
+  x.fillStyle=g; x.fillRect(0,0,512,256);
+  const t=new THREE.CanvasTexture(c); t.mapping=THREE.EquirectangularReflectionMapping; return t; }
+function buildEnv(stops){ const src=equirectGradient(stops); const rt=_pmrem.fromEquirectangular(src); src.dispose(); return rt.texture; }
+const ENV_OUT = buildEnv([[0,'#8fb6e8'],[0.42,'#bcd4ee'],[0.5,'#e9eef2'],[0.62,'#b9b3a6'],[1,'#6f6a60']]); // Himmel→Horizont→Boden
+const ENV_UG  = buildEnv([[0,'#3a4250'],[0.45,'#575e68'],[0.55,'#6b7078'],[1,'#2a2e36']]);                 // dumpfe Bahnhofshalle
+scene.environment = ENV_UG;
 
 /* ---------- Constants ---------- */
 const HALF_X = 34, HALF_Z = 5;
@@ -360,6 +382,23 @@ function emojiTex(e){
   const ctx=c.getContext('2d'); ctx.font='96px serif'; ctx.textAlign='center';
   ctx.textBaseline='middle'; ctx.fillText(e,64,74);
   return new THREE.CanvasTexture(c);
+}
+/* Höhenfeld -> Tangent-Space-Normalmap (gibt Oberflächen echtes Relief unter dem Licht). */
+function heightToNormal(w,h,drawFn,strength,rx,ry){
+  const hc=document.createElement('canvas'); hc.width=w; hc.height=h; const hx=hc.getContext('2d');
+  hx.fillStyle='#808080'; hx.fillRect(0,0,w,h); drawFn(hx);
+  const src=hx.getImageData(0,0,w,h).data;
+  const out=document.createElement('canvas'); out.width=w; out.height=h; const octx=out.getContext('2d');
+  const dst=octx.createImageData(w,h); const D=dst.data; const s=strength||2.5;
+  const H=(xx,yy)=>src[(((yy%h)+h)%h*w+(((xx%w)+w)%w))*4]/255;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const dx=(H(x-1,y)-H(x+1,y))*s, dy=(H(x,y-1)-H(x,y+1))*s;
+    const l=Math.hypot(dx,dy,1)||1; const i=(y*w+x)*4;
+    D[i]=(dx/l*0.5+0.5)*255; D[i+1]=(dy/l*0.5+0.5)*255; D[i+2]=(1/l*0.5+0.5)*255; D[i+3]=255;
+  }
+  octx.putImageData(dst,0,0);
+  const t=new THREE.CanvasTexture(out); t.encoding=THREE.LinearEncoding;
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; if(rx)t.repeat.set(rx,ry||rx); return t;
 }
 function makeFloatIcon(emoji,x,y,z,parent){
   const s=new THREE.Sprite(new THREE.SpriteMaterial(
@@ -483,8 +522,25 @@ function stationTileTex(){ const c=document.createElement('canvas'); c.width=256
     x.fillStyle=tiles[(rx*2+ry*3)%tiles.length]; x.fillRect(rx*tw+off+1.4,ry*th+1.4,tw-2.8,th-2.8); } }
   for(let k=0;k<44;k++){ x.fillStyle='rgba(70,80,80,'+(Math.random()*0.06).toFixed(3)+')'; x.fillRect(Math.random()*256,Math.random()*128,5+Math.random()*8,2+Math.random()*3); }
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(22,3); return t; }
-const matPlatform=mat(0x9a958a), matEdge=mat(0xf3c400),
-      matTileWall=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.85,map:stationTileTex()}),
+function tileWallNormal(){ return heightToNormal(256,128,(x)=>{
+  x.fillStyle='#3a3a3a'; x.fillRect(0,0,256,128); const tw=32,th=16;
+  for(let ry=0;ry<8;ry++){ const off=(ry%2)*tw/2; for(let rx=-1;rx<9;rx++){ x.fillStyle='#dedede'; x.fillRect(rx*tw+off+1.6,ry*th+1.6,tw-3.2,th-3.2);} }
+}, 3.2, 22,3); }
+// Beton-Boden (Bahnsteig): körnige Textur + Relief
+function concreteTex(){ const c=document.createElement('canvas');c.width=256;c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#9a958a'; x.fillRect(0,0,256,256);
+  for(let k=0;k<1400;k++){ const g=(Math.random()*255|0); x.fillStyle='rgba('+g+','+g+','+g+','+(0.05+Math.random()*0.07).toFixed(3)+')'; x.fillRect(Math.random()*256,Math.random()*256,2,2); }
+  for(let k=0;k<9;k++){ const bx=Math.random()*256,by=Math.random()*256,br=10+Math.random()*30; const g=x.createRadialGradient(bx,by,1,bx,by,br); g.addColorStop(0,'rgba(30,28,24,0.22)'); g.addColorStop(1,'rgba(30,28,24,0)'); x.fillStyle=g; x.beginPath(); x.arc(bx,by,br,0,7); x.fill(); }
+  x.strokeStyle='rgba(30,30,30,0.4)'; x.lineWidth=1.2; for(let k=0;k<64;k+=64){} // Dehnfugen
+  x.beginPath(); x.moveTo(0,128); x.lineTo(256,128); x.moveTo(128,0); x.lineTo(128,256); x.stroke();
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(14,7); return t; }
+function concreteNormal(){ return heightToNormal(256,256,(x)=>{
+  for(let k=0;k<1600;k++){ const g=(96+Math.random()*64|0); x.fillStyle='rgb('+g+','+g+','+g+')'; x.fillRect(Math.random()*256,Math.random()*256,2,2); }
+  x.strokeStyle='#303030'; x.lineWidth=3; x.beginPath(); x.moveTo(0,128); x.lineTo(256,128); x.moveTo(128,0); x.lineTo(128,256); x.stroke();
+}, 1.4, 14,7); }
+const matPlatform=new THREE.MeshStandardMaterial({color:0xb2ada2,roughness:0.94,metalness:0.0,map:concreteTex(),normalMap:concreteNormal()}),
+      matEdge=mat(0xf3c400),
+      matTileWall=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.82,map:stationTileTex(),normalMap:tileWallNormal()}),
       matDark=mat(0x1a1e2a), matSteel=new THREE.MeshStandardMaterial({color:0x565b64,metalness:0.55,roughness:0.45}),
       matYellow=mat(0xf3c400),
       matWood=new THREE.MeshStandardMaterial({color:0x8a5a32,roughness:0.7}),
@@ -1234,6 +1290,14 @@ function groundTex(rx,ry){ const c=document.createElement('canvas');c.width=256;
   for(let k=0;k<14;k++){ x.fillStyle='rgba('+[ '210,205,195','120,120,120','160,150,140'][k%3]+',0.5)';
     x.beginPath(); x.arc(Math.random()*256,Math.random()*256,1.5+Math.random()*2.5,0,7); x.fill(); }
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||24,ry||12); return t; }
+function groundNormal(rx,ry){ return heightToNormal(256,256,(x)=>{
+  x.fillStyle='#888888'; x.fillRect(0,0,256,256); x.strokeStyle='#2c2c2c'; x.lineWidth=3;
+  for(let gy=0;gy<4;gy++){ const off=(gy%2)*18; for(let gx=-1;gx<5;gx++){ const px=gx*60+off,py=gy*64,pw=58,ph=60; x.fillStyle='#cccccc'; x.fillRect(px,py,pw,ph); x.strokeRect(px,py,pw,ph);} }
+  for(let n=0;n<420;n++){ x.fillStyle=Math.random()<0.5?'rgba(0,0,0,0.16)':'rgba(255,255,255,0.16)'; x.fillRect(Math.random()*256,Math.random()*256,2,2);}
+}, 2.0, rx||24, ry||12); }
+function roadNormal(){ return heightToNormal(128,64,(x)=>{
+  for(let k=0;k<900;k++){ const g=(70+Math.random()*90|0); x.fillStyle='rgb('+g+','+g+','+g+')'; x.fillRect(Math.random()*128,Math.random()*64,2,2);}
+}, 1.5, 24,1); }
 function groundDecals(p){
   // Gullideckel
   function gully(gx,gz){ const m=new THREE.Mesh(new THREE.CircleGeometry(0.55,12),new THREE.MeshStandardMaterial({color:0x33363c,metalness:0.4,roughness:0.7}));
@@ -1288,9 +1352,9 @@ function shopFront(x,z,w,h,bodyCol,awnCol,label,neon,kind){
 function buildStreet(i){
   clearGroup(streetGroup); npcs=[]; streetColl=[]; const kz=KIEZ[i]; const st=STATIONS[i];
   // Boden: texturierter Gehweg + Radweg + Fahrbahn
-  box(120,0.2,60,new THREE.MeshStandardMaterial({map:groundTex(30,15),roughness:0.96}),0,-0.1,20,0,streetGroup);
+  box(120,0.2,60,new THREE.MeshStandardMaterial({map:groundTex(30,15),normalMap:groundNormal(30,15),normalScale:new THREE.Vector2(0.8,0.8),roughness:0.96}),0,-0.1,20,0,streetGroup);
   box(120,0.205,2.4,new THREE.MeshStandardMaterial({map:bikeTex(),roughness:0.9}),0,-0.05,2.1,0,streetGroup);   // Radweg
-  box(120,0.22,7,new THREE.MeshStandardMaterial({map:roadTex(),roughness:0.9}),0,-0.08,-3,0,streetGroup);        // Fahrbahn
+  box(120,0.22,7,new THREE.MeshStandardMaterial({map:roadTex(),normalMap:roadNormal(),normalScale:new THREE.Vector2(0.6,0.6),roughness:0.92}),0,-0.08,-3,0,streetGroup);        // Fahrbahn
   box(120,0.08,0.35,mat(0xcfcfcf),0,0.03,0.7,0,streetGroup);  // Bordstein
   groundDecals(streetGroup);
   // Häuserzeile (Altbau)
@@ -1447,8 +1511,10 @@ function updateTrain(dt){
 function setPlace(pl){
   place=pl; const ug=(pl==='underground');
   ugStatic.visible=ug; stationGroup.visible=ug; streetGroup.visible=!ug; skylineGroup.visible=!ug; skydome.visible=!ug;
-  keyLight.visible=ug; sunLight.visible=!ug; hemi.intensity=ug?0.55:0.95;
-  if(ug){ scene.background.set(0x0a0e1c); scene.fog.color.set(0x0a0e1c); scene.fog.near=30; scene.fog.far=90; }
+  keyLight.visible=ug; sunLight.visible=!ug; hemi.intensity=ug?0.45:0.75;
+  scene.environment = ug?ENV_UG:ENV_OUT;
+  renderer.toneMappingExposure = ug?1.0:1.12;
+  if(ug){ scene.background.set(0x0a0e1c); scene.fog.color.set(0x11151f); scene.fog.near=26; scene.fog.far=82; }
   else { scene.background.set(0x9cc2ec); scene.fog.color.set(0xbcd6f2); scene.fog.near=55; scene.fog.far=170; }
   bounds=ug?UG_BOUNDS:ST_BOUNDS; colliders=ug?ugColl:streetColl;
   if(ug) updateVerspaetBoard();
