@@ -3,8 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<title>Berlin Untergrund – U-Bahn Odyssee</title>
+<meta name="theme-color" content="#7a2b8e">
+<title>U8 Berlin Untergrund – U-Bahn Odyssee</title>
+<!-- PWA: installierbar ("Zum Startbildschirm hinzufügen"), Vollbild, offline -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="U8 Berlin">
 <style>
   :root{
     --bvg-yellow:#f3d000;
@@ -3311,6 +3319,15 @@ function miniZuzug(){
     document.getElementById('ok').addEventListener('click',()=>{closeMini();miniZuzug();}); document.getElementById('c').addEventListener('click',()=>closeMini()); }
 }
 
+</script>
+<script>
+/* PWA: Service-Worker registrieren (nur wenn same-origin/HTTPS, z. B. auf GitHub Pages).
+   Scheitert still auf raw.githack o. ä. – das Spiel läuft trotzdem normal. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
 </script>
 </body>
 </html>

@@ -11,6 +11,25 @@ Einfach den GitHub-Pages-Link öffnen (oder `docs/index.html` im Browser) –
 läuft komplett im Browser, auf **Desktop und Smartphone**, kein Download,
 nichts umstellen.
 
+## 📲 Als App installieren (PWA)
+
+Das Spiel ist eine **Progressive Web App**: Öffnet man es über eine echte
+`https`-Adresse (z. B. **GitHub Pages**), kann man es **wie eine App
+installieren**:
+
+- **Android/Chrome:** Menü ⋮ → **„App installieren"** bzw. **„Zum
+  Startbildschirm hinzufügen"**.
+- **iPhone/Safari:** Teilen-Symbol → **„Zum Home-Bildschirm"**.
+
+Danach liegt es mit eigenem **Icon** auf dem Homescreen, startet im
+**Vollbild** (ohne Browserleiste) und funktioniert dank Service-Worker auch
+**offline**. Bausteine: `manifest.webmanifest`, `sw.js`, `icon-192/512.png`.
+
+> Hinweis: Die Installation braucht eine `https`-Herkunft. Über den
+> `raw.githack.com`-Vorschau-Link läuft das Spiel zwar, ist aber **nicht**
+> installierbar – dafür GitHub Pages aktivieren (Settings → Pages → Branch
+> `spiel` /docs).
+
 ## 🎨 Grafik-Engine (Realismus-Pass)
 
 Das Spiel nutzt eine **modernisierte Render-Pipeline** für einen deutlich
