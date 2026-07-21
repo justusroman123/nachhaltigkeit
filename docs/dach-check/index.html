@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DachCheck – Ihre Dach-Anfrage in 5 Minuten</title>
+</head>
+<body>
+<style>
+  :root{
+    --bg:#F7F5F1; --surface:#FFFFFF; --surface-2:#F1EDE6;
+    --ink:#241F1C; --muted:#6B6259; --line:#E5DFD6;
+    --accent:#A63A22; --accent-ink:#FFF6F2; --accent-soft:#F6E4DE;
+    --good:#3D7A46; --good-soft:#E4EFE5; --warn:#7A5410; --warn-soft:#F5EAD2;
+    --shadow:0 1px 2px rgba(36,31,28,.06),0 6px 20px rgba(36,31,28,.07);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#201C19; --surface:#2A2521; --surface-2:#332D28;
+      --ink:#F0EAE2; --muted:#A79C8F; --line:#3C352F;
+      --accent:#E0684A; --accent-ink:#2A120B; --accent-soft:#43261F;
+      --good:#8FC397; --good-soft:#26382A; --warn:#E0B45E; --warn-soft:#3D3216;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F7F5F1; --surface:#FFFFFF; --surface-2:#F1EDE6;
+    --ink:#241F1C; --muted:#6B6259; --line:#E5DFD6;
+    --accent:#A63A22; --accent-ink:#FFF6F2; --accent-soft:#F6E4DE;
+    --good:#3D7A46; --good-soft:#E4EFE5; --warn:#7A5410; --warn-soft:#F5EAD2;
+    --shadow:0 1px 2px rgba(36,31,28,.06),0 6px 20px rgba(36,31,28,.07);
+  }
+  :root[data-theme="dark"]{
+    --bg:#201C19; --surface:#2A2521; --surface-2:#332D28;
+    --ink:#F0EAE2; --muted:#A79C8F; --line:#3C352F;
+    --accent:#E0684A; --accent-ink:#2A120B; --accent-soft:#43261F;
+    --good:#8FC397; --good-soft:#26382A; --warn:#E0B45E; --warn-soft:#3D3216;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:560px;margin:0 auto;padding:0 16px 120px;min-height:100vh}
+
+  /* ---------- Kopfbereich ---------- */
+  header.top{
+    display:flex;align-items:center;gap:10px;
+    padding:18px 2px 10px;
+  }
+  .logo{
+    width:38px;height:38px;flex:0 0 auto;border-radius:10px;
+    background:var(--accent);display:grid;place-items:center;box-shadow:var(--shadow);
+  }
+  .logo svg{display:block}
+  .brand{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .brand small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.02em}
+
+  .progress-wrap{margin:6px 2px 18px}
+  .progress-label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:12px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.08em;font-weight:600;
+    margin-bottom:6px;
+  }
+  .progress-label b{color:var(--accent);font-variant-numeric:tabular-nums}
+  .progress{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .progress>i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .35s ease}
+  @media (prefers-reduced-motion: reduce){ .progress>i{transition:none} }
+
+  /* ---------- Schritt-Karten ---------- */
+  .step{display:none;animation:stepIn .3s ease}
+  .step.active{display:block}
+  @keyframes stepIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .step{animation:none} }
+
+  .eyebrow{
+    font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--accent);margin:4px 0 6px;
+  }
+  h1{font-size:28px;line-height:1.15;letter-spacing:-.02em;margin:0 0 10px;font-weight:800;text-wrap:balance}
+  h2{font-size:22px;line-height:1.2;letter-spacing:-.015em;margin:0 0 8px;font-weight:800;text-wrap:balance}
+  p.lead{color:var(--muted);margin:0 0 20px;max-width:46ch}
+  .hint{font-size:14px;color:var(--muted);margin:2px 0 16px;max-width:52ch}
+
+  /* Auswahlkarten */
+  .options{display:grid;gap:10px;margin:0 0 8px}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:420px){ .options.two.stack-narrow{grid-template-columns:1fr} }
+  .opt{
+    display:flex;align-items:center;gap:12px;text-align:left;width:100%;
+    background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:14px;cursor:pointer;color:var(--ink);font:inherit;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .opt:hover{border-color:var(--muted)}
+  .opt:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+    outline:3px solid var(--accent);outline-offset:2px;
+  }
+  .opt[aria-pressed="true"]{
+    border-color:var(--accent);background:var(--accent-soft);
+  }
+  .opt .ic{
+    flex:0 0 auto;width:52px;height:44px;display:grid;place-items:center;
+    border-radius:10px;background:var(--surface-2);
+  }
+  .opt[aria-pressed="true"] .ic{background:var(--surface)}
+  .opt .tx b{display:block;font-weight:700;font-size:15px;line-height:1.3}
+  .opt .tx span{display:block;font-size:13px;color:var(--muted);line-height:1.35;margin-top:2px}
+  .opt .check{
+    margin-left:auto;flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+    border:2px solid var(--line);display:grid;place-items:center;color:transparent;
+  }
+  .opt[aria-pressed="true"] .check{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .opt svg.shape{stroke:var(--ink);fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .opt svg.shape .fillpart{fill:var(--accent);opacity:.18;stroke:none}
+
+  /* Formularfelder */
+  .field{margin:0 0 16px}
+  .field label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}
+  .field label small{font-weight:500;color:var(--muted)}
+  .field input[type=text],.field input[type=tel],.field input[type=email],.field input[type=number],
+  .field select,.field textarea{
+    width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);
+    background:var(--surface);color:var(--ink);font:inherit;
+  }
+  .field textarea{min-height:90px;resize:vertical}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* Zähler */
+  .counter{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:10px;
+  }
+  .counter .lbl b{display:block;font-size:15px;font-weight:700}
+  .counter .lbl span{font-size:13px;color:var(--muted)}
+  .counter .ctrl{display:flex;align-items:center;gap:12px}
+  .counter .ctrl button{
+    width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--surface-2);color:var(--ink);font-size:20px;font-weight:700;cursor:pointer;
+  }
+  .counter .ctrl button:active{background:var(--accent-soft)}
+  .counter .val{min-width:26px;text-align:center;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+
+  /* Hinweisboxen */
+  .note{
+    display:flex;gap:10px;border-radius:var(--radius);padding:12px 14px;font-size:14px;
+    margin:14px 0;line-height:1.45;
+  }
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+  .note.info{background:var(--accent-soft);color:var(--ink)}
+  .note.good{background:var(--good-soft);color:var(--good)}
+  .note b{font-weight:700}
+  .note .nic{flex:0 0 auto;margin-top:1px}
+
+  /* Fotos */
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .photo-slot{
+    position:relative;border:1.5px dashed var(--line);border-radius:var(--radius);
+    background:var(--surface);overflow:hidden;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    aspect-ratio:4/3;text-align:center;padding:10px;
+  }
+  .photo-slot.filled{border-style:solid;border-color:var(--accent);padding:0}
+  .photo-slot img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-slot .cam{color:var(--accent);margin-bottom:6px}
+  .photo-slot .pt{font-size:13px;font-weight:700;line-height:1.25}
+  .photo-slot .ps{font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:2px}
+  .photo-slot input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .photo-slot .badge{
+    position:absolute;left:8px;bottom:8px;right:8px;
+    background:rgba(0,0,0,.55);color:#fff;font-size:11.5px;font-weight:600;
+    border-radius:8px;padding:3px 8px;pointer-events:none;
+  }
+  .photo-slot .remove{
+    position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;
+    border:none;background:rgba(0,0,0,.55);color:#fff;font-size:15px;cursor:pointer;z-index:2;
+  }
+
+  /* Zusammenfassung */
+  .sum-block{
+    background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .sum-block h3{
+    margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .sum-block h3 button{
+    border:none;background:none;color:var(--accent);font-weight:700;font-size:13px;
+    cursor:pointer;text-transform:none;letter-spacing:0;padding:2px 4px;
+  }
+  .sum-block dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:14.5px}
+  .sum-block dt{color:var(--muted)}
+  .sum-block dd{margin:0;font-weight:600}
+  .sum-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .sum-photos img{width:72px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+
+  /* Buttons */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    border-radius:12px;padding:14px 20px;font:inherit;font-weight:700;font-size:16px;
+    cursor:pointer;border:1.5px solid transparent;width:100%;
+  }
+  .btn.primary{background:var(--accent);color:var(--accent-ink)}
+  .btn.primary:active{filter:brightness(.92)}
+  .btn.secondary{background:var(--surface);border-color:var(--line);color:var(--ink)}
+  .btn.ghost{background:none;color:var(--muted);border:none;font-weight:600;font-size:14px}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn-stack{display:grid;gap:10px;margin-top:14px}
+
+  /* Untere Navigation */
+  .navbar{
+    position:fixed;left:0;right:0;bottom:0;z-index:10;
+    background:var(--bg);
+    border-top:1px solid var(--line);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .navbar .inner{max-width:560px;margin:0 auto;display:flex;gap:10px}
+  .navbar .btn.back{width:auto;flex:0 0 auto;padding-inline:16px}
+  .navbar .btn.next{flex:1}
+
+  .skipline{margin-top:10px;text-align:center}
+  .skipline button{border:none;background:none;color:var(--muted);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:6px}
+
+  /* Start */
+  .hero-roof{margin:8px 0 4px}
+  .startlist{list-style:none;margin:18px 0;padding:0;display:grid;gap:12px}
+  .startlist li{display:flex;gap:12px;align-items:flex-start}
+  .startlist .n{
+    flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);
+    color:var(--accent);font-weight:800;font-size:14px;display:grid;place-items:center;margin-top:1px;
+  }
+  .startlist b{display:block;font-size:15px}
+  .startlist span{font-size:13.5px;color:var(--muted)}
+
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;
+    font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s ease;z-index:50;
+    max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .footer-note{margin-top:26px;font-size:12.5px;color:var(--muted);text-align:center}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="logo" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 13 L12 4 L22 13"/><path d="M6 11.5 V19 H18 V11.5"/>
+      </svg>
+    </div>
+    <div class="brand">DachCheck<small>Ihre Dach-Anfrage – Schritt für Schritt</small></div>
+  </header>
+
+  <div class="progress-wrap" id="progressWrap" hidden>
+    <div class="progress-label"><span id="stepName">Ihr Anliegen</span><b id="stepCount">1&hairsp;/&hairsp;10</b></div>
+    <div class="progress"><i id="progressBar" style="width:8%"></i></div>
+  </div>
+
+  <main id="steps">
+
+    <!-- 0 · Start -->
+    <section class="step active" data-name="Start">
+      <div class="hero-roof" aria-hidden="true">
+        <svg viewBox="0 0 320 120" width="100%" style="max-height:130px;display:block">
+          <path d="M20 100 L110 30 L200 100 Z" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M150 100 L235 40 L320 100" fill="none" stroke="var(--line)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M20 100 L110 30 L200 100" fill="var(--accent)" opacity=".12"/>
+          <line x1="0" y1="100" x2="320" y2="100" stroke="var(--ink)" stroke-width="2.5"/>
+          <circle cx="110" cy="30" r="4" fill="var(--accent)"/>
+        </svg>
+      </div>
+      <h1>Ihr Dach-Angebot beginnt hier.</h1>
+      <p class="lead">Beantworten Sie ein paar einfache Fragen und machen Sie Fotos von Ihrem Dach. Ihr Dachdeckerbetrieb kann Ihnen damit deutlich schneller ein passendes Angebot erstellen.</p>
+      <ul class="startlist">
+        <li><span class="n">1</span><div><b>Fragen beantworten</b><span>Wir führen Sie durch – Fachwissen brauchen Sie nicht. „Weiß ich nicht" ist immer erlaubt.</span></div></li>
+        <li><span class="n">2</span><div><b>Fotos aufnehmen</b><span>Direkt mit der Handy-Kamera, wir sagen Ihnen genau, was aufs Bild soll.</span></div></li>
+        <li><span class="n">3</span><div><b>Anfrage absenden</b><span>Alles landet in einer übersichtlichen Zusammenfassung, die Sie direkt teilen können.</span></div></li>
+      </ul>
+      <div class="note info"><span class="nic">🔒</span><span>Ihre Angaben bleiben auf Ihrem Gerät, bis <b>Sie</b> sie absenden. Dauer: ca. 5 Minuten.</span></div>
+      <div class="btn-stack">
+        <button class="btn primary" data-next>Jetzt starten</button>
+        <button class="btn ghost" id="resumeBtn" hidden>Gespeicherten Stand fortsetzen</button>
+      </div>
+    </section>
+
+    <!-- 1 · Anliegen -->
+    <section class="step" data-name="Ihr Anliegen">
+      <p class="eyebrow">Schritt 1 · Ihr Anliegen</p>
+      <h2>Worum geht es bei Ihrem Dach?</h2>
+      <p class="hint">Mehrfachauswahl möglich – wählen Sie alles, was zutrifft.</p>
+      <div class="options" id="optAnliegen"></div>
+    </section>
+
+    <!-- 2 · Gebäude -->
+    <section class="step" data-name="Ihr Gebäude">
+      <p class="eyebrow">Schritt 2 · Ihr Gebäude</p>
+      <h2>Um was für ein Gebäude handelt es sich?</h2>
+      <div class="options" id="optGebaeude"></div>
+      <div class="field" style="margin-top:18px">
+        <label>Wie viele Vollgeschosse hat das Haus? <small>(ohne Dachgeschoss – wichtig fürs Gerüst)</small></label>
+        <div class="options two" id="optGeschosse"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="baujahrHaus">Baujahr Haus <small>(ca.)</small></label>
+          <input type="number" id="baujahrHaus" inputmode="numeric" placeholder="z. B. 1972" min="1800" max="2026">
+        </div>
+        <div class="field">
+          <label for="baujahrDach">Letzte Dach&shy;erneuerung <small>(falls bekannt)</small></label>
+          <input type="number" id="baujahrDach" inputmode="numeric" placeholder="z. B. 1998" min="1800" max="2026">
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Dachform -->
+    <section class="step" data-name="Dachform">
+      <p class="eyebrow">Schritt 3 · Dachform</p>
+      <h2>Welche Form hat Ihr Dach?</h2>
+      <p class="hint">Schauen Sie von der Straße auf Ihr Haus – welche Silhouette passt am besten?</p>
+      <div class="options" id="optDachform"></div>
+    </section>
+
+    <!-- 4 · Eindeckung -->
+    <section class="step" data-name="Eindeckung">
+      <p class="eyebrow">Schritt 4 · Eindeckung</p>
+      <h2>Womit ist Ihr Dach aktuell gedeckt?</h2>
+      <p class="hint">Nicht sicher? Wählen Sie „Weiß ich nicht" – das Nahaufnahme-Foto später klärt das.</p>
+      <div class="options" id="optEindeckung"></div>
+      <div class="note warn" id="asbestNote" hidden><span class="nic">⚠️</span><span><b>Wichtiger Hinweis:</b> Faserzementplatten aus der Zeit vor 1993 können Asbest enthalten. Bitte nicht selbst bohren, brechen oder reinigen – Ihr Fachbetrieb prüft das und kümmert sich um die fachgerechte Entsorgung.</span></div>
+    </section>
+
+    <!-- 5 · Größe & Neigung -->
+    <section class="step" data-name="Größe &amp; Neigung">
+      <p class="eyebrow">Schritt 5 · Größe &amp; Neigung</p>
+      <h2>Wie groß und wie steil ist das Dach?</h2>
+      <div class="field">
+        <label>Grundfläche des Hauses <small>(Länge × Breite, grob geschätzt)</small></label>
+        <div class="row2">
+          <input type="number" id="grundLaenge" inputmode="decimal" placeholder="Länge in m" min="1" max="200" aria-label="Länge in Metern">
+          <input type="number" id="grundBreite" inputmode="decimal" placeholder="Breite in m" min="1" max="200" aria-label="Breite in Metern">
+        </div>
+        <p class="hint" style="margin:8px 0 0">Tipp: Schritte zählen – ein großer Schritt ist etwa 1 Meter. Oder im Grundriss / Kaufvertrag nachsehen.</p>
+      </div>
+      <div class="field">
+        <label>Wie steil ist das Dach ungefähr?</label>
+        <div class="options" id="optNeigung"></div>
+      </div>
+    </section>
+
+    <!-- 6 · Aufbauten -->
+    <section class="step" data-name="Aufbauten">
+      <p class="eyebrow">Schritt 6 · Aufbauten</p>
+      <h2>Was befindet sich alles auf dem Dach?</h2>
+      <p class="hint">Jedes Element bedeutet zusätzliche Anschlüsse – das beeinflusst Aufwand und Preis.</p>
+      <div id="counters"></div>
+      <div class="options" id="optExtras" style="margin-top:14px"></div>
+    </section>
+
+    <!-- 7 · Zustand -->
+    <section class="step" data-name="Zustand">
+      <p class="eyebrow">Schritt 7 · Zustand</p>
+      <h2>Gibt es aktuell Probleme am Dach?</h2>
+      <p class="hint">Mehrfachauswahl möglich.</p>
+      <div class="options" id="optProbleme"></div>
+      <div class="field" style="margin-top:18px">
+        <label>Wie dringend ist Ihr Anliegen?</label>
+        <div class="options" id="optDringend"></div>
+      </div>
+    </section>
+
+    <!-- 8 · Dämmung -->
+    <section class="step" data-name="Dämmung &amp; Ausbau">
+      <p class="eyebrow">Schritt 8 · Dämmung &amp; Ausbau</p>
+      <h2>Wie wird das Dachgeschoss genutzt?</h2>
+      <div class="options" id="optNutzung"></div>
+      <div class="field" style="margin-top:18px">
+        <label>Ist das Dach bereits gedämmt?</label>
+        <div class="options" id="optDaemmung"></div>
+      </div>
+      <div class="note info"><span class="nic">💡</span><span><b>Gut zu wissen:</b> Bei einer Neueindeckung schreibt das Gebäudeenergiegesetz (GEG) oft eine Dämmung vor. Dafür gibt es aktuell attraktive staatliche Förderungen (BAFA/KfW) – Ihr Dachdecker berät Sie dazu.</span></div>
+      <div class="options" id="optFoerderung"></div>
+    </section>
+
+    <!-- 9 · Fotos -->
+    <section class="step" data-name="Fotos">
+      <p class="eyebrow">Schritt 9 · Fotos</p>
+      <h2>Jetzt bitte ein paar Fotos.</h2>
+      <p class="hint">Bleiben Sie sicher am Boden – <b>bitte nicht aufs Dach steigen!</b> Fotos vom Gehweg oder aus dem Garten reichen völlig. Tippen Sie auf ein Feld, um die Kamera zu öffnen.</p>
+      <div class="photo-grid" id="photoGrid"></div>
+      <div class="note good" id="photoCountNote" hidden><span class="nic">✅</span><span id="photoCountText"></span></div>
+      <div class="skipline"><button data-next type="button">Ich kann gerade keine Fotos machen – überspringen</button></div>
+    </section>
+
+    <!-- 10 · Kontakt -->
+    <section class="step" data-name="Ihre Kontaktdaten">
+      <p class="eyebrow">Schritt 10 · Kontakt</p>
+      <h2>Wie erreicht Sie Ihr Dachdecker?</h2>
+      <div class="field"><label for="fName">Ihr Name *</label><input type="text" id="fName" autocomplete="name" placeholder="Vor- und Nachname"></div>
+      <div class="field"><label for="fAdresse">Adresse des Gebäudes *</label><input type="text" id="fAdresse" autocomplete="street-address" placeholder="Straße Nr., PLZ Ort"></div>
+      <div class="row2">
+        <div class="field"><label for="fTel">Telefon *</label><input type="tel" id="fTel" autocomplete="tel" placeholder="z. B. 0171 2345678"></div>
+        <div class="field"><label for="fMail">E-Mail</label><input type="email" id="fMail" autocomplete="email" placeholder="name@beispiel.de"></div>
+      </div>
+      <div class="field">
+        <label>Wann passt ein Vor-Ort-Termin am besten?</label>
+        <div class="options two stack-narrow" id="optTermin"></div>
+      </div>
+      <div class="field"><label for="fNotiz">Möchten Sie noch etwas mitteilen? <small>(optional)</small></label><textarea id="fNotiz" placeholder="z. B. Hund im Garten, Klingel defekt, besondere Wünsche …"></textarea></div>
+    </section>
+
+    <!-- 11 · Zusammenfassung -->
+    <section class="step" data-name="Zusammenfassung">
+      <p class="eyebrow">Fertig · Ihre Anfrage</p>
+      <h2>Alles beisammen – prüfen &amp; absenden.</h2>
+      <p class="hint">Tippen Sie auf „Ändern", um einen Punkt zu korrigieren.</p>
+      <div id="summary"></div>
+      <div class="btn-stack">
+        <button class="btn primary" id="shareBtn">📤&nbsp; Anfrage teilen (mit Fotos)</button>
+        <button class="btn secondary" id="mailBtn">✉️&nbsp; Per E-Mail senden</button>
+        <button class="btn secondary" id="copyBtn">📋&nbsp; Text kopieren</button>
+        <button class="btn ghost" id="resetBtn">Neue Anfrage beginnen</button>
+      </div>
+      <p class="footer-note">Beim Teilen per E-Mail werden die Fotos nicht automatisch angehängt – bitte hängen Sie sie dann von Hand an. Über „Anfrage teilen" gehen Text <b>und</b> Fotos zusammen raus.</p>
+    </section>
+
+  </main>
+</div>
+
+<nav class="navbar" id="navbar" hidden>
+  <div class="inner">
+    <button class="btn secondary back" id="backBtn" aria-label="Zurück">←&nbsp;Zurück</button>
+    <button class="btn primary next" id="nextBtn">Weiter</button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =============================================================
+     Konfiguration für den Dachdeckerbetrieb:
+     Hier Name und E-Mail-Adresse des Betriebs eintragen.
+     ============================================================= */
+  var BETRIEB = {
+    name: "Ihr Dachdeckerbetrieb",
+    email: ""   // z. B. "info@dachdecker-mustermann.de" – bleibt es leer, wählt der Kunde den Empfänger selbst
+  };
+
+  /* ---------- Zustand ---------- */
+  var state = {
+    anliegen: [], gebaeude: "", geschosse: "", baujahrHaus: "", baujahrDach: "",
+    dachform: "", eindeckung: "",
+    grundLaenge: "", grundBreite: "", neigung: "",
+    gauben: 0, schornsteine: 0, dachfenster: 0, extras: [],
+    probleme: [], dringend: "",
+    nutzung: "", daemmung: "", foerderung: [],
+    name: "", adresse: "", tel: "", mail: "", termin: "", notiz: ""
+  };
+  var photos = {}; // slotId -> {dataUrl, label}
+
+  var STORAGE_KEY = "dachcheck-v1";
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({state:state, step:current})); }catch(e){}
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  /* ---------- Daten / Fachwissen ---------- */
+  function icon(paths, extra){
+    return '<svg class="shape" width="44" height="36" viewBox="0 0 44 36" aria-hidden="true">'+(extra||"")+paths+'</svg>';
+  }
+  var emojiIc = function(e){ return '<span style="font-size:24px" aria-hidden="true">'+e+'</span>'; };
+
+  var ANLIEGEN = [
+    {id:"neueindeckung", t:"Dach neu eindecken", s:"Komplette Erneuerung der Dachfläche", ic:emojiIc("🏠")},
+    {id:"reparatur", t:"Reparatur", s:"Undichte Stelle, kaputte Ziegel, Sturmschaden", ic:emojiIc("🔧")},
+    {id:"daemmung", t:"Dämmung / Sanierung", s:"Energetisch verbessern, Förderung nutzen", ic:emojiIc("🧣")},
+    {id:"flachdach", t:"Flachdach abdichten", s:"Neue Abdichtung oder Sanierung", ic:emojiIc("📐")},
+    {id:"dachfenster", t:"Dachfenster", s:"Neu einbauen oder austauschen", ic:emojiIc("🪟")},
+    {id:"rinne", t:"Dachrinne / Blecharbeiten", s:"Rinnen, Fallrohre, Verwahrungen", ic:emojiIc("🌧️")},
+    {id:"solar", t:"Vorbereitung für Solar", s:"Dach fit machen für PV oder Solarthermie", ic:emojiIc("☀️")},
+    {id:"beratung", t:"Erstmal nur Beratung", s:"Zustand einschätzen lassen", ic:emojiIc("💬")}
+  ];
+  var GEBAEUDE = [
+    {id:"efh", t:"Einfamilienhaus", ic:emojiIc("🏡")},
+    {id:"doppel", t:"Doppelhaushälfte / Reihenhaus", ic:emojiIc("🏘️")},
+    {id:"mfh", t:"Mehrfamilienhaus", ic:emojiIc("🏢")},
+    {id:"neben", t:"Garage / Anbau / Nebengebäude", ic:emojiIc("🚗")}
+  ];
+  var GESCHOSSE = [
+    {id:"1", t:"1 Geschoss"},{id:"2", t:"2 Geschosse"},{id:"3", t:"3 Geschosse"},{id:"4+", t:"4 oder mehr"}
+  ];
+  var DACHFORM = [
+    {id:"sattel", t:"Satteldach", s:"Zwei schräge Flächen, klassischer Giebel",
+      ic:icon('<path d="M4 30 L22 8 L40 30"/>','<path class="fillpart" d="M4 30 L22 8 L40 30 Z"/>')},
+    {id:"walm", t:"Walmdach", s:"Auch an den Seiten abgeschrägt",
+      ic:icon('<path d="M4 30 L14 10 L30 10 L40 30 Z"/><line x1="14" y1="10" x2="30" y2="10"/>','<path class="fillpart" d="M4 30 L14 10 L30 10 L40 30 Z"/>')},
+    {id:"pult", t:"Pultdach", s:"Eine einzige geneigte Fläche",
+      ic:icon('<path d="M4 28 L40 12 L40 30 L4 30 Z"/>','<path class="fillpart" d="M4 28 L40 12 L40 30 L4 30 Z"/>')},
+    {id:"flach", t:"Flachdach", s:"(Fast) waagerecht",
+      ic:icon('<rect x="6" y="14" width="32" height="4" rx="1"/><path d="M10 18 V30 M34 18 V30"/>','<rect class="fillpart" x="6" y="14" width="32" height="4"/>')},
+    {id:"mansard", t:"Mansarddach", s:"Unten steil, oben flacher – oft Altbau",
+      ic:icon('<path d="M4 30 L10 16 L18 8 L26 8 L34 16 L40 30"/>','<path class="fillpart" d="M4 30 L10 16 L18 8 L26 8 L34 16 L40 30 Z"/>')},
+    {id:"zelt", t:"Zeltdach", s:"Läuft in einer Spitze zusammen",
+      ic:icon('<path d="M6 30 L22 6 L38 30 Z"/><line x1="22" y1="6" x2="22" y2="30"/>','<path class="fillpart" d="M6 30 L22 6 L38 30 Z"/>')},
+    {id:"unbekannt", t:"Weiß ich nicht", s:"Kein Problem – die Fotos helfen", ic:emojiIc("🤔")}
+  ];
+  var EINDECKUNG = [
+    {id:"ton", t:"Tonziegel", s:"Klassisch rot/braun, leicht gewellt", ic:emojiIc("🧱")},
+    {id:"beton", t:"Betondachstein", s:"Gleichmäßige, kantige Steine (z. B. „Frankfurter Pfanne“)", ic:emojiIc("⬜")},
+    {id:"schiefer", t:"Schiefer", s:"Dunkle, flache Platten", ic:emojiIc("⬛")},
+    {id:"bitumen", t:"Bitumen / Dachpappe", s:"Schwarze Bahnen oder Schindeln", ic:emojiIc("🛢️")},
+    {id:"blech", t:"Metall / Blech", s:"Trapezblech, Zink, Kupfer", ic:emojiIc("🔩")},
+    {id:"faserzement", t:"Faserzement / „Eternit“", s:"Graue Wellplatten oder Platten", ic:emojiIc("〰️")},
+    {id:"reet", t:"Reet / Sonstiges", s:"Reet, Gründach, anderes Material", ic:emojiIc("🌾")},
+    {id:"unbekannt", t:"Weiß ich nicht", s:"Das Nahaufnahme-Foto klärt es", ic:emojiIc("🤔")}
+  ];
+  var NEIGUNG = [
+    {id:"flach", t:"Flach (0–10°)", s:"Man könnte fast darauf stehen",
+      ic:icon('<line x1="4" y1="26" x2="40" y2="26"/><line x1="4" y1="26" x2="40" y2="22"/>')},
+    {id:"gering", t:"Leicht geneigt (10–25°)", s:"Deutlich schräg, aber flach wirkend",
+      ic:icon('<line x1="4" y1="28" x2="40" y2="28"/><line x1="4" y1="28" x2="40" y2="14"/>')},
+    {id:"normal", t:"Normal steil (25–45°)", s:"Typisches Wohnhausdach",
+      ic:icon('<line x1="4" y1="30" x2="40" y2="30"/><line x1="4" y1="30" x2="36" y2="6"/>')},
+    {id:"steil", t:"Sehr steil (über 45°)", s:"Steiler als eine normale Treppe",
+      ic:icon('<line x1="4" y1="32" x2="40" y2="32"/><line x1="8" y1="32" x2="26" y2="4"/>')},
+    {id:"unbekannt", t:"Weiß ich nicht", s:"", ic:emojiIc("🤔")}
+  ];
+  var COUNTERS = [
+    {id:"gauben", t:"Dachgauben", s:"Aufbauten mit eigenem kleinen Dach und Fenster"},
+    {id:"schornsteine", t:"Schornsteine", s:"Auch stillgelegte zählen mit"},
+    {id:"dachfenster", t:"Dachflächenfenster", s:"Liegende Fenster in der Schräge (z. B. Velux)"}
+  ];
+  var EXTRAS = [
+    {id:"solar", t:"Solar-/PV-Anlage vorhanden", s:"Muss bei Arbeiten ab- und wieder aufgebaut werden", ic:emojiIc("☀️")},
+    {id:"sat", t:"Antenne / Sat-Schüssel", s:"", ic:emojiIc("📡")},
+    {id:"begruenung", t:"Dachbegrünung", s:"", ic:emojiIc("🌱")},
+    {id:"keine", t:"Nichts davon", s:"", ic:emojiIc("✖️")}
+  ];
+  var PROBLEME = [
+    {id:"undicht", t:"Es tropft / undichte Stelle", s:"Wasserflecken an Decke oder Wand", ic:emojiIc("💧")},
+    {id:"ziegel", t:"Kaputte oder verrutschte Ziegel", s:"Vom Boden aus sichtbar", ic:emojiIc("🧩")},
+    {id:"sturm", t:"Sturmschaden", s:"Ggf. wichtig für die Versicherung", ic:emojiIc("🌪️")},
+    {id:"moos", t:"Starkes Moos / Verschmutzung", s:"", ic:emojiIc("🍀")},
+    {id:"rinne", t:"Dachrinne undicht / verstopft", s:"", ic:emojiIc("🌧️")},
+    {id:"feucht", t:"Feuchtigkeit / Schimmel innen", s:"Im Dachboden oder Obergeschoss", ic:emojiIc("🍄")},
+    {id:"alter", t:"Nur altersbedingt / vorsorglich", s:"Kein akuter Schaden", ic:emojiIc("⏳")},
+    {id:"keine", t:"Keine Probleme bekannt", s:"", ic:emojiIc("✅")}
+  ];
+  var DRINGEND = [
+    {id:"notfall", t:"Notfall – es regnet rein!", s:"Schnellstmögliche Hilfe nötig", ic:emojiIc("🚨")},
+    {id:"bald", t:"Zeitnah", s:"In den nächsten Wochen", ic:emojiIc("📅")},
+    {id:"planung", t:"In Planung", s:"In den nächsten 6–12 Monaten", ic:emojiIc("🗓️")},
+    {id:"offen", t:"Noch offen", s:"Erstmal Preise und Möglichkeiten kennenlernen", ic:emojiIc("🧭")}
+  ];
+  var NUTZUNG = [
+    {id:"wohnraum", t:"Ausgebaut & bewohnt", s:"Wohn- oder Schlafräume unterm Dach", ic:emojiIc("🛏️")},
+    {id:"ausbau-geplant", t:"Ausbau geplant", s:"Soll künftig Wohnraum werden", ic:emojiIc("📦")},
+    {id:"abstell", t:"Nur Abstellraum", s:"Kalter Dachboden", ic:emojiIc("🕸️")},
+    {id:"kein-boden", t:"Kein Dachboden", s:"z. B. Flachdach oder offene Decke", ic:emojiIc("➖")}
+  ];
+  var DAEMMUNG = [
+    {id:"ja", t:"Ja, ist gedämmt", ic:emojiIc("✅")},
+    {id:"teilweise", t:"Teilweise / nur dünn", ic:emojiIc("➗")},
+    {id:"nein", t:"Nein, ungedämmt", ic:emojiIc("❄️")},
+    {id:"unbekannt", t:"Weiß ich nicht", ic:emojiIc("🤔")}
+  ];
+  var FOERDERUNG = [
+    {id:"foerderung", t:"Ja, Beratung zu Fördermitteln gewünscht", s:"BAFA / KfW-Zuschüsse und Steuerbonus", ic:emojiIc("💶")}
+  ];
+  var TERMIN = [
+    {id:"vormittag", t:"Werktags vormittags"},
+    {id:"nachmittag", t:"Werktags nachmittags"},
+    {id:"abend", t:"Abends"},
+    {id:"flexibel", t:"Flexibel / nach Absprache"}
+  ];
+  var PHOTO_SLOTS = [
+    {id:"front", t:"Haus von vorne", s:"Ganzes Haus mit Dach, von der Straße aus"},
+    {id:"seite", t:"Haus von der Seite", s:"Schräg von der Ecke, damit man die Dachform sieht"},
+    {id:"nah", t:"Nahaufnahme Eindeckung", s:"So nah wie möglich heranzoomen"},
+    {id:"problem", t:"Problemstelle", s:"Falls vorhanden – außen oder innen"},
+    {id:"rinne", t:"Dachrinne / Traufe", s:"Der untere Dachrand mit Rinne"},
+    {id:"innen", t:"Dachboden innen", s:"Falls zugänglich – Blick auf die Dachschräge"}
+  ];
+
+  /* ---------- Hilfsfunktionen ---------- */
+  function $(s){ return document.querySelector(s); }
+  function $all(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
+  function labelFor(list, id){
+    for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i].t;
+    return id || "–";
+  }
+  function labelsFor(list, ids){
+    if(!ids || !ids.length) return "–";
+    return ids.map(function(id){ return labelFor(list, id); }).join(", ");
+  }
+  function toast(msg){
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._h);
+    t._h = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+  }
+
+  function renderOptions(containerId, list, key, multi, exclusiveId){
+    var c = document.getElementById(containerId);
+    c.innerHTML = "";
+    list.forEach(function(o){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt";
+      b.setAttribute("data-id", o.id);
+      var pressed = multi ? (state[key].indexOf(o.id) >= 0) : (state[key] === o.id);
+      b.setAttribute("aria-pressed", pressed ? "true" : "false");
+      b.innerHTML =
+        (o.ic ? '<span class="ic">'+o.ic+'</span>' : "") +
+        '<span class="tx"><b>'+o.t+'</b>'+(o.s?'<span>'+o.s+'</span>':"")+'</span>' +
+        '<span class="check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 6.5 L4.8 9 L10 3"/></svg></span>';
+      b.addEventListener("click", function(){
+        if(multi){
+          if(exclusiveId && o.id === exclusiveId){
+            state[key] = state[key].indexOf(o.id) >= 0 ? [] : [o.id];
+          } else {
+            var idx = state[key].indexOf(o.id);
+            if(idx >= 0) state[key].splice(idx,1); else state[key].push(o.id);
+            if(exclusiveId){
+              var ex = state[key].indexOf(exclusiveId);
+              if(ex >= 0 && state[key].length > 1) state[key].splice(ex,1);
+            }
+          }
+        } else {
+          state[key] = (state[key] === o.id) ? "" : o.id;
+        }
+        renderOptions(containerId, list, key, multi, exclusiveId);
+        afterChange(key);
+        save();
+      });
+      c.appendChild(b);
+    });
+  }
+
+  function renderCounters(){
+    var c = $("#counters");
+    c.innerHTML = "";
+    COUNTERS.forEach(function(o){
+      var d = document.createElement("div");
+      d.className = "counter";
+      d.innerHTML = '<div class="lbl"><b>'+o.t+'</b><span>'+o.s+'</span></div>' +
+        '<div class="ctrl"><button type="button" aria-label="'+o.t+' verringern">−</button>' +
+        '<span class="val" data-val>'+state[o.id]+'</span>' +
+        '<button type="button" aria-label="'+o.t+' erhöhen">+</button></div>';
+      var btns = d.querySelectorAll("button");
+      var val = d.querySelector("[data-val]");
+      btns[0].addEventListener("click", function(){ if(state[o.id]>0){state[o.id]--; val.textContent=state[o.id]; save();} });
+      btns[1].addEventListener("click", function(){ if(state[o.id]<20){state[o.id]++; val.textContent=state[o.id]; save();} });
+      c.appendChild(d);
+    });
+  }
+
+  function bindInput(id, key){
+    var el = document.getElementById(id);
+    el.value = state[key] || "";
+    el.addEventListener("input", function(){ state[key] = el.value; afterChange(key); save(); });
+  }
+
+  function afterChange(key){
+    if(key === "eindeckung" || key === "baujahrDach" || key === "baujahrHaus"){
+      var jahr = parseInt(state.baujahrDach || state.baujahrHaus, 10);
+      var show = state.eindeckung === "faserzement" && (!jahr || jahr < 1993);
+      $("#asbestNote").hidden = !show;
+    }
+  }
+
+  /* ---------- Fotos ---------- */
+  function renderPhotos(){
+    var g = $("#photoGrid");
+    g.innerHTML = "";
+    PHOTO_SLOTS.forEach(function(slot){
+      var d = document.createElement("label");
+      d.className = "photo-slot" + (photos[slot.id] ? " filled" : "");
+      if(photos[slot.id]){
+        d.innerHTML = '<img src="'+photos[slot.id].dataUrl+'" alt="Foto: '+slot.t+'">' +
+          '<span class="badge">'+slot.t+'</span>' +
+          '<button type="button" class="remove" aria-label="Foto entfernen">✕</button>';
+        d.querySelector(".remove").addEventListener("click", function(ev){
+          ev.preventDefault(); ev.stopPropagation();
+          delete photos[slot.id];
+          renderPhotos();
+        });
+      } else {
+        d.innerHTML =
+          '<span class="cam" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8 h3 l2 -2.5 h6 L17 8 h3 a1.5 1.5 0 0 1 1.5 1.5 v8 a1.5 1.5 0 0 1 -1.5 1.5 h-16 a1.5 1.5 0 0 1 -1.5 -1.5 v-8 A1.5 1.5 0 0 1 4 8 Z"/><circle cx="12" cy="13" r="3.4"/></svg></span>' +
+          '<span class="pt">'+slot.t+'</span><span class="ps">'+slot.s+'</span>' +
+          '<input type="file" accept="image/*" capture="environment" aria-label="Foto aufnehmen: '+slot.t+'">';
+        d.querySelector("input").addEventListener("change", function(ev){
+          var f = ev.target.files && ev.target.files[0];
+          if(f) addPhoto(slot, f);
+        });
+      }
+      g.appendChild(d);
+    });
+    var n = Object.keys(photos).length;
+    $("#photoCountNote").hidden = n === 0;
+    $("#photoCountText").textContent = n === 1 ? "1 Foto aufgenommen – sehr gut!" : n + " Fotos aufgenommen – sehr gut!";
+  }
+
+  function addPhoto(slot, file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 1600;
+        var w = img.width, h = img.height;
+        if(Math.max(w,h) > MAX){
+          var f = MAX / Math.max(w,h);
+          w = Math.round(w*f); h = Math.round(h*f);
+        }
+        var cv = document.createElement("canvas");
+        cv.width = w; cv.height = h;
+        cv.getContext("2d").drawImage(img, 0, 0, w, h);
+        photos[slot.id] = { dataUrl: cv.toDataURL("image/jpeg", .82), label: slot.t };
+        renderPhotos();
+      };
+      img.onerror = function(){ toast("Dieses Bild konnte nicht gelesen werden."); };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ---------- Navigation ---------- */
+  var steps = $all(".step");
+  var current = 0;
+  var KONTAKT_STEP = 10;
+
+  function show(i){
+    current = Math.max(0, Math.min(steps.length-1, i));
+    steps.forEach(function(s, idx){ s.classList.toggle("active", idx === current); });
+    var isStart = current === 0;
+    var isLast = current === steps.length-1;
+    $("#progressWrap").hidden = isStart;
+    $("#navbar").hidden = isStart || isLast;
+    if(!isStart && !isLast){
+      $("#stepName").textContent = steps[current].getAttribute("data-name");
+      $("#stepCount").innerHTML = current + "&hairsp;/&hairsp;" + (steps.length-2);
+      $("#progressBar").style.width = Math.round(current/(steps.length-2)*100) + "%";
+      $("#nextBtn").textContent = current === steps.length-2 ? "Zur Zusammenfassung" : "Weiter";
+    }
+    if(isLast) renderSummary();
+    window.scrollTo({top:0, behavior:"instant" in window ? "instant" : "auto"});
+    save();
+  }
+
+  function validate(){
+    if(current === KONTAKT_STEP){
+      if(!state.name.trim()){ toast("Bitte geben Sie Ihren Namen an."); $("#fName").focus(); return false; }
+      if(!state.adresse.trim()){ toast("Bitte geben Sie die Adresse des Gebäudes an."); $("#fAdresse").focus(); return false; }
+      if(!state.tel.trim() && !state.mail.trim()){ toast("Bitte Telefonnummer oder E-Mail angeben."); $("#fTel").focus(); return false; }
+    }
+    return true;
+  }
+
+  $("#nextBtn").addEventListener("click", function(){ if(validate()) show(current+1); });
+  $("#backBtn").addEventListener("click", function(){ show(current-1); });
+  $all("[data-next]").forEach(function(b){ b.addEventListener("click", function(){ show(current+1); }); });
+
+  /* ---------- Zusammenfassung ---------- */
+  function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function flaeche(){
+    var l = parseFloat(state.grundLaenge), b = parseFloat(state.grundBreite);
+    if(l>0 && b>0) return (l+" × "+b+" m (ca. "+Math.round(l*b)+" m² Grundfläche)");
+    return "–";
+  }
+  function sumRows(){
+    var jahrTxt = state.baujahrHaus ? "Haus "+state.baujahrHaus : "";
+    if(state.baujahrDach) jahrTxt += (jahrTxt?", ":"")+"Dach zuletzt "+state.baujahrDach;
+    return [
+      {step:1, title:"Anliegen", rows:[["Anliegen", labelsFor(ANLIEGEN, state.anliegen)],["Dringlichkeit", labelFor(DRINGEND, state.dringend)]]},
+      {step:2, title:"Gebäude", rows:[["Gebäudetyp", labelFor(GEBAEUDE, state.gebaeude)],["Geschosse", state.geschosse||"–"],["Baujahr", jahrTxt||"–"]]},
+      {step:3, title:"Dach", rows:[["Dachform", labelFor(DACHFORM, state.dachform)],["Eindeckung", labelFor(EINDECKUNG, state.eindeckung)],["Neigung", labelFor(NEIGUNG, state.neigung)],["Grundfläche", flaeche()]]},
+      {step:6, title:"Aufbauten", rows:[["Gauben", state.gauben],["Schornsteine", state.schornsteine],["Dachfenster", state.dachfenster],["Sonstiges", labelsFor(EXTRAS, state.extras)]]},
+      {step:7, title:"Zustand", rows:[["Probleme", labelsFor(PROBLEME, state.probleme)]]},
+      {step:8, title:"Dämmung & Ausbau", rows:[["Nutzung Dachgeschoss", labelFor(NUTZUNG, state.nutzung)],["Dämmung", labelFor(DAEMMUNG, state.daemmung)],["Förderberatung", state.foerderung.length ? "gewünscht" : "–"]]},
+      {step:10, title:"Kontakt", rows:[["Name", state.name||"–"],["Adresse", state.adresse||"–"],["Telefon", state.tel||"–"],["E-Mail", state.mail||"–"],["Termin", labelFor(TERMIN, state.termin)],["Anmerkung", state.notiz||"–"]]}
+    ];
+  }
+  function renderSummary(){
+    var host = $("#summary");
+    host.innerHTML = "";
+    sumRows().forEach(function(block){
+      var d = document.createElement("div");
+      d.className = "sum-block";
+      var dl = block.rows.map(function(r){
+        return "<dt>"+esc(r[0])+"</dt><dd>"+esc(r[1])+"</dd>";
+      }).join("");
+      d.innerHTML = "<h3>"+esc(block.title)+' <button type="button" data-goto="'+block.step+'">Ändern</button></h3><dl>'+dl+"</dl>";
+      d.querySelector("[data-goto]").addEventListener("click", function(){ show(block.step); });
+      host.appendChild(d);
+    });
+    var pKeys = Object.keys(photos);
+    var pd = document.createElement("div");
+    pd.className = "sum-block";
+    pd.innerHTML = '<h3>Fotos ('+pKeys.length+') <button type="button" data-goto="9">Ändern</button></h3>' +
+      (pKeys.length
+        ? '<div class="sum-photos">'+pKeys.map(function(k){ return '<img src="'+photos[k].dataUrl+'" alt="'+esc(photos[k].label)+'">'; }).join("")+"</div>"
+        : '<p class="hint" style="margin:0">Keine Fotos aufgenommen. Fotos helfen dem Dachdecker sehr bei der Einschätzung.</p>');
+    pd.querySelector("[data-goto]").addEventListener("click", function(){ show(9); });
+    host.appendChild(pd);
+  }
+
+  function summaryText(){
+    var lines = [];
+    lines.push("DACH-ANFRAGE über DachCheck");
+    lines.push("==============================");
+    sumRows().forEach(function(block){
+      lines.push("");
+      lines.push(block.title.toUpperCase());
+      block.rows.forEach(function(r){ lines.push("  " + r[0] + ": " + r[1]); });
+    });
+    lines.push("");
+    lines.push("Fotos: " + (Object.keys(photos).length ? Object.keys(photos).map(function(k){return photos[k].label;}).join(", ") : "keine"));
+    return lines.join("\n");
+  }
+
+  function dataUrlToFile(dataUrl, name){
+    var parts = dataUrl.split(",");
+    var bin = atob(parts[1]);
+    var arr = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, {type:"image/jpeg"});
+  }
+
+  $("#shareBtn").addEventListener("click", function(){
+    var text = summaryText();
+    var files = Object.keys(photos).map(function(k, i){
+      return dataUrlToFile(photos[k].dataUrl, "dach-foto-"+(i+1)+".jpg");
+    });
+    if(navigator.share){
+      var payload = { title: "Dach-Anfrage", text: text };
+      if(files.length && navigator.canShare && navigator.canShare({files: files})) payload.files = files;
+      navigator.share(payload).catch(function(){ /* Nutzer hat abgebrochen */ });
+    } else {
+      copyText(text, "Teilen wird hier nicht unterstützt – der Text wurde stattdessen kopiert.");
+    }
+  });
+
+  $("#mailBtn").addEventListener("click", function(){
+    var subject = "Dach-Anfrage: " + (state.adresse || state.name || "Neues Objekt");
+    var href = "mailto:" + encodeURIComponent(BETRIEB.email) +
+      "?subject=" + encodeURIComponent(subject) +
+      "&body=" + encodeURIComponent(summaryText() + "\n\n(Fotos bitte an diese E-Mail anhängen.)");
+    window.location.href = href;
+  });
+
+  function copyText(text, doneMsg){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ toast(doneMsg); }, function(){ fallbackCopy(text, doneMsg); });
+    } else fallbackCopy(text, doneMsg);
+  }
+  function fallbackCopy(text, doneMsg){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toast(doneMsg); }catch(e){ toast("Kopieren nicht möglich."); }
+    document.body.removeChild(ta);
+  }
+  $("#copyBtn").addEventListener("click", function(){ copyText(summaryText(), "Anfrage-Text kopiert!"); });
+
+  $("#resetBtn").addEventListener("click", function(){
+    if(confirm("Wirklich alle Angaben löschen und neu beginnen?")){
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+      location.reload();
+    }
+  });
+
+  /* ---------- Aufbau ---------- */
+  function renderAll(){
+    renderOptions("optAnliegen", ANLIEGEN, "anliegen", true);
+    renderOptions("optGebaeude", GEBAEUDE, "gebaeude", false);
+    renderOptions("optGeschosse", GESCHOSSE, "geschosse", false);
+    renderOptions("optDachform", DACHFORM, "dachform", false);
+    renderOptions("optEindeckung", EINDECKUNG, "eindeckung", false);
+    renderOptions("optNeigung", NEIGUNG, "neigung", false);
+    renderOptions("optExtras", EXTRAS, "extras", true, "keine");
+    renderOptions("optProbleme", PROBLEME, "probleme", true, "keine");
+    renderOptions("optDringend", DRINGEND, "dringend", false);
+    renderOptions("optNutzung", NUTZUNG, "nutzung", false);
+    renderOptions("optDaemmung", DAEMMUNG, "daemmung", false);
+    renderOptions("optFoerderung", FOERDERUNG, "foerderung", true);
+    renderOptions("optTermin", TERMIN, "termin", false);
+    renderCounters();
+    renderPhotos();
+    bindInput("baujahrHaus","baujahrHaus");
+    bindInput("baujahrDach","baujahrDach");
+    bindInput("grundLaenge","grundLaenge");
+    bindInput("grundBreite","grundBreite");
+    bindInput("fName","name");
+    bindInput("fAdresse","adresse");
+    bindInput("fTel","tel");
+    bindInput("fMail","mail");
+    bindInput("fNotiz","notiz");
+    afterChange("eindeckung");
+  }
+
+  var saved = load();
+  if(saved && saved.state){
+    var hasProgress = saved.step > 0 || (saved.state.anliegen && saved.state.anliegen.length);
+    if(hasProgress){
+      var rb = $("#resumeBtn");
+      rb.hidden = false;
+      rb.addEventListener("click", function(){
+        Object.keys(state).forEach(function(k){ if(k in saved.state) state[k] = saved.state[k]; });
+        renderAll();
+        show(Math.min(saved.step || 1, steps.length-2));
+      });
+    }
+  }
+
+  renderAll();
+  show(0);
+})();
+</script>
+
+</body>
+</html>
