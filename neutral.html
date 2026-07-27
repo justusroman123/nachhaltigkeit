@@ -135,7 +135,7 @@
   .route-glow{fill:none; stroke:var(--wine); stroke-width:8; opacity:.14; stroke-linecap:round}
   .river{fill:var(--map-river); opacity:.9}
   .land{fill:var(--map-land); opacity:.85}
-  #me{opacity:0; transition:opacity .4s}
+  #me{opacity:0; transition:transform .9s ease, opacity .4s}
   #me.on{opacity:1}
   #me .acc{fill:var(--spree); opacity:.14}
   #me .ring{fill:none; stroke:#fff; stroke-width:3}
@@ -226,6 +226,18 @@
   @keyframes polawobble{0%,100%{transform:rotate(-3deg)}20%{transform:rotate(4deg) scale(1.04)}45%{transform:rotate(-6deg)}70%{transform:rotate(3deg)}}
   .tiphint{font-size:11px; color:var(--muted); margin:0 auto 8px; opacity:.85}
   #startOverlay{justify-content:flex-start; padding-top:26px}
+  /* TikTok/Kurzvideo: Intro-Effekt, Demo-Knopf, Routen-Zeichnung */
+  .ov-inner{animation:introUp .55s ease both}
+  @keyframes introUp{from{opacity:0; transform:translateY(16px)}to{opacity:1; transform:none}}
+  .ov-cta{animation:ctaPulse 2.4s ease-in-out 1s 2}
+  @keyframes ctaPulse{0%,100%{transform:none}50%{transform:scale(1.04)}}
+  .ov-demo{margin:12px auto 0; background:transparent; color:var(--text); border:1px solid var(--line);
+    border-radius:12px; padding:11px 18px; font-family:var(--sans); font-size:13.5px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; transition:transform .12s, background .2s}
+  .ov-demo:hover{background:var(--bg-2)} .ov-demo:active{transform:scale(.96)}
+  .ov-demo:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .routedraw{fill:none; stroke:var(--gold); stroke-width:4.2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none}
+  #me .core{filter:drop-shadow(0 0 3px rgba(62,142,130,.9))}
   /* Personalakte / Steckbrief */
   .dossier-inner{align-items:stretch}
   .dossier-head{font-family:var(--sans); font-size:11.5px; letter-spacing:.08em; color:var(--gold); text-transform:uppercase; margin:0 auto 16px; text-align:center}
@@ -364,6 +376,7 @@
         <span><b>5</b> km</span><span><b>4</b> Weinstationen</span><span><b>7</b> Stopps</span><span>🍽️ Essen im Zenner</span>
       </div>
       <button class="ov-cta" id="startBtn">Wanderung starten →</button>
+      <button class="ov-demo" id="demoBtn">▶︎ 20-Sekunden-Demo abspielen</button>
       <p class="ov-fine">Tipp: „Standort erlauben", dann zeigt die Karte, wo man gerade ist.<br>Zum Navigieren gibt’s an jeder Station einen Google-Maps-Knopf.</p>
     </div>
   </div>
@@ -752,7 +765,7 @@
     var p=project(userPos.lat,userPos.lng);
     // clamp into view so it never disappears entirely
     var cx=Math.max(6,Math.min(W-6,p.x)), cy=Math.max(6,Math.min(H-6,p.y));
-    me.setAttribute("transform","translate("+cx+","+cy+")");
+    me.style.transform="translate("+cx+"px,"+cy+"px)";
     me.classList.add("on");
   }
   document.getElementById("locPill").addEventListener("click",function(){
@@ -886,8 +899,10 @@
     state.started=true; save();
     AUDIO.start();
     document.getElementById("startOverlay").classList.add("hidden");
+    playRouteDraw();
     startGeo();
   });
+  document.getElementById("demoBtn").addEventListener("click", runDemo);
   document.getElementById("musicBtn").addEventListener("click",function(){
     var willMute=!AUDIO.isMuted();
     AUDIO.setMuted(willMute);
@@ -896,8 +911,10 @@
     this.title = willMute ? "Wein-Musik ist aus" : "Wein-Musik läuft";
   });
   document.getElementById("restartBtn").addEventListener("click",function(){
+    demoRunning=false;
     state={active:0,done:[],started:true}; selected=0; save();
     document.getElementById("finaleOverlay").classList.add("hidden");
+    document.getElementById("startOverlay").classList.remove("hidden");
     renderSheet(); updatePins();
   });
   document.getElementById("routeBtn").addEventListener("click",function(){
@@ -947,6 +964,64 @@
         wrap.classList.remove("fade");
       }, 420);
     }, 4200);
+  }
+
+  /* ---------- Demo-Modus (für Kurzvideo / TikTok) ---------- */
+  var demoRunning=false;
+  function setMarkerTo(s, instant){
+    userPos={lat:s.lat, lng:s.lng};
+    var me=document.querySelector("#mapHost #me");
+    if(me && instant){
+      var prev=me.style.transition; me.style.transition="none";
+      updateMe(); void me.getBoundingClientRect(); me.style.transition=prev||"";
+      return;
+    }
+    updateMe();
+  }
+  function playRouteDraw(){
+    var host=document.getElementById("mapHost"); if(!host) return;
+    var route=host.querySelector(".route"); if(!route) return;
+    var draw=host.querySelector(".routedraw");
+    if(!draw){
+      draw=route.cloneNode(false);
+      draw.setAttribute("class","routedraw"); draw.removeAttribute("style");
+      route.parentNode.insertBefore(draw, route.nextSibling);
+    }
+    var len; try{ len=draw.getTotalLength(); }catch(e){ return; }
+    draw.style.opacity="0.95";
+    draw.style.strokeDasharray=len+""; draw.style.strokeDashoffset=len+"";
+    draw.style.transition="none"; void draw.getBoundingClientRect();
+    draw.style.transition="stroke-dashoffset 1.7s ease";
+    draw.style.strokeDashoffset="0";
+    setTimeout(function(){ draw.style.transition="opacity .8s ease"; draw.style.opacity="0"; }, 2000);
+  }
+  function runDemo(){
+    if(demoRunning) return; demoRunning=true;
+    state={active:0, done:[], started:true}; selected=0; save();
+    document.getElementById("startOverlay").classList.add("hidden");
+    document.getElementById("finaleOverlay").classList.add("hidden");
+    try{ AUDIO.start(); }catch(e){}
+    renderSheet(); updatePins(); playRouteDraw();
+    setMarkerTo(STATIONS[0], true);
+    var i=0, stepMs=1900;
+    function step(){
+      if(!demoRunning) return;
+      selected=i; state.active=i;
+      setMarkerTo(STATIONS[i]);
+      renderSheet(); updatePins();
+      confetti(38);
+      if(i>=STATIONS.length-1){
+        setTimeout(function(){
+          if(!demoRunning) return;
+          state.done=[0,1,2,3,4,5,6]; updateProgress(); updatePins();
+          showFinale(); demoRunning=false;
+        }, stepMs);
+        return;
+      }
+      if(state.done.indexOf(i)<0) state.done.push(i);
+      i++; setTimeout(step, stepMs);
+    }
+    setTimeout(step, 950);
   }
 
   (function init(){
