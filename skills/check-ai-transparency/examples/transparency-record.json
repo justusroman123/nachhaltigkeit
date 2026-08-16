@@ -1,0 +1,47 @@
+{
+  "model": {
+    "name": "DALL-E 3",
+    "version": "3.0",
+    "provider": "OpenAI",
+    "type": "diffusion",
+    "modalities": ["text", "image"],
+    "documentation_url": "https://openai.com/dall-e-3"
+  },
+  "training": {
+    "dataset": "LAION-5B + proprietary licensed data",
+    "cutoff_date": "2023-04-01",
+    "license": "Proprietary",
+    "filtered": true,
+    "data_sources_url": "https://openai.com/policies/usage-policies"
+  },
+  "inference": {
+    "date": "2024-06-01T12:34:56Z",
+    "prompt_hash": "sha256:a3f1c2d4e5b6...",
+    "temperature": 1.0,
+    "seed": null,
+    "service_url": "https://api.openai.com/v1/images/generations"
+  },
+  "output": {
+    "type": "image",
+    "format": "image/png",
+    "description": "Photorealistic landscape with mountains and lake at sunrise"
+  },
+  "rights": {
+    "usage_allowed": true,
+    "restrictions": ["no-resale-as-stock", "no-deepfake-use"],
+    "attribution_required": false,
+    "license": "CC0",
+    "jurisdiction": "US, EU"
+  },
+  "review": {
+    "human_reviewed": true,
+    "reviewer_role": "Content Moderator",
+    "review_date": "2024-06-01T13:00:00Z",
+    "approved": true
+  },
+  "disclosure": {
+    "ai_generated_label": true,
+    "watermarked": false,
+    "c2pa_manifest": true
+  }
+}
