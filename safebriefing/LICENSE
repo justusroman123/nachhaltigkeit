@@ -1,0 +1,13 @@
+Copyright (c) 2026 KI-SCHUB. Alle Rechte vorbehalten.
+
+Dieser Quellcode, die Datenbasis (Werks-Glossar, Kernsätze, Übersetzungen, Prüfregeln)
+und die Dokumentation sind urheberrechtlich geschützt. Ohne vorherige schriftliche
+Zustimmung von KI-SCHUB ist es nicht gestattet, sie ganz oder in Teilen zu kopieren,
+zu verändern, zu verbreiten, öffentlich zugänglich zu machen oder für eigene
+Produkte oder Dienstleistungen zu verwenden. Die Sichtbarkeit in einem Repository
+räumt keine Nutzungsrechte ein.
+
+Ausgenommen sind Bestandteile Dritter mit eigener Lizenz:
+
+- app/vendor/qrcode.js – QR Code Generator for JavaScript, Copyright (c) 2009 Kazuhiko Arase,
+  MIT-Lizenz (siehe Dateikopf). "QR Code" ist eine eingetragene Marke der DENSO WAVE INCORPORATED.

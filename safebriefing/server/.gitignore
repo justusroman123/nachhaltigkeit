@@ -1,0 +1,2 @@
+# Lokale Konfiguration kann API-Schlüssel enthalten – nie einchecken.
+config.env

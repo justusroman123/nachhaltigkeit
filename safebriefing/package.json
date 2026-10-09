@@ -1,0 +1,15 @@
+{
+  "name": "safebriefing",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "SafeBriefing – mehrsprachige Arbeitsschutz-Unterweisungen mit geprüfter Rückübersetzung (lokaler Edge-Server + Browser-App)",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "start:mock": "TRANSLATE_ENGINE=mock node server/server.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
