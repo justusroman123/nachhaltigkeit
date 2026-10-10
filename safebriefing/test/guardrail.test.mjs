@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const G = require('../app/js/guardrail.js');
 const D = require('../app/js/data.js');
-const LANGS = ['en', 'pl', 'ro', 'tr', 'ar', 'uk', 'bg', 'ru'];
+const LANGS = ['en', 'pl', 'ro', 'tr', 'ar', 'uk', 'el', 'bg', 'ru'];
 
 const check = (source, translation, back, lang, extra = {}) =>
   G.analyze({ source, translation, back, lang, glossary: D.glossary, ...extra });
@@ -164,6 +164,26 @@ describe('Demo-Datenbasis', () => {
       assert.equal(a.status, status, s.id);
       for (const l of LANGS) assert.equal(a.perLang[l].status, l === lang ? status : 'green', `${s.id}/${l}`);
     }
+  });
+
+  test('vorbereitete Unterweisungen verweisen nur auf vorhandene, vollständig übersetzte Inhalte', () => {
+    const quizIds = [...D.quiz, ...D.fremdfirmen.quiz].map((q) => q.id);
+    for (const p of D.programs) {
+      if (p.quiz) assert.ok(quizIds.includes(p.quiz), `${p.id}: Quiz ${p.quiz}`);
+      for (const id of p.items) {
+        const k = D.kernsaetze.find((x) => x.id === id);
+        const r = D.fremdfirmen.rules.find((x) => x.id === id);
+        assert.ok(k || r, `${p.id}: Inhalt ${id}`);
+        for (const l of LANGS) assert.ok(k ? k.t[l] : (r.text[l] && r.title[l]), `${p.id}/${id}/${l}`);
+      }
+    }
+  });
+
+  test('Griechisch: Fachbegriffe greifen, „Notausgang“-Fehler wird gesperrt', () => {
+    const ok = check('Vor dem Eingreifen in die Linie den Not-Halt drücken.', 'Πριν επέμβετε στη γραμμή, πατήστε τον διακόπτη έκτακτης ανάγκης.', 'Vor dem Eingreifen in die Linie den Not-Halt drücken.', 'el');
+    assert.equal(ok.status, 'green');
+    const bad = check('Vor dem Eingreifen in die Linie den Not-Halt drücken.', 'Πριν επέμβετε στη γραμμή, πατήστε την έξοδο κινδύνου.', 'Vor dem Eingreifen in die Linie den Notausgang drücken.', 'el');
+    assert.equal(bad.status, 'red');
   });
 
   test('Texte für Beschäftigte, Quiz und Fremdfirmen sind vollständig', () => {

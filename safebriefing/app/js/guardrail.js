@@ -177,7 +177,7 @@
 
   var EMERGENCY = /(^|[^\p{L}])(feuer|brand|evakuier|räum|notfall|alarm|gasaustritt|explosion|sammelstelle|verletz)/u;
 
-  var SCRIPT = { bg: /\p{Script=Cyrillic}/u, uk: /\p{Script=Cyrillic}/u, ru: /\p{Script=Cyrillic}/u, ar: /\p{Script=Arabic}/u };
+  var SCRIPT = { bg: /\p{Script=Cyrillic}/u, uk: /\p{Script=Cyrillic}/u, ru: /\p{Script=Cyrillic}/u, ar: /\p{Script=Arabic}/u, el: /\p{Script=Greek}/u };
 
   // ---------------------------------------------------------------------
   // Glossar

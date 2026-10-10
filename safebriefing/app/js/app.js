@@ -64,6 +64,19 @@
       return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true, alt: 'QR-Code' });
     } catch (e) { return ''; }
   }
+  function quizById(id) { return D.quiz.concat(D.fremdfirmen.quiz).filter(function (x) { return x.id === id; })[0] || null; }
+  // Vorbereiteter Inhalt: Kernsatz oder Fremdfirmen-Regel, einheitlich als { id, de, t, pictos }
+  function itemById(id) {
+    var k = D.kernsaetze.filter(function (x) { return x.id === id; })[0];
+    if (k) return { id: k.id, de: k.de, t: k.t, pictos: k.pictos, title: null, emergency: !!k.emergency };
+    var r = D.fremdfirmen.rules.filter(function (x) { return x.id === id; })[0];
+    if (r) {
+      var t = {};
+      Object.keys(r.text).forEach(function (l) { if (l !== 'de') t[l] = r.title[l] + ': ' + r.text[l]; });
+      return { id: r.id, de: r.title.de + ': ' + r.text.de, t: t, pictos: [r.picto], title: r.title.de, emergency: false };
+    }
+    return null;
+  }
   function pictos(list, size) { return (list || []).map(function (p) { return PIC.render(p, size); }).join(''); }
 
   // ------------------------------------------------------------------
@@ -73,7 +86,7 @@
   function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || {}; } catch (e) { return {}; } }
   var saved = load();
 
-  function newWorker(lang) { return { lang: lang || null, acked: {}, answered: {}, showDe: false, signed: false, askQ: '', askA: null, askBusy: false, note: '' }; }
+  function newWorker(lang) { return { lang: lang || null, acked: {}, answered: {}, showDe: false, signed: false, askQ: '', askA: null, askBusy: false, note: '', sound: false, spoken: {}, ended: false, pass: null, otherLangs: false }; }
 
   var S = SB.S = {
     route: 'leitstand', routeLang: null,
@@ -93,14 +106,18 @@
     devices: {}, ownMessages: 0,
     worker: newWorker(saved.workerLang), preview: newWorker('pl'),
     induction: { step: 0, lang: null, answers: {}, name: '', firma: '', result: null },
-    glFilter: { cat: 'alle', q: '' }, nachweisSel: null, flash: null
+    glFilter: { cat: 'alle', q: '' }, nachweisSel: null, flash: null,
+    programs: saved.programs || clone(D.programs),
+    simple: { step: 'pick', programId: null, langs: saved.simpleLangs || ['uk', 'ar', 'el'], idx: 0, busy: false, pending: null, error: null, typing: false, listening: false, speakHere: true, summary: null, sessionId: null, quizAsked: false, note: '' },
+    session: null
   };
 
   function persist() {
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify({
         langs: S.langs, settings: S.settings, glossary: S.glossary, contractors: S.contractors,
-        sessions: S.sessions.slice(-60), findings: S.findings.slice(-100), workerLang: S.worker.lang
+        sessions: S.sessions.slice(-60), findings: S.findings.slice(-100), workerLang: S.worker.lang,
+        programs: S.programs, simpleLangs: S.simple.langs
       }));
     } catch (e) { /* privates Fenster o. Ä. – App läuft ohne Speicherung weiter */ }
   }
@@ -111,9 +128,27 @@
   BUS.on('briefing.msg', function (m) {
     if (!m || !m.id) return;
     var i = S.feed.findIndex(function (x) { return x.id === m.id; });
+    var isNew = i < 0;
     if (i >= 0) S.feed[i] = m; else S.feed.unshift(m);
     S.feed = S.feed.slice(0, 40);
+    // Handy der Beschäftigten: neue Anweisung automatisch vorlesen
+    var w = S.worker;
+    if (S.route === 'join' && isNew && w.lang && w.sound && !w.spoken[m.id] && Date.now() - m.ts < 20000) {
+      w.spoken[m.id] = 1;
+      E.speak(w.lang === 'de' ? m.de : (m.texts[w.lang] || ui(w.lang).held), w.lang);
+    }
     refresh('feed');
+  });
+  BUS.on('briefing.session', function (x) {
+    if (!x || !x.id) return;
+    if (!S.session || S.session.id !== x.id) { S.worker.ended = false; S.worker.signed = false; S.worker.pass = null; }
+    S.session = { id: x.id, title: String(x.title || ''), type: x.type, langs: Array.isArray(x.langs) ? x.langs.filter(function (l) { return LANG[l]; }) : [] };
+    refresh('session');
+  });
+  BUS.on('briefing.end', function () {
+    S.worker.ended = true;
+    if (S.quiz) S.quiz.closed = true;
+    refresh('session');
   });
   BUS.on('briefing.quiz', function (q) {
     if (!q || !q.id) return;
@@ -147,10 +182,16 @@
     if (msg.from !== BUS.tabId && j.device) S.devices[j.device] = { lang: j.lang, ts: Date.now() };
     if (j.signed && j.name) {
       S.participants.push({ name: String(j.name).slice(0, 80), firma: String(j.firma || '').slice(0, 80), lang: j.lang, ts: Date.now() });
+      if (j.passCode && !S.contractors.some(function (c) { return c.passCode === j.passCode; })) {
+        S.contractors.unshift({ id: 'c' + Date.now().toString(36), name: String(j.name).slice(0, 80), firma: String(j.firma || '–').slice(0, 80) || '–', lang: j.lang,
+          bereich: 'Gruppeneinweisung', koordinator: 'offen', since: today(), until: String(j.until || today()), permits: [], passCode: String(j.passCode).slice(0, 12), fresh: true });
+        persist();
+      }
     }
     // Spät beigetretene Geräte bekommen die letzten Anweisungen erneut (gleiche id → kein Duplikat)
-    if (S.route === 'leitstand' && S.ownMessages > 0 && msg.from !== BUS.tabId) {
-      S.feed.slice(0, 3).reverse().forEach(function (m) { BUS.publish('briefing.msg', m); });
+    if ((S.route === 'leitstand' || S.route === 'start') && msg.from !== BUS.tabId && !j.signed) {
+      if (S.route === 'start' && S.simple.step === 'live' && SB.sessionInfo) BUS.publish('briefing.session', SB.sessionInfo());
+      if (S.ownMessages > 0) S.feed.slice(0, 3).reverse().forEach(function (m) { BUS.publish('briefing.msg', m); });
       if (S.quiz && !S.quiz.closed) BUS.publish('briefing.quiz', { id: S.quiz.id, qid: S.quiz.qid, ts: S.quiz.ts });
     }
     refresh('session');
@@ -241,6 +282,24 @@
     return 'ok';
   }
 
+  // Eine freigegebene Anweisung an alle Geräte senden
+  function sendMessage(o) {
+    var msg = { id: o.id || BUS.rid(), ts: Date.now(), de: o.de, texts: o.texts, held: o.held || [], pictos: o.pictos || [], origin: o.origin, engine: o.engine, kernsatzId: o.kernsatzId || null };
+    S.ownMessages++;
+    S.stats.released++;
+    S.stats.held += msg.held.length;
+    BUS.publish('briefing.msg', msg);
+    simulateAcks(msg);
+    return msg;
+  }
+
+  function recordBlocked(source, lang, result, analysis, engine, state) {
+    S.findings.unshift({
+      ts: Date.now(), source: source, lang: lang, translation: result.text, back: result.back, engine: engine,
+      problems: analysis.checks.filter(function (c) { return c.level === 'block' || (state !== 'offen' && c.level === 'warn'); }).map(function (c) { return c.title + ': ' + c.detail; }), state: state || 'offen'
+    });
+  }
+
   function release(onlyOk, auto) {
     var d = S.draft;
     if (!d) return;
@@ -251,24 +310,13 @@
     });
     if (!onlyOk && held.length) return;
     if (!Object.keys(texts).length) return;
-    var msg = { id: d.id, ts: Date.now(), de: d.source, texts: texts, held: held, pictos: d.pictos, origin: d.origin, engine: d.engine, kernsatzId: d.kernsatz ? d.kernsatz.id : null };
-    S.ownMessages++;
-    S.stats.released++;
     S.stats.confirmed += Object.keys(d.confirmed).filter(function (l) { return d.confirmed[l]; }).length;
     d.langs.forEach(function (l) {
       var a = d.analysis.perLang[l];
-      if (a.status === 'red') {
-        S.stats.blocked++;
-        S.findings.unshift({
-          ts: Date.now(), source: d.source, lang: l, translation: d.results[l].text, back: d.results[l].back, engine: d.engine,
-          problems: a.checks.filter(function (c) { return c.level === 'block'; }).map(function (c) { return c.title + ': ' + c.detail; }), state: 'offen'
-        });
-      }
+      if (a.status === 'red') { S.stats.blocked++; recordBlocked(d.source, l, d.results[l], a, d.engine); }
     });
-    S.stats.held += held.length;
     persist();
-    BUS.publish('briefing.msg', msg);
-    simulateAcks(msg);
+    sendMessage({ id: d.id, de: d.source, texts: texts, held: held, pictos: d.pictos, origin: d.origin, engine: d.engine, kernsatzId: d.kernsatz ? d.kernsatz.id : null });
     S.draft = null;
     S.flash = auto ? 'Automatisch freigegeben: alle Sprachen grün.' : (held.length ? 'Freigegeben. ' + plural(held.length, 'Sprache wird', 'Sprachen werden') + ' zurückgehalten.' : 'Freigegeben an ' + plural(Object.keys(texts).length, 'Sprache', 'Sprachen') + '.');
     var ta = $('#say'); if (ta) { ta.value = ''; updateCount(); }
@@ -281,24 +329,32 @@
     if (S.quiz) simulateAnswers(S.quiz);
   }
 
-  function closeSession() {
+  function sessionRecord(topic, type) {
     var real = Object.keys(S.devices).length;
     var sim = S.settings.sim ? simDevicesFor(S.langs) : 0;
     var q = S.quiz;
-    var sess = {
-      id: 'n-' + Date.now().toString(36), type: 'briefing', date: today(), start: hhmm(S.sessionStart), end: hhmm(Date.now()),
-      topic: S.topic, leader: D.site.leader, langs: S.langs.slice(), released: S.stats.released, blocked: S.stats.blocked,
+    return {
+      id: 'n-' + Date.now().toString(36), type: type || 'briefing', date: today(), start: hhmm(S.sessionStart), end: hhmm(Date.now()),
+      topic: topic, leader: D.site.leader, langs: S.langs.slice(), released: S.stats.released, blocked: S.stats.blocked,
       confirmed: S.stats.confirmed, held: S.stats.held,
       participants: S.participants.length + sim + real, named: S.participants.slice(), simulated: sim,
       quiz: q ? { correct: q.correct, total: q.correct + q.wrong, qid: q.qid } : null,
       messages: S.feed.slice().reverse().map(function (m) { return { ts: m.ts, de: m.de, held: m.held, langs: Object.keys(m.texts), kernsatz: !!m.kernsatzId }; }),
       live: true
     };
-    S.sessions.push(sess);
-    persist();
+  }
+
+  function resetLive() {
     BUS.publish('briefing.reset', {});
     S.stats = { released: 0, blocked: 0, confirmed: 0, held: 0 };
     S.participants = []; S.acks = {}; S.simAcks = {}; S.notUnderstood = {}; S.ownMessages = 0; S.sessionStart = Date.now();
+  }
+
+  function closeSession() {
+    var sess = sessionRecord(S.topic, 'briefing');
+    S.sessions.push(sess);
+    persist();
+    resetLive();
     S.nachweisSel = sess.id;
     location.hash = 'nachweise';
   }
@@ -524,7 +580,7 @@
 
   function renderQuiz() {
     var el = $('#ls-quiz'); if (!el) return;
-    var q = S.quiz, def = q ? D.quiz.filter(function (x) { return x.id === q.qid; })[0] : null;
+    var q = S.quiz, def = q ? quizById(q.qid) : null;
     var opts = D.quiz.map(function (x) { return '<option value="' + x.id + '">' + esc(x.q.de) + '</option>'; }).join('');
     var head = '<div class="card-head"><h2>Verständnis-Check</h2><span class="small muted">Antworten anonym, nur Summen</span></div>';
     if (!q) {
@@ -616,7 +672,7 @@
   // Hallen-Display
   function hallHtml() {
     var top = '<div class="hall-top"><b>' + esc(D.site.werk) + ' · ' + esc(D.site.halle) + ' · ' + esc(D.site.schicht) + '</b><span>KI-übersetzt · geprüft · ' + hhmm(Date.now()) + '</span></div>';
-    var q = S.quiz && !S.quiz.closed ? D.quiz.filter(function (x) { return x.id === S.quiz.qid; })[0] : null;
+    var q = S.quiz && !S.quiz.closed ? quizById(S.quiz.qid) : null;
     var m = S.feed[0];
     var main;
     if (q) {
@@ -638,7 +694,7 @@
 
   // Smart-Brille
   function hudHtml(lang) {
-    var q = S.quiz && !S.quiz.closed ? D.quiz.filter(function (x) { return x.id === S.quiz.qid; })[0] : null;
+    var q = S.quiz && !S.quiz.closed ? quizById(S.quiz.qid) : null;
     var m = S.feed[0];
     var top = '<div class="hud-top"><span>' + lang.toUpperCase() + ' · ' + esc(D.site.halle) + '</span><span>' + hhmm(Date.now()) + '</span></div>';
     var body;
@@ -657,16 +713,45 @@
   // ------------------------------------------------------------------
   // Beschäftigten-Ansicht (Handy)
   // ------------------------------------------------------------------
+  function passCode() { var a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', c = 'P-'; for (var i = 0; i < 4; i++) c += a[Math.floor(Math.random() * a.length)]; return c; }
+  function addDays(iso, days) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
+
   function workerHtml(w, ctx) {
+    var sess = S.session;
+    var sessLangs = sess && sess.langs && sess.langs.length ? sess.langs : null;
     if (!w.lang) {
-      return '<div class="w"><div class="w-head"><b>' + esc(D.site.werk) + '</b><span class="small muted">' + esc(D.site.halle) + '</span></div>' +
-        '<p style="font-weight:600">Sprache wählen · Choose language</p>' +
-        '<div class="w-langs">' + TARGETS.concat(['de']).map(function (l) {
+      var list = sessLangs && !w.otherLangs ? sessLangs : TARGETS.concat(['de']);
+      var heads = (sessLangs || ['de', 'en']).map(function (l) { return '<span lang="' + l + '" dir="' + dirOf(l) + '">' + esc(ui(l).chooseLang) + '</span>'; }).join(' · ');
+      return '<div class="w"><div class="w-head"><b>' + esc(D.site.werk) + '</b><span class="small muted">' + esc(sess ? sess.title : D.site.halle) + '</span></div>' +
+        '<p class="w-pick">' + heads + '</p>' +
+        '<div class="w-langs big">' + list.map(function (l) {
           return '<button data-action="w-setlang" data-ctx="' + ctx + '" data-lang="' + l + '" lang="' + l + '" dir="' + dirOf(l) + '">' + esc(LANG[l].native) + '</button>';
-        }).join('') + '</div><p class="w-foot">' + esc(D.ui.de.privacy) + '</p></div>';
+        }).join('') + '</div>' +
+        (sessLangs && !w.otherLangs ? '<button class="btn ghost sm" data-action="w-otherlangs" data-ctx="' + ctx + '">Andere Sprache · Other language</button>' : '') +
+        '<p class="w-foot">' + esc(D.ui.de.privacy) + '</p></div>';
     }
     var L = w.lang, U = ui(L);
-    var q = S.quiz && !S.quiz.closed ? D.quiz.filter(function (x) { return x.id === S.quiz.qid; })[0] : null;
+    var head = '<div class="w-head"><b>' + esc(sess ? sess.title : U.live) + '</b><button class="chip" data-action="w-chooselang" data-ctx="' + ctx + '">' + esc(LANG[L].native) + '</button></div>';
+
+    if (w.ended) {
+      var endBody;
+      if (w.pass) {
+        endBody = '<div class="w-pass">' + icon('check') + '<b style="font:600 1.3rem var(--font-display)">' + esc(U.passTitle) + '</b>' +
+          '<div class="qr">' + qrSvg('SAFEBRIEFING-PASS:' + w.pass.code) + '</div><div class="mono" style="font-size:1.2rem">' + esc(w.pass.code) + '</div>' +
+          '<div>' + esc(w.pass.name) + (w.pass.firma ? ' · ' + esc(w.pass.firma) : '') + '</div><div class="small">' + esc(U.validUntil) + ' <b>' + deDate(w.pass.until) + '</b></div>' +
+          '<p class="small muted">' + esc(U.showAtGate) + '</p></div>';
+      } else if (w.signed) {
+        endBody = '<div class="notice ok">' + icon('check') + ' ' + esc(U.confirmed) + '</div>';
+      } else {
+        endBody = '<div class="w-card latest"><div class="txt">' + esc(U.ended) + '</div>' +
+          '<input id="sig-name-' + ctx + '" type="text" placeholder="' + esc(U.name) + '" autocomplete="name">' +
+          '<input id="sig-firma-' + ctx + '" type="text" placeholder="' + esc(U.company) + '" autocomplete="organization">' +
+          '<button class="btn primary" data-action="w-sign" data-ctx="' + ctx + '">' + esc(U.confirm) + '</button></div>';
+      }
+      return '<div class="w" lang="' + L + '" dir="' + dirOf(L) + '">' + head + endBody + '<p class="w-foot">' + esc(U.privacy) + '</p></div>';
+    }
+
+    var q = S.quiz && !S.quiz.closed ? quizById(S.quiz.qid) : null;
     var quizHtml = '';
     if (q) {
       var ans = w.answered[S.quiz.id];
@@ -676,40 +761,50 @@
           '<span class="small muted">' + esc(U.anonymous) + '</span></div>'
         : '<div class="notice ' + (ans === q.correct ? 'ok' : 'warn') + '">' + esc(ans === q.correct ? U.correct : U.wrong) + '</div>';
     }
-    var cards = S.feed.slice(0, 6).map(function (m, idx) {
+    var sound = w.sound
+      ? '<button class="chip on" data-action="w-sound" data-ctx="' + ctx + '" aria-pressed="true">' + icon('speaker') + esc(U.soundOn) + '</button>'
+      : '';
+    var soundBig = w.sound ? '' : '<button class="btn primary w-soundbig" data-action="w-sound" data-ctx="' + ctx + '" aria-pressed="false">' + icon('speaker') + esc(U.tapSound) + '</button>';
+    var m = S.feed[0];
+    var latest = '';
+    if (m) {
       var txt = L === 'de' ? m.de : m.texts[L];
       var acked = w.acked[m.id];
-      return '<div class="w-card' + (idx === 0 ? ' latest' : '') + (txt ? '' : ' held') + '">' +
-        (m.pictos && m.pictos.length ? '<div class="row">' + pictos(m.pictos, '46px') + '</div>' : '') +
-        '<div class="txt">' + esc(txt || U.held) + '</div>' +
+      latest = '<div class="w-card latest' + (txt ? '' : ' held') + '">' +
+        (m.pictos && m.pictos.length ? '<div class="row">' + pictos(m.pictos, '52px') + '</div>' : '') +
+        '<div class="txt big">' + esc(txt || U.held) + '</div>' +
         (w.showDe && L !== 'de' ? '<div class="de" lang="de" dir="ltr">' + esc(m.de) + '</div>' : '') +
         (acked ? '<div class="w-ok">' + icon('check') + ' ' + esc(acked === 'nicht' ? U.sent : U.understood) + '</div>'
           : '<div class="w-actions">' +
             '<button class="btn ok" data-action="w-ack" data-ctx="' + ctx + '" data-id="' + m.id + '">' + icon('check') + esc(U.understood) + '</button>' +
             '<button class="btn" data-action="w-nicht" data-ctx="' + ctx + '" data-id="' + m.id + '">' + icon('q') + esc(U.question) + '</button>' +
-            '<button class="btn" data-action="w-speak" data-ctx="' + ctx + '" data-id="' + m.id + '" aria-label="' + esc(U.listen) + '">' + icon('speaker') + '</button>' +
+            '<button class="btn" data-action="w-speak" data-ctx="' + ctx + '" data-id="' + m.id + '" aria-label="' + esc(U.replay) + '" title="' + esc(U.replay) + '">' + icon('speaker') + '</button>' +
           '</div>') +
-        '<div class="w-meta"><span>' + hhmm(m.ts) + '</span><span>' + esc(m.kernsatzId ? U.verified : U.aiLabel) + '</span></div>' +
-      '</div>';
+        '<div class="w-meta"><span>' + hhmm(m.ts) + '</span><span>' + esc(m.kernsatzId ? U.verified : U.aiLabel) + '</span></div></div>';
+    } else {
+      latest = '<div class="w-card"><div class="txt muted">' + esc(U.waiting) + '</div></div>';
+    }
+    var older = S.feed.slice(1, 5).map(function (o) {
+      var t = L === 'de' ? o.de : (o.texts[L] || U.held);
+      return '<button class="w-old" data-action="w-replay" data-ctx="' + ctx + '" data-id="' + o.id + '"><span class="mono small">' + hhmm(o.ts) + '</span><span>' + esc(t) + '</span>' + icon('speaker') + '</button>';
     }).join('');
     var askA = w.askA ? '<div class="w-answer">' + esc(w.askA.text) + (w.askA.src ? '<div class="small muted" style="margin-top:4px">' + esc(U.source) + ': ' + esc(w.askA.src) + '</div>' : '') + '</div>' : '';
-    return '<div class="w" lang="' + L + '" dir="' + dirOf(L) + '">' +
-      '<div class="w-head"><b>' + esc(U.live) + '</b><button class="chip" data-action="w-chooselang" data-ctx="' + ctx + '">' + esc(LANG[L].native) + '</button></div>' +
-      '<div class="w-meta"><span>' + esc(D.site.werk) + ' · ' + esc(D.site.halle) + '</span>' + (L !== 'de' ? '<button class="chip" style="padding:2px 8px;font-size:.72rem" data-action="w-showde" data-ctx="' + ctx + '">' + esc(U.showGerman) + '</button>' : '') + '</div>' +
-      (w.note ? '<div class="notice ok small">' + esc(w.note) + '</div>' : '') +
-      quizHtml +
-      (cards || '<div class="w-card"><div class="txt muted">' + esc(U.waiting) + '</div></div>') +
-      '<div class="w-section"><span class="label">' + esc(U.quickTitle) + '</span><div class="w-quick">' + D.quickReplies.map(function (r) {
-        return '<button data-action="w-quick" data-ctx="' + ctx + '" data-id="' + r.id + '">' + esc(r.t[L] || r.t.de) + '</button>';
-      }).join('') + '</div></div>' +
-      '<div class="w-section"><span class="label">' + esc(U.askTitle) + '</span>' +
+    return '<div class="w" lang="' + L + '" dir="' + dirOf(L) + '">' + head +
+      '<div class="w-meta"><span>' + esc(D.site.werk) + '</span>' + sound + '</div>' +
+      soundBig +
+      (w.note ? '<div class="notice small">' + esc(w.note) + '</div>' : '') +
+      quizHtml + latest +
+      (older ? '<div class="w-olds">' + older + '</div>' : '') +
+      '<details class="w-more"><summary>' + esc(U.more) + '</summary><div class="w-section">' +
+        (L !== 'de' ? '<button class="chip" data-action="w-showde" data-ctx="' + ctx + '">' + esc(U.showGerman) + '</button>' : '') +
+        '<span class="label">' + esc(U.quickTitle) + '</span><div class="w-quick">' + D.quickReplies.map(function (r) {
+          return '<button data-action="w-quick" data-ctx="' + ctx + '" data-id="' + r.id + '">' + esc(r.t[L] || r.t.de) + '</button>';
+        }).join('') + '</div>' +
+        '<span class="label">' + esc(U.askTitle) + '</span>' +
         '<div class="row"><label class="sr-only" for="ask-' + ctx + '">' + esc(U.askTitle) + '</label><input id="ask-' + ctx + '" type="text" class="grow" style="width:auto" placeholder="' + esc(U.askPlaceholder) + '" value="' + esc(w.askQ) + '">' +
         '<button class="btn sm" data-action="w-ask" data-ctx="' + ctx + '"' + (w.askBusy ? ' disabled' : '') + '>' + esc(U.ask) + '</button></div>' +
-        '<span class="small muted">' + esc(U.askHint) + '</span>' + askA + '</div>' +
-      '<div class="w-section"><span class="label">' + esc(U.sign) + '</span>' +
-        (w.signed ? '<div class="w-ok">' + icon('check') + ' ' + esc(U.confirmed) + '</div>'
-          : '<input id="sig-name-' + ctx + '" type="text" placeholder="' + esc(U.name) + '" autocomplete="name"><input id="sig-firma-' + ctx + '" type="text" placeholder="' + esc(U.company) + '" autocomplete="organization">' +
-            '<button class="btn" data-action="w-sign" data-ctx="' + ctx + '">' + esc(U.confirm) + '</button>') + '</div>' +
+        '<span class="small muted">' + esc(U.askHint) + '</span>' + askA +
+      '</div></details>' +
       '<p class="w-foot">' + esc(U.privacy) + '</p></div>';
   }
 
@@ -813,6 +908,25 @@
       refreshWorker(el.dataset.ctx);
     },
     'w-chooselang': function (el) { wctx(el.dataset.ctx).lang = null; refreshWorker(el.dataset.ctx); },
+    'w-otherlangs': function (el) { wctx(el.dataset.ctx).otherLangs = true; refreshWorker(el.dataset.ctx); },
+    'w-sound': function (el) {
+      var w = wctx(el.dataset.ctx);
+      w.sound = !w.sound;
+      if (w.sound) {
+        // Erstes Vorlesen direkt nach dem Tippen – danach dürfen neue Anweisungen automatisch vorgelesen werden
+        var m = S.feed[0];
+        var r = E.speak(m ? (w.lang === 'de' ? m.de : (m.texts[w.lang] || ui(w.lang).held)) : ui(w.lang).soundOn, w.lang);
+        if (m) w.spoken[m.id] = 1;
+        if (!r.ok) w.note = r.reason;
+      } else if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) { /* ignorieren */ } }
+      refreshWorker(el.dataset.ctx); w.note = '';
+    },
+    'w-replay': function (el) {
+      var w = wctx(el.dataset.ctx);
+      var m = S.feed.filter(function (x) { return x.id === el.dataset.id; })[0]; if (!m) return;
+      var r = E.speak(w.lang === 'de' ? m.de : (m.texts[w.lang] || ui(w.lang).held), w.lang);
+      if (!r.ok) { w.note = r.reason; refreshWorker(el.dataset.ctx); w.note = ''; }
+    },
     'w-showde': function (el) { var w = wctx(el.dataset.ctx); w.showDe = !w.showDe; refreshWorker(el.dataset.ctx); },
     'w-ack': function (el) {
       var w = wctx(el.dataset.ctx); w.acked[el.dataset.id] = 'ok';
@@ -839,7 +953,7 @@
     },
     'w-answer': function (el) {
       var w = wctx(el.dataset.ctx); if (!S.quiz) return;
-      var q = D.quiz.filter(function (x) { return x.id === S.quiz.qid; })[0];
+      var q = quizById(S.quiz.qid);
       var i = Number(el.dataset.i);
       w.answered[S.quiz.id] = i;
       BUS.publish('worker.answer', { quizId: S.quiz.id, correct: i === q.correct, lang: w.lang });
@@ -863,7 +977,13 @@
       var name = n ? n.value.trim() : '';
       if (!name) { if (n) n.focus(); return; }
       w.signed = true;
-      BUS.publish('worker.join', { device: ctx === 'preview' ? null : BUS.tabId, lang: w.lang, signed: true, name: name, firma: f ? f.value.trim() : '' });
+      var firma = f ? f.value.trim() : '';
+      var payload = { device: ctx === 'preview' ? null : BUS.tabId, lang: w.lang, signed: true, name: name.slice(0, 80), firma: firma.slice(0, 80) };
+      if (S.session && S.session.type === 'fremdfirma') {
+        w.pass = { code: passCode(), name: payload.name, firma: payload.firma, until: addDays(today(), 365) };
+        payload.passCode = w.pass.code; payload.until = w.pass.until;
+      }
+      BUS.publish('worker.join', payload);
       refreshWorker(ctx);
     }
   };
@@ -919,6 +1039,8 @@
       var kh = $('#kiosk-hud'); if (kh) kh.innerHTML = hudHtml(S.routeLang || S.previewLang.glasses);
     } else if (S.route === 'join') {
       if (what !== 'acks' && what !== 'rueck') refreshWorker('kiosk');
+    } else if (S.route === 'start') {
+      if (SB.refreshSimple) SB.refreshSimple(what);
     } else if (SB.refreshAdmin) {
       SB.refreshAdmin(what);
     }
@@ -928,11 +1050,11 @@
   // ------------------------------------------------------------------
   // Router
   // ------------------------------------------------------------------
-  var ADMIN = ['leitstand', 'fremdfirmen', 'glossar', 'nachweise', 'cockpit', 'system'];
+  var ADMIN = ['start', 'leitstand', 'unterweisungen', 'fremdfirmen', 'glossar', 'nachweise', 'cockpit', 'system'];
   function parseRoute() {
     var h = (location.hash || '').replace(/^#/, '');
-    var m = h.match(/^(leitstand|fremdfirmen|glossar|nachweise|cockpit|system|display|join|brille|pforte)(?:-([a-z]{2}))?$/);
-    return m ? { name: m[1], lang: m[2] && LANG[m[2]] ? m[2] : null } : { name: 'leitstand', lang: null };
+    var m = h.match(/^(start|leitstand|unterweisungen|fremdfirmen|glossar|nachweise|cockpit|system|display|join|brille|pforte)(?:-([a-z]{2}))?$/);
+    return m ? { name: m[1], lang: m[2] && LANG[m[2]] ? m[2] : null } : { name: 'start', lang: null };
   }
 
   function render() {
@@ -942,11 +1064,12 @@
     var kiosk = ADMIN.indexOf(r.name) < 0;
     document.body.classList.toggle('kiosk', kiosk);
     document.body.classList.toggle('kiosk-light', r.name === 'join' || r.name === 'pforte');
+    document.body.classList.toggle('simple-mode', r.name === 'start');
     document.querySelectorAll('nav.tabs-main a').forEach(function (a) {
       if (a.getAttribute('href') === '#' + r.name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    var back = '<a class="btn sm kiosk-back no-print" href="#leitstand">' + icon('back') + 'Leitstand</a>';
-    var backFoot = '<p class="kiosk-foot no-print"><a href="#leitstand">' + icon('back') + 'Zurück zum Leitstand (Demo)</a></p>';
+    var back = '<a class="btn sm kiosk-back no-print" href="#start">' + icon('back') + 'Zurück</a>';
+    var backFoot = '<p class="kiosk-foot no-print"><a href="#start">' + icon('back') + 'Zurück zum Start (Demo)</a></p>';
     if (r.name === 'display') {
       root.innerHTML = '<div class="kiosk-display" id="kiosk-display">' + hallHtml() + '</div>' + back;
     } else if (r.name === 'brille') {
@@ -959,6 +1082,9 @@
       if (r.lang) S.induction.lang = r.lang;
       root.innerHTML = '<div class="kiosk-phone"><div id="kiosk-induction"></div>' + backFoot + '</div>';
       if (SB.renderInduction) SB.renderInduction($('#kiosk-induction'));
+    } else if (r.name === 'start') {
+      root.innerHTML = '<main class="simple-page" id="page"></main>';
+      if (SB.views && SB.views.start) SB.views.start($('#page'));
     } else if (r.name === 'leitstand') {
       root.innerHTML = '<main class="page" id="page"></main>';
       viewLeitstand($('#page'));
@@ -982,7 +1108,9 @@
   SB.renderModeChip = renderModeChip;
 
   // Hilfen für admin.js
-  SB.h = { esc: esc, icon: icon, qrSvg: qrSvg, pictos: pictos, hhmm: hhmm, hhmmss: hhmmss, deDate: deDate, today: today, ago: ago, lname: lname, ui: ui, dirOf: dirOf, plural: plural, persist: persist, framed: framed, LANG: LANG, TARGETS: TARGETS, joinUrl: joinUrl, statusPill: statusPill };
+  SB.h = { esc: esc, icon: icon, qrSvg: qrSvg, pictos: pictos, hhmm: hhmm, hhmmss: hhmmss, deDate: deDate, today: today, ago: ago, lname: lname, ui: ui, dirOf: dirOf, plural: plural, persist: persist, framed: framed, LANG: LANG, TARGETS: TARGETS, joinUrl: joinUrl, statusPill: statusPill,
+    quizById: quizById, itemById: itemById, sendMessage: sendMessage, startQuiz: startQuiz, deviceCount: deviceCount, sessionRecord: sessionRecord,
+    resetLive: resetLive, recordBlocked: recordBlocked, simDevicesFor: simDevicesFor, refreshWorker: refreshWorker, hallHtml: hallHtml, newWorker: newWorker };
 
   // ------------------------------------------------------------------
   // Start

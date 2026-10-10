@@ -18,6 +18,17 @@ deutsches Recht, deutsche Hallen und die Mitbestimmung:
 
 Notfall- und Warnhinweise werden nie live übersetzt: Sie kommen als vorab geprüfte **Kernsätze**.
 
+## Bedienung in drei Schritten (Start-Modus)
+
+1. **Was steht an?** – vorbereitete Unterweisung antippen (z. B. Fremdfirmen-Einweisung)
+2. **Wer steht vor Ihnen?** – Sprachen antippen (z. B. Ukrainisch, Arabisch, Griechisch)
+3. **Los** – vorbereitete Punkte mit „Senden“ verschicken oder frei sprechen; „Frage“ für den
+   Verständnis-Check, „Beenden“ erzeugt den Nachweis
+
+Die Handys der Teilnehmenden zeigen nur die gewählten Sprachen und lesen jede Anweisung vor.
+Alles Weitere (Prüfdetails, Glossar, Unterweisungen bearbeiten, Nachweise, Datenschutz) liegt unter
+**Verwaltung**.
+
 > Fiktives Werk („Musterwerk“). Alle Übersetzungen sind Demo-Übersetzungen ohne
 > Muttersprachler-Prüfung. Sicherheitszeichen sind symbolisch. Keine Rechtsberatung.
 
@@ -42,7 +53,9 @@ Handys im selben Netz treten damit bei. Beamer: zweites Fenster mit `#display`.
 
 | Ansicht | Adresse |
 | --- | --- |
-| Leitstand (Führungskraft) | `#leitstand` |
+| Start-Modus (Standard) | `#start` |
+| Experten-Leitstand | `#leitstand` |
+| Unterweisungen bearbeiten | `#unterweisungen` |
 | Hallen-Display / Beamer | `#display` |
 | Handy der Beschäftigten | `#join` oder `#join-pl`, `#join-ro`, … |
 | Smart-Brille | `#brille-ro`, `#brille-ar`, … |
@@ -68,10 +81,11 @@ In der Online-Demo auf claude.ai übersetzt Claude freie Sätze (Cloud, nur zum 
 ```
 app/                 Browser-App (ohne Build, ohne Framework)
   js/guardrail.js    Sinnvergleich – deterministische, nachvollziehbare Regeln
-  js/data.js         Kernsätze, Werks-Glossar, Quiz, Fremdfirmen-Regeln, UI-Texte (9 Sprachen)
+  js/data.js         Kernsätze, Werks-Glossar, Quiz, Fremdfirmen-Regeln, Unterweisungen, UI-Texte (10 Sprachen)
   js/engines.js      Kernsatz · Prüf-Demo · Edge-Server · Browser-Übersetzer · Online-Demo
   js/bus.js          Sync Leitstand ↔ Geräte (BroadcastChannel · SSE · Artifact-Room)
-  js/app.js          Leitstand, Display, Handy, Brille
+  js/app.js          Experten-Leitstand, Display, Handy, Brille
+  js/simple.js       Start-Modus: Unterweisung → Sprachen → Los
   js/admin.js        Fremdfirmen, Glossar, Nachweise, Cockpit, System & Datenschutz
 server/              Edge-Server (Node, ohne Abhängigkeiten): Dateien, SSE, Übersetzung, Spracherkennung
 test/                node --test: Sinnvergleich, Daten, Server, Engine-Adapter (gegen Test-Server)
@@ -81,7 +95,7 @@ docs/                Demo-Skript, Architektur & Datenschutz, Fremdfirmen
 ## Tests
 
 ```bash
-npm test     # 87 Tests
+npm test     # 89 Tests
 ```
 
 ## Stand und Grenzen

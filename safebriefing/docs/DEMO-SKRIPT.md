@@ -1,65 +1,42 @@
-# Demo-Skript für das Online-Meeting (ca. 12 Minuten)
+# Demo-Skript (ca. 5 Minuten)
 
-Ziel: zeigen, in welche Richtung es geht – nicht ein fertiges Produkt verkaufen.
-Bildschirm teilen, Browserfenster mit dem Leitstand. Optional das eigene Handy in die Kamera halten.
+Ziel: zeigen, wie einfach es für die Führungskraft ist. Nichts erklären, einfach machen.
+Bildschirm teilen oder Handy in die Kamera halten.
 
-## Vorbereitung (5 Minuten vorher)
+## Vorbereitung
 
-- Online-Demo-Link oder lokal `npm run start:mock` und `http://localhost:8080` öffnen.
-- **System & Datenschutz → Demo zurücksetzen**, damit Verlauf und Nachweise leer starten.
-- Sprachen der Schicht: Polnisch, Rumänisch, Türkisch, Arabisch, Ukrainisch (Voreinstellung).
-- Rechts „Ausgabe live“ auf **Hallen-Display** stellen.
+- Online-Link oder lokal `npm run start:mock` → `http://localhost:8080` öffnen. Die App startet im **Start-Modus**.
+- Optional zweites Gerät oder zweites Fenster mit `#join` als „Handy der Teilnehmenden“.
+- Für einen frischen Start: **Verwaltung → System & Datenschutz → Demo zurücksetzen**.
 
 ## Ablauf
 
-**1. Das Problem in einem Satz (30 s)**
-„Alle nicken, unterschreiben – und trotzdem ist die Anweisung nicht angekommen. Scheinverständnis.“
+**1. Was steht an?** → Kachel **Fremdfirmen-Einweisung** antippen.
+„Die Inhalte sind vorbereitet und fachlich freigegeben.“
 
-**2. Kernsatz senden (1,5 min)**
-Leitstand → *Geprüfte Kernsätze* → „Wenn sich ein Stapler nähert: stehen bleiben …“.
-- Prüfkarte: alles grün, „vorab geprüfter Kernsatz“.
-- *Freigeben* → rechts erscheint der Satz in fünf Sprachen mit Warnzeichen auf dem Display.
-- Unten im Verlauf zählen die (simulierten) Geräte „verstanden“ hoch.
+**2. Wer steht vor Ihnen?** → z. B. **Українська, العربية, Ελληνικά** antippen → **Los geht’s**.
 
-**3. Der Unterschied zu einer Übersetzungs-App: die Sperre (3 min)**
-Reiter *Prüf-Demo: typische KI-Fehler*:
-- **Sinnverkehrung:** Polnisch macht aus „freischalten“ „einschalten“. Rot, gesperrt.
-  Rückübersetzung mit markiertem Wort zeigen. „Das wäre an der Anlage lebensgefährlich.“
-- *Nur geprüfte Sprachen senden* → auf dem Handy (Reiter *Handy*, Polnisch) steht:
-  „Wird noch geprüft – bitte Führungskraft fragen.“
-- **Verbot geht verloren** (Türkisch) und **Zahl falsch** (6 → 60 km/h) kurz anklicken.
-- **Fachbegriff falsch** (Arabisch): gelb – die Führungskraft liest die Rückübersetzung und bestätigt.
+**3. Los**
+- **Senden** tippen: Der erste Punkt geht sofort in allen drei Sprachen raus und wird vorgelesen.
+- Auf dem Handy der Teilnehmenden: Sprache antippen, **Vorlesen an** – jede neue Anweisung wird
+  automatisch vorgelesen. „Verstanden“ oder „Nicht verstanden“ tippen.
+- **Sprechen** (großer Knopf) und frei etwas sagen, z. B. „Achtung: Der Gabelstapler fährt rückwärts
+  aus der Halle.“ Die App übersetzt, übersetzt zurück und prüft den Sinn:
+  - stimmt alles → wird sofort gesendet,
+  - unsicher → „Haben Sie das gemeint?“ mit der Rückübersetzung → **Ja, senden**,
+  - Sinn verfälscht → **Nicht gesendet**, bitte anders sagen.
+- **Frage** tippen: Die Verständnisfrage erscheint auf jedem Handy in der eigenen Sprache.
+- **Beenden**: Zusammenfassung, Nachweis entsteht automatisch. Auf den Handys bestätigen die
+  Teilnehmenden ihren Namen und bekommen bei Fremdfirmen ihren **Einweisungs-Pass** mit QR-Code.
 
-**4. Geräte (2 min)**
-Reiter *Handy*, *Smart-Brille*, *Ton / Gehörschutz* durchklicken.
-- Handy: „Verstanden“, „Nicht verstanden“, Vorlesen, Rückfragen, Fragen-Assistent.
-- Brille: Schwarz ist auf dem Glas durchsichtig – nur Text leuchtet.
-- Ton: ein Kanal je Sprache in den Gehörschutz.
-Auf *Nicht verstanden* tippen → links im Rückkanal erscheint es anonym auf Deutsch.
+## Wenn nach den Details gefragt wird
 
-**5. Verständnis-Check (1,5 min)**
-*Verständnis-Check → An alle senden*. Auf dem Display und auf jedem Handy steht die Frage in der
-eigenen Sprache. Ergebnis nur als Summe – kein Einzelner wird bewertet (Betriebsrat).
+**Verwaltung** (oben rechts): Experten-Leitstand mit allen Prüfergebnissen, Unterweisungen bearbeiten,
+Werks-Glossar, Fremdfirmen-Übersicht, Nachweise, Cockpit, Datenschutz-Steckbrief.
 
-**6. Nachweis (1 min)**
-*Abschließen und Nachweis*: Datum, Inhalte, Sprachfassungen, zurückgehaltene Sprachen,
-Verständnisquote, Unterschriftenliste, KI-Kennzeichnung.
+## Gut zu wissen
 
-**7. Fremdfirmen (2 min)**
-Reiter *Fremdfirmen*: Einweisung an der Pforte im Handy-Rahmen durchspielen (Polnisch, sechs Regeln,
-drei Fragen, Name) → Einweisungs-Pass mit QR-Code und Gültigkeit. Rechts Koordinator-Übersicht mit
-ablaufenden Einweisungen und die Checkliste „Worauf achten“.
-
-**8. Abschluss (30 s)**
-*System & Datenschutz*: läuft lokal im Werk, ohne Internet; Steckbrief für den Betriebsrat.
-„Vorschlag: Pilot in einem Bereich, zwei bis drei Sprachen, Verständnistest vorher und nachher.“
-
-## Fragen, die kommen können
-
-- **„Ist das rechtssicher?“** Verlangt ist Verständlichkeit, keine bestimmte Technik. Verständnis
-  prüfen und dokumentieren bleibt Pflicht – genau das unterstützt das System.
-- **„Und wenn die KI trotzdem falsch übersetzt?“** Sinnvergleich sperrt die typischen gefährlichen
-  Fehler; der Rest geht über die Freigabe der Führungskraft. Notfälle nur als geprüfte Kernsätze.
-- **„Cloud?“** Nein, im Werk lokal. Die Online-Demo nutzt Claude nur zum Vorführen.
-- **„Was kostet die Brille?“** Pilot zuerst mit Display, Handy und Gehörschutz; Brille als Option
-  für Vorarbeiter oder Fremdfirmen-Koordination.
+- In der Online-Vorschau ist das Mikrofon gesperrt. Dann öffnet „Sprechen“ ein Textfeld – am Handy
+  einfach die Mikrofon-Taste der Tastatur nutzen.
+- Freie Sätze übersetzt in der Online-Vorschau Claude (Cloud, nur zum Vorführen). Im Werk läuft das lokal.
+- Vorlesen nutzt die Stimmen des Geräts. Fehlt eine Stimme, zeigt die App das an.

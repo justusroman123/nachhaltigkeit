@@ -7,7 +7,7 @@
   var D = window.SB_DATA, G = window.SBGuardrail, E = window.SB_ENGINES, PIC = window.SB_PICTOS;
   var SB = window.SB, S = SB.S, H = SB.h;
   var esc = H.esc, icon = H.icon;
-  var views = SB.views = {};
+  var views = SB.views = SB.views || {};
 
   function $(sel, el) { return (el || document).querySelector(sel); }
   function addDays(iso, days) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); }
@@ -421,6 +421,84 @@
   };
 
   // ------------------------------------------------------------------
+  // Vorbereitete Unterweisungen (Inhalt für den Start-Modus)
+  // ------------------------------------------------------------------
+  function allItems() {
+    return D.fremdfirmen.rules.map(function (r) { return { id: r.id, label: 'Fremdfirmen · ' + r.title.de + ': ' + r.text.de }; })
+      .concat(D.kernsaetze.map(function (k) { return { id: k.id, label: k.cat + ' · ' + k.de }; }));
+  }
+  function itemLabel(id) { var it = allItems().filter(function (x) { return x.id === id; })[0]; return it ? it.label : id; }
+  function pgById(id) { return S.programs.filter(function (p) { return p.id === id; })[0]; }
+
+  views.unterweisungen = function (root) {
+    var quizzes = D.quiz.concat(D.fremdfirmen.quiz);
+    root.innerHTML =
+      '<div class="card-head"><div><span class="label">Verwaltung</span><h2 style="font-size:1.8rem">Vorbereitete Unterweisungen</h2>' +
+      '<p class="small muted">Was hier steht, erscheint im Start-Modus als Kachel. Inhalte sind geprüfte Kernsätze und Fremdfirmen-Regeln – sie werden ohne Live-Übersetzung gesendet.</p></div>' +
+      '<div class="row"><button class="btn" data-action="pg-reset">Standard wiederherstellen</button><button class="btn primary" data-action="pg-new">Neue Unterweisung</button></div></div>' +
+      '<div class="stack">' + S.programs.map(function (p) {
+        var rest = allItems().filter(function (x) { return p.items.indexOf(x.id) < 0; });
+        return '<section class="card"><div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
+          '<label class="field"><span class="label">Titel</span><input type="text" data-pg="' + esc(p.id) + '" data-field="title" value="' + esc(p.title) + '"></label>' +
+          '<label class="field"><span class="label">Untertitel</span><input type="text" data-pg="' + esc(p.id) + '" data-field="sub" value="' + esc(p.sub || '') + '"></label>' +
+          '<label class="field"><span class="label">Art</span><select data-pg="' + esc(p.id) + '" data-field="type"><option value="briefing"' + (p.type !== 'fremdfirma' ? ' selected' : '') + '>Unterweisung / Briefing</option><option value="fremdfirma"' + (p.type === 'fremdfirma' ? ' selected' : '') + '>Fremdfirmen (mit Einweisungs-Pass)</option></select></label>' +
+          '<label class="field"><span class="label">Verständnisfrage</span><select data-pg="' + esc(p.id) + '" data-field="quiz"><option value="">keine</option>' + quizzes.map(function (q) { return '<option value="' + q.id + '"' + (p.quiz === q.id ? ' selected' : '') + '>' + esc(q.q.de) + '</option>'; }).join('') + '</select></label>' +
+          '</div><h3 style="margin:14px 0 6px">Ablauf</h3>' +
+          (p.items.length ? '<ol class="pg-items">' + p.items.map(function (id, i) {
+            return '<li><span class="grow">' + esc(itemLabel(id)) + '</span><span class="row" style="flex-wrap:nowrap">' +
+              '<button class="btn sm" data-action="pg-move" data-pg="' + esc(p.id) + '" data-i="' + i + '" data-dir="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="Nach oben">↑</button>' +
+              '<button class="btn sm" data-action="pg-move" data-pg="' + esc(p.id) + '" data-i="' + i + '" data-dir="1"' + (i === p.items.length - 1 ? ' disabled' : '') + ' aria-label="Nach unten">↓</button>' +
+              '<button class="btn sm danger" data-action="pg-remove" data-pg="' + esc(p.id) + '" data-i="' + i + '">Entfernen</button></span></li>';
+          }).join('') + '</ol>' : '<p class="empty">Keine vorbereiteten Punkte – im Start-Modus wird frei gesprochen.</p>') +
+          '<div class="row" style="margin-top:8px"><label class="sr-only" for="pg-add-' + esc(p.id) + '">Punkt hinzufügen</label><select id="pg-add-' + esc(p.id) + '" class="grow" style="width:auto;min-width:0">' +
+            rest.map(function (x) { return '<option value="' + x.id + '">' + esc(x.label) + '</option>'; }).join('') + '</select>' +
+            '<button class="btn" data-action="pg-add" data-pg="' + esc(p.id) + '"' + (rest.length ? '' : ' disabled') + '>Hinzufügen</button>' +
+            (S.programs.length > 1 ? '<button class="btn ghost danger" data-action="pg-delete" data-pg="' + esc(p.id) + '">Unterweisung löschen</button>' : '') + '</div>' +
+          '</section>';
+      }).join('') + '</div>' +
+      '<p class="small muted" style="margin-top:12px">Neue Kernsätze kommen über das Werks-Glossar und die fachliche Freigabe hinzu (im Prototyp fest hinterlegt).</p>';
+  };
+
+  Object.assign(SB.ACTIONS, {
+    'pg-move': function (el) {
+      var p = pgById(el.dataset.pg); if (!p) return;
+      var i = Number(el.dataset.i), j = i + Number(el.dataset.dir);
+      if (j < 0 || j >= p.items.length) return;
+      var t = p.items[i]; p.items[i] = p.items[j]; p.items[j] = t;
+      H.persist(); SB.render();
+    },
+    'pg-remove': function (el) { var p = pgById(el.dataset.pg); if (!p) return; p.items.splice(Number(el.dataset.i), 1); H.persist(); SB.render(); },
+    'pg-add': function (el) {
+      var p = pgById(el.dataset.pg); var sel = $('#pg-add-' + el.dataset.pg);
+      if (!p || !sel || !sel.value) return;
+      p.items.push(sel.value); H.persist(); SB.render();
+    },
+    'pg-new': function () {
+      S.programs.push({ id: 'p' + Date.now().toString(36), type: 'briefing', picto: 'achtung', title: 'Neue Unterweisung', sub: '', items: [], quiz: null });
+      H.persist(); SB.render();
+    },
+    'pg-delete': function (el) {
+      if (el.dataset.confirm !== '1') { el.dataset.confirm = '1'; el.textContent = 'Wirklich löschen?'; return; }
+      S.programs = S.programs.filter(function (p) { return p.id !== el.dataset.pg; });
+      H.persist(); SB.render();
+    },
+    'pg-reset': function (el) {
+      if (el.dataset.confirm !== '1') { el.dataset.confirm = '1'; el.textContent = 'Wirklich zurücksetzen?'; return; }
+      S.programs = JSON.parse(JSON.stringify(D.programs)); H.persist(); SB.render();
+    }
+  });
+
+  function onProgramChange(el) {
+    var p = pgById(el.dataset.pg); if (!p) return false;
+    var f = el.dataset.field;
+    if (f === 'title' || f === 'sub') p[f] = el.value.slice(0, 80);
+    else if (f === 'type') { p.type = el.value === 'fremdfirma' ? 'fremdfirma' : 'briefing'; p.picto = p.type === 'fremdfirma' ? 'erlaubnis' : p.picto; }
+    else if (f === 'quiz') p.quiz = el.value || null;
+    H.persist();
+    return true;
+  }
+
+  // ------------------------------------------------------------------
   // System & Datenschutz
   // ------------------------------------------------------------------
   views.system = function (root) {
@@ -478,6 +556,7 @@
   };
 
   SB.onChange = function (el) {
+    if (el.dataset && el.dataset.pg && onProgramChange(el)) return;
     if (el.name === 'engine') { S.settings.engine = el.value; H.persist(); SB.renderModeChip(); return; }
     if (el.id === 'set-auto') S.settings.autoRelease = el.checked;
     else if (el.id === 'set-emerg') S.settings.emergencyPolicy = el.value;
@@ -498,6 +577,7 @@
     S.contractors = JSON.parse(JSON.stringify(D.demo.contractors));
     S.sessions = JSON.parse(JSON.stringify(D.demo.sessions));
     S.findings = [];
+    S.programs = JSON.parse(JSON.stringify(D.programs));
     S.settings = { engine: 'auto', autoRelease: false, emergencyPolicy: 'warn', minSimilarity: 0.3, sim: true };
     SB.render();
   };

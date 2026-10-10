@@ -233,6 +233,23 @@
     } catch (e) { return { ok: false, reason: 'Vorlesen nicht möglich.' }; }
   }
 
+  // Mehrere Sprachen nacheinander vorlesen (Lautsprecher am Gerät der Führungskraft)
+  function speakAll(list) {
+    if (!root.speechSynthesis) return { ok: false, missing: [] };
+    try { root.speechSynthesis.cancel(); } catch (e) { /* ignorieren */ }
+    var missing = [], any = false;
+    (list || []).forEach(function (it) {
+      if (!it || !it.text) return;
+      var v = voiceFor(it.lang);
+      if (!v) { missing.push(it.lang); return; }
+      var u = new root.SpeechSynthesisUtterance(it.text);
+      u.lang = v.lang; u.voice = v; u.rate = 0.92;
+      root.speechSynthesis.speak(u);
+      any = true;
+    });
+    return { ok: any, missing: missing };
+  }
+
   // ------------------------------------------------------------------
   // Spracheingabe der Führungskraft
   // ------------------------------------------------------------------
@@ -283,6 +300,6 @@
     state: state, LABEL: ENGINE_LABEL,
     detectEdge: detectEdge, detectBrowser: detectBrowser, detectClaude: detectClaude,
     available: available, liveEngine: liveEngine, translate: translate,
-    speak: speak, voiceFor: voiceFor, sttMode: sttMode, listen: listen
+    speak: speak, speakAll: speakAll, voiceFor: voiceFor, sttMode: sttMode, listen: listen
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -10,7 +10,7 @@
 (function (root) {
   'use strict';
 
-  var TOPICS = ['briefing.msg', 'briefing.quiz', 'briefing.quizend', 'briefing.reset', 'worker.ack', 'worker.feedback', 'worker.answer', 'worker.join'];
+  var TOPICS = ['briefing.msg', 'briefing.quiz', 'briefing.quizend', 'briefing.reset', 'briefing.session', 'briefing.end', 'worker.ack', 'worker.feedback', 'worker.answer', 'worker.join'];
   var tabId = rid();
   var seen = new Set();
   var handlers = Object.create(null);

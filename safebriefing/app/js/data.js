@@ -17,6 +17,7 @@
     { code: 'tr', name: 'Türkisch', native: 'Türkçe', dir: 'ltr', tts: 'tr-TR' },
     { code: 'ar', name: 'Arabisch', native: 'العربية', dir: 'rtl', tts: 'ar' },
     { code: 'uk', name: 'Ukrainisch', native: 'Українська', dir: 'ltr', tts: 'uk-UA' },
+    { code: 'el', name: 'Griechisch', native: 'Ελληνικά', dir: 'ltr', tts: 'el-GR' },
     { code: 'bg', name: 'Bulgarisch', native: 'Български', dir: 'ltr', tts: 'bg-BG' },
     { code: 'ru', name: 'Russisch', native: 'Русский', dir: 'ltr', tts: 'ru-RU' },
     { code: 'en', name: 'Englisch', native: 'English', dir: 'ltr', tts: 'en-GB' }
@@ -597,8 +598,118 @@
     simDevices: { pl: 4, ro: 3, tr: 2, ar: 2, uk: 1 }
   };
 
+
+  // ------------------------------------------------------------------
+  // Ergänzung: Griechisch und Texte für den Start-Modus
+  // ------------------------------------------------------------------
+  UI.el = {
+    chooseLang: 'Επιλέξτε γλώσσα', live: 'Ενημέρωση ασφαλείας ζωντανά', waiting: 'Αναμονή για την επόμενη οδηγία …',
+    understood: 'Κατάλαβα', question: 'Δεν κατάλαβα', listen: 'Ακρόαση', showGerman: 'Εμφάνιση στα γερμανικά',
+    checkTitle: 'Ερώτηση κατανόησης', correct: 'Σωστό!', wrong: 'Όχι ακριβώς. Ρωτήστε τον προϊστάμενό σας.',
+    anonymous: 'Η απάντησή σας είναι ανώνυμη.', held: 'Αυτή η οδηγία ελέγχεται ακόμη για τη γλώσσα σας. Περιμένετε ή ρωτήστε τον προϊστάμενο.',
+    verified: 'Ελεγμένη μετάφραση', aiLabel: 'Μετάφραση με ΤΝ · ελεγμένη', sent: 'Στάλθηκε. Ο προϊστάμενος βλέπει το μήνυμά σας ανώνυμα.',
+    quickTitle: 'Μήνυμα στον προϊστάμενο', askTitle: 'Κάντε μια ερώτηση', askPlaceholder: 'Η ερώτησή σας …',
+    askHint: 'Απαντήσεις μόνο από εγκεκριμένο περιεχόμενο ενημέρωσης.', fallback: 'Δεν υπάρχει εγκεκριμένη απάντηση. Ρωτήστε τον προϊστάμενό σας.',
+    privacy: 'Χωρίς εγγραφή, χωρίς εφαρμογή. Η φωνή σας δεν αποθηκεύεται.', sign: 'Επιβεβαίωση συμμετοχής', name: 'Όνομα', company: 'Εταιρεία',
+    confirm: 'Επιβεβαίωση', confirmed: 'Η συμμετοχή επιβεβαιώθηκε', passTitle: 'Βεβαίωση ενημέρωσης', validUntil: 'ισχύει έως', next: 'Επόμενο', back: 'Πίσω',
+    start: 'Έναρξη ενημέρωσης', rulesTitle: 'Κανόνες εργοστασίου', passed: 'Επιτυχία', retry: 'Δείτε ξανά τους κανόνες.',
+    showAtGate: 'Δείξτε αυτή τη βεβαίωση στην πύλη και στον συντονιστή.', send: 'Αποστολή', ask: 'Ρωτήστε', source: 'Πηγή'
+  };
+
+  var UI_EXTRA = {
+    de: { soundOn: 'Vorlesen an', soundOff: 'Vorlesen aus', replay: 'Nochmal anhören', ended: 'Die Unterweisung ist beendet. Bitte bestätigen Sie Ihre Teilnahme.', more: 'Weitere Funktionen', tapSound: 'Tippen, damit jede Anweisung vorgelesen wird.' },
+    pl: { soundOn: 'Czytanie wł.', soundOff: 'Czytanie wył.', replay: 'Odsłuchaj ponownie', ended: 'Instruktaż zakończony. Potwierdź swój udział.', more: 'Więcej funkcji', tapSound: 'Dotknij, aby każde polecenie było odczytywane na głos.' },
+    ro: { soundOn: 'Citire activată', soundOff: 'Citire dezactivată', replay: 'Ascultă din nou', ended: 'Instruirea s-a încheiat. Vă rugăm să vă confirmați participarea.', more: 'Mai multe funcții', tapSound: 'Atingeți pentru ca fiecare instrucțiune să fie citită cu voce tare.' },
+    tr: { soundOn: 'Sesli okuma açık', soundOff: 'Sesli okuma kapalı', replay: 'Tekrar dinle', ended: 'Eğitim sona erdi. Lütfen katılımınızı onaylayın.', more: 'Diğer işlevler', tapSound: 'Her talimatın sesli okunması için dokunun.' },
+    ar: { soundOn: 'القراءة الصوتية مفعّلة', soundOff: 'القراءة الصوتية متوقفة', replay: 'استمع مرة أخرى', ended: 'انتهى التوجيه. يرجى تأكيد مشاركتك.', more: 'وظائف أخرى', tapSound: 'اضغط هنا لتُقرأ كل تعليمات بصوت عالٍ.' },
+    uk: { soundOn: 'Озвучення увімк.', soundOff: 'Озвучення вимк.', replay: 'Прослухати ще раз', ended: 'Інструктаж завершено. Підтвердьте, будь ласка, свою участь.', more: 'Інші функції', tapSound: 'Торкніться, щоб кожну вказівку було озвучено.' },
+    el: { soundOn: 'Ανάγνωση ενεργή', soundOff: 'Ανάγνωση ανενεργή', replay: 'Ακούστε ξανά', ended: 'Η ενημέρωση ολοκληρώθηκε. Επιβεβαιώστε τη συμμετοχή σας.', more: 'Περισσότερα', tapSound: 'Πατήστε ώστε κάθε οδηγία να διαβάζεται φωναχτά.' },
+    bg: { soundOn: 'Четене на глас вкл.', soundOff: 'Четене на глас изкл.', replay: 'Чуй отново', ended: 'Инструктажът приключи. Моля, потвърдете участието си.', more: 'Още функции', tapSound: 'Докоснете, за да се чете на глас всяко указание.' },
+    ru: { soundOn: 'Озвучка вкл.', soundOff: 'Озвучка выкл.', replay: 'Прослушать ещё раз', ended: 'Инструктаж завершён. Пожалуйста, подтвердите своё участие.', more: 'Другие функции', tapSound: 'Нажмите, чтобы каждое указание озвучивалось.' },
+    en: { soundOn: 'Read aloud on', soundOff: 'Read aloud off', replay: 'Listen again', ended: 'The briefing has ended. Please confirm your attendance.', more: 'More', tapSound: 'Tap so that every instruction is read aloud.' }
+  };
+  Object.keys(UI_EXTRA).forEach(function (l) { Object.assign(UI[l], UI_EXTRA[l]); });
+
+  var GLOSSARY_EL = {
+    nothalt: { term: 'διακόπτης έκτακτης ανάγκης', match: ['διακόπτη έκτακτης ανάγκης', 'διακόπτης έκτακτης ανάγκης', 'στάση έκτακτης ανάγκης', 'στάσης έκτακτης ανάγκης', 'κουμπί έκτακτης'], forbidden: ['έξοδο κινδύνου', 'έξοδος κινδύνου', 'έξοδος έκτακτης', 'έξοδο έκτακτης'] },
+    freischalten: { term: 'αποσυνδέστε από την παροχή ρεύματος', match: ['αποσυνδ', 'απενεργοπ', 'χωρίς τάση'], forbidden: ['ενεργοποι', 'θέστε σε λειτουργία', 'ξεκλειδ'] },
+    hochvolt: { term: 'υψηλή τάση', match: ['υψηλή τάση', 'υψηλής τάσης', 'υψηλή τάσης'] },
+    stapler: { term: 'περονοφόρο', match: ['περονοφόρ', 'κλαρκ'] },
+    schutzbrille: { term: 'προστατευτικά γυαλιά', match: ['προστατευτικά γυαλιά', 'προστατευτικών γυαλιών', 'γυαλιά προστασίας'] },
+    gehoerschutz: { term: 'ωτοασπίδες', match: ['ωτοασπίδ', 'προστασία ακοής', 'προστασίας ακοής'] },
+    absperrung: { term: 'περίφραξη / φράγμα', match: ['περιφραγμέν', 'περίφραξ', 'φράγμα'] },
+    sammelstelle: { term: 'σημείο συγκέντρωσης', match: ['συγκέντρωσης'] },
+    erlaubnisschein: { term: 'άδεια εργασίας', match: ['άδεια εργασίας', 'άδειας εργασίας'] },
+    koordinator: { term: 'συντονιστής', match: ['συντονιστ'] },
+    quetschgefahr: { term: 'κίνδυνος σύνθλιψης', match: ['σύνθλιψ'] }
+  };
+  GLOSSARY.forEach(function (g) { if (GLOSSARY_EL[g.id]) g.t.el = GLOSSARY_EL[g.id]; });
+
+  var KERNSATZ_EL = {
+    'k-brille': 'Φοράτε προστατευτικά γυαλιά σε όλη την αίθουσα παραγωγής.',
+    'k-gehoer': 'Φοράτε ωτοασπίδες: ο θόρυβος ξεπερνά τα 85 dB(A).',
+    'k-wege': 'Προσοχή, κυκλοφορία περονοφόρων: χρησιμοποιείτε μόνο τους σημαδεμένους διαδρόμους πεζών.',
+    'k-stapler': 'Όταν πλησιάζει περονοφόρο: σταματήστε και κάντε οπτική επαφή με τον οδηγό.',
+    'k-stoerung': 'Σε βλάβη της εγκατάστασης ισχύει: σταμάτα – φώναξε – περίμενε.',
+    'k-nothalt': 'Πριν επέμβετε στη γραμμή, πατήστε τον διακόπτη έκτακτης ανάγκης.',
+    'k-loto': 'Πριν από εργασίες συντήρησης αποσυνδέστε την εγκατάσταση από την παροχή ρεύματος και ασφαλίστε την έναντι επανενεργοποίησης.',
+    'k-hv': 'Εργασίες σε εξαρτήματα υψηλής τάσης μόνο με την απαιτούμενη εκπαίδευση και γραπτή έγκριση.',
+    'k-zutritt': 'Μην εισέρχεστε στην περιφραγμένη περιοχή.',
+    'k-feuer': 'Σε συναγερμό πυρκαγιάς: σταματήστε αμέσως την εργασία και πηγαίνετε στο σημείο συγκέντρωσης.',
+    'k-unfall': 'Αναφέρετε αμέσως στον προϊστάμενό σας κάθε ατύχημα και κάθε τραυματισμό – ακόμη και τα μικρά.',
+    'k-heiss': 'Εργασίες συγκόλλησης, κοπής και λείανσης μόνο με έγκυρη άδεια εργασίας.'
+  };
+  KERNSAETZE.forEach(function (k) { if (KERNSATZ_EL[k.id]) k.t.el = KERNSATZ_EL[k.id]; });
+
+  var SCENARIO_EL = {
+    's-sinn': ['Πριν από εργασίες συντήρησης αποσυνδέστε την εγκατάσταση από την παροχή ρεύματος.', 'Vor Wartungsarbeiten die Anlage von der Stromversorgung trennen.'],
+    's-neg': ['Μην εισέρχεστε στην περιοχή πίσω από το φράγμα.', 'Betreten Sie den Bereich hinter der Absperrung nicht.'],
+    's-zahl': ['Στο εργοστάσιο ισχύει ταχύτητα βαδίσματος: το πολύ 6 km/h.', 'Im Werk gilt Schrittgeschwindigkeit: höchstens 6 km/h.'],
+    's-glossar': ['Προσοχή: το περονοφόρο βγαίνει με την όπισθεν από την αίθουσα.', 'Achtung: Der Gabelstapler fährt rückwärts aus der Halle.']
+  };
+  SCENARIOS.forEach(function (s) { if (SCENARIO_EL[s.id]) s.r.el = SCENARIO_EL[s.id]; });
+
+  var QUIZ_EL = {
+    'q-stapler': { q: 'Ένα περονοφόρο έρχεται προς το μέρος σας. Τι κάνετε;', a: ['Συνεχίζω να περπατάω', 'Σταματώ και κάνω οπτική επαφή', 'Περνάω γρήγορα μπροστά από το περονοφόρο'] },
+    'q-stoerung': { q: 'Η εγκατάσταση έχει βλάβη. Τι είναι σωστό;', a: ['Επεμβαίνω μόνος μου και την επισκευάζω', 'Σταμάτα – φώναξε – περίμενε', 'Συνεχίζω τη δουλειά'] },
+    'q-feuer': { q: 'Συναγερμός πυρκαγιάς. Πού πηγαίνετε;', a: ['Στο σημείο συγκέντρωσης', 'Στην καντίνα', 'Στο ντουλάπι μου για τα πράγματά μου'] },
+    'q-loto': { q: 'Τι κάνετε πριν από κάθε συντήρηση;', a: ['Αποσύνδεση από το ρεύμα και ασφάλιση έναντι επανενεργοποίησης', 'Αφήνω την εγκατάσταση να λειτουργεί', 'Βγάζω τα προστατευτικά γυαλιά'] },
+    'fq-start': { q: 'Πότε επιτρέπεται να ξεκινήσετε την εργασία;', a: ['Αμέσως μόλις φτάσω', 'Μετά την ενημέρωση και τη δήλωση στον συντονιστή', 'Όταν έρθουν τα υλικά'] },
+    'fq-schweissen': { q: 'Θέλετε να κάνετε συγκόλληση. Τι χρειάζεστε;', a: ['Έγκυρη άδεια εργασίας', 'Μόνο τη μηχανή συγκόλλησης', 'Προφορική έγκριση από συνάδελφο'] },
+    'fq-alarm': { q: 'Ηχεί συναγερμός. Τι κάνετε;', a: ['Σταματώ την εργασία και πηγαίνω στο σημείο συγκέντρωσης', 'Συνεχίζω τη δουλειά', 'Πρώτα μαζεύω τα εργαλεία μου'] }
+  };
+  QUIZ.concat(FREMDFIRMEN.quiz).forEach(function (q) {
+    var e = QUIZ_EL[q.id]; if (!e) return;
+    q.q.el = e.q; q.a.forEach(function (a, i) { a.el = e.a[i]; });
+  });
+
+  var RULES_EL = {
+    'f-anmeldung': ['Δήλωση άφιξης', 'Πριν ξεκινήσετε, δηλωθείτε στον συντονιστή. Ξεκινήστε την εργασία μόνο μετά την ενημέρωση ασφαλείας.'],
+    'f-psa': ['Εξοπλισμός προστασίας', 'Σε όλο τον χώρο φοράτε υποδήματα ασφαλείας και γιλέκο υψηλής ορατότητας. Στις αίθουσες επιπλέον προστατευτικά γυαλιά.'],
+    'f-verkehr': ['Κυκλοφορία', 'Χρησιμοποιείτε μόνο τους σημαδεμένους διαδρόμους πεζών. Τα περονοφόρα έχουν προτεραιότητα. Με οχήματα το πολύ 6 km/h.'],
+    'f-erlaubnis': ['Άδεια εργασίας', 'Συγκόλληση, κοπή, λείανση, εργασίες μέσα σε δεξαμενές και σε ηλεκτρικές εγκαταστάσεις μόνο με έγκυρη άδεια εργασίας.'],
+    'f-notfall': ['Έκτακτη ανάγκη', 'Σε συναγερμό σταματήστε την εργασία και πηγαίνετε στο σημείο συγκέντρωσης. Αριθμός έκτακτης ανάγκης του εργοστασίου: 2222.'],
+    'f-melden': ['Αναφορά και απαγόρευση φωτογράφισης', 'Αναφέρετε αμέσως στον συντονιστή ατυχήματα, παρ’ ολίγον ατυχήματα και ζημιές. Η φωτογράφιση στον χώρο απαγορεύεται.']
+  };
+  FREMDFIRMEN.rules.forEach(function (r) { var e = RULES_EL[r.id]; if (e) { r.title.el = e[0]; r.text.el = e[1]; } });
+
+  var QUICK_EL = { wdh: 'Παρακαλώ επαναλάβετε.', langsam: 'Παρακαλώ μιλήστε πιο αργά.', psa: 'Τι εξοπλισμό προστασίας χρειάζομαι;', zeigen: 'Παρακαλώ δείξτε μου επί τόπου.' };
+  QUICK_REPLIES.forEach(function (r) { if (QUICK_EL[r.id]) r.t.el = QUICK_EL[r.id]; });
+
+  // Vorbereitete Unterweisungen für den Start-Modus (in der Verwaltung pflegbar)
+  var PROGRAMS = [
+    { id: 'p-fremd', type: 'fremdfirma', picto: 'erlaubnis', title: 'Fremdfirmen-Einweisung', sub: 'Werksregeln vor Arbeitsbeginn',
+      items: ['f-anmeldung', 'f-psa', 'f-verkehr', 'f-erlaubnis', 'f-notfall', 'f-melden'], quiz: 'fq-alarm' },
+    { id: 'p-schicht', type: 'briefing', picto: 'stapler', title: 'Schichtbriefing', sub: 'Tägliche Sicherheitspunkte in der Halle',
+      items: ['k-brille', 'k-wege', 'k-stapler', 'k-stoerung', 'k-nothalt'], quiz: 'q-stapler' },
+    { id: 'p-wartung', type: 'briefing', picto: 'spannung', title: 'Wartung und Instandhaltung', sub: 'Freischalten, Hochvolt, Zutritt',
+      items: ['k-loto', 'k-hv', 'k-nothalt', 'k-zutritt', 'k-unfall'], quiz: 'q-loto' },
+    { id: 'p-frei', type: 'briefing', picto: 'achtung', title: 'Freie Ansage', sub: 'Ohne Vorbereitung – einfach sprechen',
+      items: [], quiz: null }
+  ];
+
   root.SB_DATA = {
-    version: '2026-10-09',
+    version: '2026-10-10',
     site: { werk: 'Musterwerk', halle: 'Halle 3', schicht: 'Schicht A', leader: 'Schichtleitung Halle 3' },
     languages: LANGS,
     ui: UI,
@@ -608,6 +719,7 @@
     quiz: QUIZ,
     quickReplies: QUICK_REPLIES,
     fremdfirmen: FREMDFIRMEN,
+    programs: PROGRAMS,
     demo: DEMO
   };
   if (typeof module === 'object' && module.exports) module.exports = root.SB_DATA;
