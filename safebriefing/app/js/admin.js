@@ -180,14 +180,14 @@
       '<div class="kpi"><b style="color:var(--ok)">' + counts.green + '</b><span>gültig</span></div>' +
       '<div class="kpi"><b style="color:var(--warn)">' + counts.yellow + '</b><span>laufen in 30 Tagen ab</span></div>' +
       '<div class="kpi"><b style="color:var(--bad)">' + counts.red + '</b><span>abgelaufen – kein Zutritt</span></div>';
-    t.innerHTML = '<table><thead><tr><th>Person</th><th>Firma</th><th>Sprache</th><th>Bereich · Koordinator</th><th>Erlaubnisscheine</th><th>Einweisung</th></tr></thead><tbody>' +
+    t.innerHTML = '<table class="rtable"><thead><tr><th>Person</th><th>Firma</th><th>Sprache</th><th>Bereich · Koordinator</th><th>Erlaubnisscheine</th><th>Einweisung</th></tr></thead><tbody>' +
       S.contractors.map(function (c) {
         var st = contractorStatus(c);
         return '<tr><td><b>' + esc(c.name) + '</b>' + (c.passCode ? '<div class="small mono muted">' + esc(c.passCode) + '</div>' : '') + (c.fresh ? ' <span class="pill blue">neu</span>' : '') + '</td>' +
-          '<td>' + esc(c.firma) + '</td><td><span class="lang-badge">' + esc(c.lang.toUpperCase()) + '</span></td>' +
-          '<td>' + esc(c.bereich) + '<div class="small muted">' + esc(c.koordinator) + '</div></td>' +
-          '<td>' + (c.permits.length ? c.permits.map(esc).join('<br>') : '<span class="muted">–</span>') + '</td>' +
-          '<td><span class="status-dot ' + st.st + '"></span>' + esc(st.text) + '<div class="small muted mono">bis ' + H.deDate(c.until) + '</div></td></tr>';
+          '<td data-label="Firma">' + esc(c.firma) + '</td><td data-label="Sprache"><span class="lang-badge">' + esc(c.lang.toUpperCase()) + '</span></td>' +
+          '<td data-label="Bereich · Koordinator">' + esc(c.bereich) + '<div class="small muted">' + esc(c.koordinator) + '</div></td>' +
+          '<td data-label="Erlaubnisscheine">' + (c.permits.length ? c.permits.map(esc).join('<br>') : '<span class="muted">–</span>') + '</td>' +
+          '<td data-label="Einweisung"><span class="status-dot ' + st.st + '"></span>' + esc(st.text) + '<div class="small muted mono">bis ' + H.deDate(c.until) + '</div></td></tr>';
       }).join('') + '</tbody></table>';
   }
 
@@ -228,16 +228,17 @@
       if (!q) return true;
       return (g.de + ' ' + g.note + ' ' + JSON.stringify(g.t)).toLowerCase().indexOf(q) >= 0;
     });
-    el.innerHTML = '<table><thead><tr><th>Begriff</th><th>Status</th>' + langs.map(function (l) { return '<th>' + l.toUpperCase() + ' · ' + esc(H.lname(l)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    el.innerHTML = '<table class="rtable"><thead><tr><th>Begriff</th><th>Status</th>' + langs.map(function (l) { return '<th>' + l.toUpperCase() + ' · ' + esc(H.lname(l)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.map(function (g) {
         return '<tr><td><div class="row" style="flex-wrap:nowrap;align-items:flex-start">' + PIC.render(g.picto, '32px') + '<div><b>' + esc(g.de) + '</b>' + (g.critical ? ' <span class="pill red">kritisch</span>' : '') +
           '<div class="small muted">' + esc(g.cat) + ' · ' + esc(g.note) + '</div></div></div></td>' +
-          '<td>' + (g.status === 'freigegeben' ? H.statusPill('green', 'freigegeben') + '<div class="small muted">' + esc(g.approvedBy) + ', ' + H.deDate(g.approvedAt) + '</div>'
+          '<td data-label="Status">' + (g.status === 'freigegeben' ? H.statusPill('green', 'freigegeben') + '<div class="small muted">' + esc(g.approvedBy) + ', ' + H.deDate(g.approvedAt) + '</div>'
             : H.statusPill('yellow', 'Entwurf') + '<div><button class="btn sm" style="margin-top:6px" data-action="gl-approve" data-id="' + esc(g.id) + '">Fachlich freigeben</button></div>') + '</td>' +
           langs.map(function (l) {
             var t = g.t[l];
-            if (!t) return '<td><span class="pill yellow">fehlt</span></td>';
-            return '<td><div class="gl-terms" lang="' + l + '" dir="' + H.dirOf(l) + '"><span>' + esc(t.term) + '</span>' + (t.forbidden || []).map(function (f) { return '<span class="forb">' + esc(f) + '</span>'; }).join('') + '</div></td>';
+            var lab = ' data-label="' + l.toUpperCase() + ' · ' + esc(H.lname(l)) + '"';
+            if (!t) return '<td' + lab + '><span class="pill yellow">fehlt</span></td>';
+            return '<td' + lab + '><div class="gl-terms" lang="' + l + '" dir="' + H.dirOf(l) + '"><span>' + esc(t.term) + '</span>' + (t.forbidden || []).map(function (f) { return '<span class="forb">' + esc(f) + '</span>'; }).join('') + '</div></td>';
           }).join('') + '</tr>';
       }).join('') + '</tbody></table>';
   }
@@ -459,13 +460,13 @@
         '<div class="node"><b>Ausgabe</b>Hallen-Display · Handy per QR · Smart-Brille · Ton in den Gehörschutz</div><span class="arrow">→</span>' +
         '<div class="node"><b>Nachweis</b>Verständnisfrage anonym · Teilnahme · Dokument</div>' +
       '</div></section>' +
-      '<section class="card" style="margin-top:16px"><div class="card-head"><h3>Steckbrief für Betriebsrat und Datenschutz</h3><span class="pill grey">Entwurf</span></div><div class="table-wrap"><table>' +
+      '<section class="card" style="margin-top:16px"><div class="card-head"><h3>Steckbrief für Betriebsrat und Datenschutz</h3><span class="pill grey">Entwurf</span></div><div class="table-wrap"><table class="rtable">' +
         '<thead><tr><th>Daten</th><th>Zweck</th><th>Ort</th><th>Speicherdauer</th></tr></thead><tbody>' +
-        '<tr><td>Sprache der Führungskraft (Audio)</td><td>Spracherkennung</td><td>Arbeitsspeicher Edge-Server</td><td>keine Speicherung, nur während der Erkennung</td></tr>' +
-        '<tr><td>Ansagen und Übersetzungen (Text)</td><td>Anzeige, Nachweis der Inhalte</td><td>Edge-Server, Nachweis-Dokument</td><td>wie Unterweisungsnachweise (betrieblich festlegen)</td></tr>' +
-        '<tr><td>Teilnahme (Name, Firma, Sprache, Datum)</td><td>Nachweis nach § 12 BetrSichV, § 4 DGUV Vorschrift 1</td><td>Nachweis-Dokument</td><td>betriebliche Aufbewahrungsfrist</td></tr>' +
-        '<tr><td>Antworten auf Verständnisfragen</td><td>Wirksamkeit der Unterweisung</td><td>nur als Summe</td><td>keine Einzelwerte gespeichert</td></tr>' +
-        '<tr><td>Rückmeldungen „nicht verstanden“</td><td>Unterweisung verbessern</td><td>Leitstand, anonym</td><td>Ende der Sitzung</td></tr>' +
+        '<tr><td>Sprache der Führungskraft (Audio)</td><td data-label="Zweck">Spracherkennung</td><td data-label="Ort">Arbeitsspeicher Edge-Server</td><td data-label="Speicherdauer">keine Speicherung, nur während der Erkennung</td></tr>' +
+        '<tr><td>Ansagen und Übersetzungen (Text)</td><td data-label="Zweck">Anzeige, Nachweis der Inhalte</td><td data-label="Ort">Edge-Server, Nachweis-Dokument</td><td data-label="Speicherdauer">wie Unterweisungsnachweise (betrieblich festlegen)</td></tr>' +
+        '<tr><td>Teilnahme (Name, Firma, Sprache, Datum)</td><td data-label="Zweck">Nachweis nach § 12 BetrSichV, § 4 DGUV Vorschrift 1</td><td data-label="Ort">Nachweis-Dokument</td><td data-label="Speicherdauer">betriebliche Aufbewahrungsfrist</td></tr>' +
+        '<tr><td>Antworten auf Verständnisfragen</td><td data-label="Zweck">Wirksamkeit der Unterweisung</td><td data-label="Ort">nur als Summe</td><td data-label="Speicherdauer">keine Einzelwerte gespeichert</td></tr>' +
+        '<tr><td>Rückmeldungen „nicht verstanden“</td><td data-label="Zweck">Unterweisung verbessern</td><td data-label="Ort">Leitstand, anonym</td><td data-label="Speicherdauer">Ende der Sitzung</td></tr>' +
         '</tbody></table></div>' +
         '<ul class="checklist" style="margin-top:12px">' +
           '<li><span>Keine Leistungs- oder Verhaltenskontrolle, keine Sprechererkennung, keine Stimmprofile.<span class="src">§ 87 Abs. 1 Nr. 6 BetrVG – Betriebsvereinbarung trotzdem empfohlen</span></span></li>' +

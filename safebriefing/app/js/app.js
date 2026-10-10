@@ -311,6 +311,15 @@
       '<div class="ls-grid">' +
         '<div class="stack">' +
           '<section class="card session-bar" id="ls-session" aria-label="Briefing"></section>' +
+          '<section class="card mobile-only" aria-label="Ansichten ausprobieren"><h3>Ansichten ausprobieren</h3>' +
+            '<p class="small muted" style="margin:4px 0 10px">So sieht es bei den Beschäftigten aus. Erst unten einen Kernsatz freigeben, dann eine Ansicht öffnen.</p>' +
+            '<div class="try-grid">' +
+              '<a class="btn" href="#join-pl">' + icon('speaker') + 'Handy (Polnisch)</a>' +
+              '<a class="btn" href="#join-ar">' + icon('speaker') + 'Handy (Arabisch)</a>' +
+              '<a class="btn" href="#display">' + icon('expand') + 'Hallen-Display</a>' +
+              '<a class="btn" href="#brille-ro">' + icon('expand') + 'Smart-Brille</a>' +
+              '<a class="btn" href="#pforte">' + icon('doc') + 'Fremdfirmen-Pforte</a>' +
+            '</div></section>' +
           '<section class="card" id="ls-composer" aria-label="Ansage"></section>' +
           '<div id="ls-check" aria-live="polite"></div>' +
           '<section class="card" id="ls-rueck" aria-label="Rückmeldungen"></section>' +
@@ -937,17 +946,18 @@
       if (a.getAttribute('href') === '#' + r.name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     var back = '<a class="btn sm kiosk-back no-print" href="#leitstand">' + icon('back') + 'Leitstand</a>';
+    var backFoot = '<p class="kiosk-foot no-print"><a href="#leitstand">' + icon('back') + 'Zurück zum Leitstand (Demo)</a></p>';
     if (r.name === 'display') {
       root.innerHTML = '<div class="kiosk-display" id="kiosk-display">' + hallHtml() + '</div>' + back;
     } else if (r.name === 'brille') {
       root.innerHTML = '<div class="kiosk-hud" id="kiosk-hud">' + hudHtml(r.lang || S.previewLang.glasses) + '</div>' + back;
     } else if (r.name === 'join') {
       if (r.lang && S.worker.lang !== r.lang) { S.worker.lang = r.lang; persist(); }
-      root.innerHTML = '<div class="kiosk-phone" id="kiosk-worker">' + workerHtml(S.worker, 'kiosk') + '</div>' + back;
+      root.innerHTML = '<div class="kiosk-phone"><div id="kiosk-worker">' + workerHtml(S.worker, 'kiosk') + '</div>' + backFoot + '</div>';
       if (S.worker.lang) BUS.publish('worker.join', { device: BUS.tabId, lang: S.worker.lang });
     } else if (r.name === 'pforte') {
       if (r.lang) S.induction.lang = r.lang;
-      root.innerHTML = '<div class="kiosk-phone" id="kiosk-induction"></div>' + back;
+      root.innerHTML = '<div class="kiosk-phone"><div id="kiosk-induction"></div>' + backFoot + '</div>';
       if (SB.renderInduction) SB.renderInduction($('#kiosk-induction'));
     } else if (r.name === 'leitstand') {
       root.innerHTML = '<main class="page" id="page"></main>';
