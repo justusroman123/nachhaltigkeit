@@ -135,6 +135,22 @@ describe('Weitere Regeln', () => {
     assert.equal(a.perLang.ro.status, 'red');
   });
 
+  test('groupBacks fasst gleiche Rückübersetzungen zusammen und erkennt wörtliche Treffer', () => {
+    const src = 'Vor dem Eingreifen in die Linie den Not-Halt drücken.';
+    const results = {
+      uk: { back: 'Vor dem Eingreifen in die Linie den Not-Halt drücken.' },
+      ar: { back: 'Vor dem Eingreifen in die Linie den NOT-HALT drücken.' },
+      el: { back: 'Vor dem Eingriff in die Linie den Notausgang drücken.' },
+      pl: { back: '' }
+    };
+    const g = G.groupBacks(src, results, ['uk', 'ar', 'el', 'pl']);
+    assert.equal(g.length, 3);
+    assert.deepEqual(g[0].langs, ['uk', 'ar']);
+    assert.equal(g[0].same, true);
+    assert.equal(g[1].same, false);
+    assert.deepEqual(g[2], { key: '', back: '', langs: ['pl'], same: false });
+  });
+
   test('matchKernsatz findet exakte und ähnliche Sätze', () => {
     const k = D.kernsaetze.find((x) => x.id === 'k-nothalt');
     assert.equal(G.matchKernsatz(k.de.toUpperCase(), D.kernsaetze).exact, true);

@@ -408,7 +408,30 @@ body.simple-mode .mode-chip { margin-left: auto; }
 .s-dec .row { margin-top: 8px; }
 .s-note { font-weight: 600; }
 .heard { font-size: 1.05rem; margin-top: 8px; font-style: italic; }
-.rec-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bad); animation: blink 1s ease-in-out infinite; }
+.heard.big { font-size: 1.35rem; font-weight: 600; font-style: normal; line-height: 1.35; min-height: 1.4em; }
+.s-busy.listen { border: 2px solid var(--bad); }
+.rec-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bad); animation: blink 1s ease-in-out infinite; flex: none; }
+.rec-dot.blue { background: var(--accent); }
+/* Freigabe: sehen, hören, senden */
+.s-dec.confirm.ok { border-color: var(--ok); background: var(--ok-bg); }
+.s-dec.confirm.warn { border-color: var(--warn); background: var(--warn-bg); }
+.s-dec .row > strong { margin-bottom: 0; }
+.said { font-size: 1.05rem; margin: 8px 0 !important; }
+.said .label, .backs > .label { display: block; margin-bottom: 2px; }
+.backs { display: grid; gap: 8px; margin: 8px 0; }
+.back-line { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.back-line .back-text { font-size: 1.18rem; font-weight: 600; line-height: 1.35; }
+.back-line.warn { border-color: var(--warn); }
+.back-line.bad { border-color: var(--bad); }
+.back-line.bad .back-text { color: var(--bad); }
+.lang-badges { display: flex; gap: 4px; flex-wrap: wrap; align-self: start; padding-top: 3px; }
+.s-status { display: flex; align-items: center; gap: 8px; margin: 8px 0 0 !important; font-weight: 600; }
+.countdown { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 600; flex-wrap: wrap; }
+.countdown .bar { flex: 1; min-width: 80px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.countdown .bar i { display: block; height: 100%; background: var(--ok); transition: width .9s linear; }
+.link-btn.inline { display: inline; margin: 0; padding: 0 2px; font-size: .9em; }
+.mic-col { display: grid; justify-items: center; gap: 4px; }
+.mic-hint { font-size: .72rem; color: var(--muted); text-align: center; max-width: 150px; line-height: 1.2; }
 @keyframes blink { 50% { opacity: .3; } }
 .qbar { display: flex; gap: 14px; font-weight: 600; margin: 8px 0; flex-wrap: wrap; }
 .qbar .ok { color: var(--ok); }
@@ -419,7 +442,7 @@ body.simple-mode .mode-chip { margin-left: auto; }
 .live-bar { position: sticky; bottom: 0; z-index: 10; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 10px 0 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); }
 .live-bar > .btn:first-child { justify-self: start; }
 .live-bar > .btn:last-child { justify-self: end; }
-.mic-big { width: 96px; height: 96px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent); font: 700 .85rem var(--font-body); }
+.mic-big { width: 96px; height: 96px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent); font: 700 .85rem var(--font-body); touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .mic-big .ico { width: 36px; height: 36px; }
 .mic-big.rec { background: var(--bad); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 55%, transparent); } 50% { box-shadow: 0 0 0 16px transparent; } }
@@ -447,6 +470,9 @@ body.simple-mode .mode-chip { margin-left: auto; }
 @media (max-width: 560px) {
   .mic-big { width: 84px; height: 84px; }
   .live-bar .btn { padding: 9px 10px; font-size: .85rem; }
+  .mic-hint { font-size: .66rem; max-width: 120px; }
+  .back-line { grid-template-columns: minmax(0, 1fr) auto; }
+  .back-line .lang-badges { grid-column: 1 / -1; padding-top: 0; }
   .ltiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

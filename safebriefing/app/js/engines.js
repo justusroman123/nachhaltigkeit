@@ -220,17 +220,29 @@
     list.sort(function (a, b) { return (b.localService ? 1 : 0) - (a.localService ? 1 : 0); });
     return list[0] || null;
   }
-  function speak(text, lang) {
+  // opts.onend(fertig) wird gerufen, wenn die Ausgabe endet (fertig=false: abgebrochen/Fehler)
+  function speak(text, lang, opts) {
+    opts = opts || {};
     if (!root.speechSynthesis) return { ok: false, reason: 'Dieser Browser kann nicht vorlesen.' };
     var v = voiceFor(lang);
     if (!v) return { ok: false, reason: 'Auf diesem Gerät ist keine Stimme für ' + (LANG[lang] ? LANG[lang].name : lang) + ' installiert.' };
     try {
       root.speechSynthesis.cancel();
       var u = new root.SpeechSynthesisUtterance(text);
-      u.lang = v.lang; u.voice = v; u.rate = 0.92;
+      u.lang = v.lang; u.voice = v; u.rate = opts.rate || 0.92;
+      var ended = false;
+      function end(ok) { if (ended) return; ended = true; if (opts.onend) opts.onend(ok); }
+      u.onend = function () { end(true); };
+      u.onerror = function () { end(false); };
       root.speechSynthesis.speak(u);
-      return { ok: true, local: v.localService, voice: v.name };
+      // Sicherheitsnetz: manche Browser melden das Ende nicht zuverlässig
+      if (opts.onend) setTimeout(function () { end(!root.speechSynthesis.speaking); }, Math.min(30000, 2500 + String(text).length * 90));
+      return { ok: true, local: v.localService, voice: v.name, cancel: function () { try { root.speechSynthesis.cancel(); } catch (e) { /* ignorieren */ } end(false); } };
     } catch (e) { return { ok: false, reason: 'Vorlesen nicht möglich.' }; }
+  }
+  // iOS und einige Browser erlauben Vorlesen erst nach einer Nutzer-Geste: leere Ausgabe in der Geste anstoßen
+  function unlockSpeech() {
+    try { if (root.speechSynthesis && !root.speechSynthesis.speaking) root.speechSynthesis.speak(new root.SpeechSynthesisUtterance('')); } catch (e) { /* ignorieren */ }
   }
 
   // Mehrere Sprachen nacheinander vorlesen (Lautsprecher am Gerät der Führungskraft)
@@ -259,8 +271,9 @@
     return SR ? 'browser' : null;
   }
 
-  // Liefert ein Objekt mit stop(); ruft onText(text, final) auf.
-  async function listen(onText, onError) {
+  // Liefert ein Objekt mit stop(); ruft onText(text, final) auf, onEnd() wenn die Erkennung vorbei ist
+  // (auch ohne Ergebnis, z. B. Stille), onError(meldung) nur bei echten Fehlern.
+  async function listen(onText, onError, onEnd) {
     var mode = sttMode();
     if (mode === 'edge') {
       var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -276,6 +289,7 @@
           if (!res.ok) throw new Error(body.error || 'stt');
           onText(String(body.text || ''), true);
         } catch (e) { onError && onError('Spracherkennung am Edge-Server fehlgeschlagen.'); }
+        onEnd && onEnd();
       };
       rec.start();
       return { mode: mode, stop: function () { if (rec.state !== 'inactive') rec.stop(); } };
@@ -289,7 +303,11 @@
         for (var i = 0; i < e.results.length; i++) { txt += e.results[i][0].transcript; fin = e.results[i].isFinal; }
         onText(txt, fin);
       };
-      r.onerror = function (e) { onError && onError(e.error === 'not-allowed' ? 'Mikrofon nicht freigegeben.' : 'Spracherkennung nicht verfügbar.'); };
+      r.onerror = function (e) {
+        if (e.error === 'no-speech' || e.error === 'aborted') return; // kein Fehler: nichts gesagt oder bewusst beendet
+        onError && onError(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Mikrofon nicht freigegeben.' : 'Spracherkennung nicht verfügbar.');
+      };
+      r.onend = function () { onEnd && onEnd(); };
       r.start();
       return { mode: mode, stop: function () { try { r.stop(); } catch (e) { /* schon beendet */ } } };
     }
@@ -300,6 +318,6 @@
     state: state, LABEL: ENGINE_LABEL,
     detectEdge: detectEdge, detectBrowser: detectBrowser, detectClaude: detectClaude,
     available: available, liveEngine: liveEngine, translate: translate,
-    speak: speak, speakAll: speakAll, voiceFor: voiceFor, sttMode: sttMode, listen: listen
+    speak: speak, speakAll: speakAll, unlockSpeech: unlockSpeech, voiceFor: voiceFor, sttMode: sttMode, listen: listen
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

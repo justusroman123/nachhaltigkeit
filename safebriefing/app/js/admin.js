@@ -504,6 +504,9 @@
   views.system = function (root) {
     var st = E.state, h = st.edge.health;
     var current = st.edge.available ? 'edge' : (st.claude.sample ? 'online' : 'browser');
+    function relRow(id, name, desc) {
+      return '<label class="toggle"><input type="radio" name="release" value="' + id + '"' + (S.settings.release === id ? ' checked' : '') + '><span><b>' + esc(name) + '</b><br><span class="small muted">' + esc(desc) + '</span></span></label>';
+    }
     function engRow(id, name, desc, ok, detail) {
       return '<label class="toggle"><input type="radio" name="engine" value="' + id + '"' + (S.settings.engine === id ? ' checked' : '') + (ok || id === 'auto' ? '' : ' disabled') + '>' +
         '<span><b>' + esc(name) + '</b> ' + (id === 'auto' ? '' : H.statusPill(ok ? 'green' : 'grey', ok ? 'verfügbar' : 'nicht verfügbar')) + '<br><span class="small muted">' + esc(desc) + (detail ? ' · ' + esc(detail) : '') + '</span></span></label>';
@@ -525,7 +528,11 @@
           engRow('claude', 'Online-Demo-Engine', 'Claude über claude.ai – nur zum Vorführen, Cloud', E.available('claude'), '') +
           '<p class="small muted" style="margin-top:8px">Geprüfte Kernsätze und die Prüf-Demo funktionieren immer, auch ohne Engine.</p></section>' +
         '<section class="card"><h3 style="margin-bottom:6px">Freigaberegeln</h3>' +
-          '<label class="toggle"><input type="checkbox" id="set-auto"' + (S.settings.autoRelease ? ' checked' : '') + '><span><b>Grün automatisch freigeben</b><br><span class="small muted">Aus: Die Führungskraft gibt jede Ansage selbst frei (empfohlen für den Start).</span></span></label>' +
+          '<p class="small" style="margin:4px 0 2px"><b>Nach dem Sprechen</b> – wie wird eine Ansage freigegeben?</p>' +
+          relRow('confirm', 'Rückübersetzung prüfen, dann „Senden“ antippen', 'Standard. Die Führungskraft sieht und hört, wie der Satz zurückkommt, und gibt ihn frei – wie das Readback in der Luftfahrt.') +
+          relRow('readback', 'Hände frei: vorlesen, dann automatisch senden', 'Nur bei Grün. Nach dem Vorlesen bleiben fünf Sekunden zum Stoppen. Gelb braucht immer einen Tipp, Rot bleibt gesperrt.') +
+          relRow('auto', 'Grün sofort senden', 'Ohne Rückfrage. Nur mit erprobter Engine und erfahrener Führungskraft.') +
+          '<label class="toggle"><input type="checkbox" id="set-readback"' + (S.settings.readBack ? ' checked' : '') + '><span><b>Rückübersetzung auf Deutsch vorlesen</b><br><span class="small muted">Die Führungskraft hört, was ankommt, ohne auf den Bildschirm zu schauen. Nutzt die deutsche Stimme des Geräts.</span></span></label>' +
           '<label class="toggle"><span style="width:18px"></span><span class="grow"><b>Notfallbegriffe in freien Sätzen</b><br><select id="set-emerg" style="width:auto;margin-top:4px"><option value="warn"' + (S.settings.emergencyPolicy === 'warn' ? ' selected' : '') + '>Gelb: Bestätigung nötig</option><option value="block"' + (S.settings.emergencyPolicy === 'block' ? ' selected' : '') + '>Rot: sperren, nur Kernsätze</option></select></span></label>' +
           '<label class="toggle"><span style="width:18px"></span><span class="grow"><b>Mindest-Übereinstimmung der Rückübersetzung: <span id="sim-val">' + Math.round(S.settings.minSimilarity * 100) + ' %</span></b><br><input id="set-sim" type="range" min="0.15" max="0.6" step="0.05" value="' + S.settings.minSimilarity + '" style="width:100%"></span></label>' +
           '<label class="toggle"><input type="checkbox" id="set-simdev"' + (S.settings.sim ? ' checked' : '') + '><span><b>Simulierte Belegschaft</b><br><span class="small muted">Für Vorführungen: simulierte Geräte bestätigen und beantworten Fragen. Im Nachweis gekennzeichnet.</span></span></label>' +
@@ -534,7 +541,7 @@
       '<section class="card" style="margin-top:16px"><h3 style="margin-bottom:10px">So läuft eine Ansage</h3><div class="arch">' +
         '<div class="node"><b>Führungskraft</b>Headset mit Nahbesprechungs-Mikrofon oder Tablet</div><span class="arrow">→</span>' +
         '<div class="node edge"><b>Edge-Server</b>1 Spracherkennung (lokal)<br>2 Übersetzung mit Werks-Glossar<br>3 Rückübersetzung (zweite Engine)<br>4 Sinnvergleich: Verneinung, Gegenteil, Zahlen, Fachbegriffe</div><span class="arrow">→</span>' +
-        '<div class="node"><b>Freigabe</b>Grün: senden · Gelb: Führungskraft bestätigt · Rot: gesperrt</div><span class="arrow">→</span>' +
+        '<div class="node"><b>Freigabe (Readback)</b>Führungskraft sieht und hört die Rückübersetzung<br>Grün: senden · Gelb: bestätigen · Rot: gesperrt</div><span class="arrow">→</span>' +
         '<div class="node"><b>Ausgabe</b>Hallen-Display · Handy per QR · Smart-Brille · Ton in den Gehörschutz</div><span class="arrow">→</span>' +
         '<div class="node"><b>Nachweis</b>Verständnisfrage anonym · Teilnahme · Dokument</div>' +
       '</div></section>' +
@@ -558,7 +565,8 @@
   SB.onChange = function (el) {
     if (el.dataset && el.dataset.pg && onProgramChange(el)) return;
     if (el.name === 'engine') { S.settings.engine = el.value; H.persist(); SB.renderModeChip(); return; }
-    if (el.id === 'set-auto') S.settings.autoRelease = el.checked;
+    if (el.name === 'release') S.settings.release = el.value;
+    else if (el.id === 'set-readback') S.settings.readBack = el.checked;
     else if (el.id === 'set-emerg') S.settings.emergencyPolicy = el.value;
     else if (el.id === 'set-sim') S.settings.minSimilarity = Number(el.value);
     else if (el.id === 'set-simdev') S.settings.sim = el.checked;
@@ -578,7 +586,7 @@
     S.sessions = JSON.parse(JSON.stringify(D.demo.sessions));
     S.findings = [];
     S.programs = JSON.parse(JSON.stringify(D.programs));
-    S.settings = { engine: 'auto', autoRelease: false, emergencyPolicy: 'warn', minSimilarity: 0.3, sim: true };
+    S.settings = { engine: 'auto', release: 'confirm', readBack: true, emergencyPolicy: 'warn', minSimilarity: 0.3, sim: true };
     SB.render();
   };
 

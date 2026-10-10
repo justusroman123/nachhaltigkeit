@@ -22,12 +22,19 @@ Notfall- und Warnhinweise werden nie live übersetzt: Sie kommen als vorab gepr�
 
 1. **Was steht an?** – vorbereitete Unterweisung antippen (z. B. Fremdfirmen-Einweisung)
 2. **Wer steht vor Ihnen?** – Sprachen antippen (z. B. Ukrainisch, Arabisch, Griechisch)
-3. **Los** – vorbereitete Punkte mit „Senden“ verschicken oder frei sprechen; „Frage“ für den
-   Verständnis-Check, „Beenden“ erzeugt den Nachweis
+3. **Los** – **sprechen** (großer Knopf: antippen oder gedrückt halten), dann zeigt und **liest die
+   App die Rückübersetzung vor**, dann **„Senden“**. Vorbereitete Punkte gehen mit „Punkt senden“ raus.
+   „Frage“ für den Verständnis-Check, „Beenden“ erzeugt den Nachweis.
+
+Das ist das Readback-Prinzip aus Luftfahrt und Medizin: sagen, zurückhören, bestätigen. Grün wird
+mit einem Tipp gesendet, Gelb nennt den Grund („Fachbegriff Stapler nicht wie freigegeben“) und
+braucht ein „Ja, so gemeint“, Rot wird nicht gesendet. **Hände frei:** Rückübersetzung vorlesen,
+fünf Sekunden, dann automatisch senden – nur bei Grün, „Stopp“ jederzeit. Falsch verstanden?
+„korrigieren“ öffnet den erkannten Satz. Tippen bleibt als Rückfall.
 
 Die Handys der Teilnehmenden zeigen nur die gewählten Sprachen und lesen jede Anweisung vor.
-Alles Weitere (Prüfdetails, Glossar, Unterweisungen bearbeiten, Nachweise, Datenschutz) liegt unter
-**Verwaltung**.
+Alles Weitere (Prüfdetails, Glossar, Unterweisungen bearbeiten, Nachweise, Freigaberegeln,
+Datenschutz) liegt unter **Verwaltung**. Warum der Ablauf so aussieht: [Vorgehen](docs/VORGEHEN.md).
 
 > Fiktives Werk („Musterwerk“). Alle Übersetzungen sind Demo-Übersetzungen ohne
 > Muttersprachler-Prüfung. Sicherheitszeichen sind symbolisch. Keine Rechtsberatung.
@@ -85,17 +92,17 @@ app/                 Browser-App (ohne Build, ohne Framework)
   js/engines.js      Kernsatz · Prüf-Demo · Edge-Server · Browser-Übersetzer · Online-Demo
   js/bus.js          Sync Leitstand ↔ Geräte (BroadcastChannel · SSE · Artifact-Room)
   js/app.js          Experten-Leitstand, Display, Handy, Brille
-  js/simple.js       Start-Modus: Unterweisung → Sprachen → Los
+  js/simple.js       Start-Modus: Unterweisung → Sprachen → sprechen, zurückhören, senden
   js/admin.js        Fremdfirmen, Glossar, Nachweise, Cockpit, System & Datenschutz
 server/              Edge-Server (Node, ohne Abhängigkeiten): Dateien, SSE, Übersetzung, Spracherkennung
 test/                node --test: Sinnvergleich, Daten, Server, Engine-Adapter (gegen Test-Server)
-docs/                Demo-Skript, Architektur & Datenschutz, Fremdfirmen
+docs/                Demo-Skript, Vorgehen (Recherche), Architektur & Datenschutz, Fremdfirmen
 ```
 
 ## Tests
 
 ```bash
-npm test     # 89 Tests
+npm test     # 90 Tests
 ```
 
 ## Stand und Grenzen
@@ -107,6 +114,6 @@ npm test     # 89 Tests
 - Demo-Übersetzungen vor jedem echten Einsatz durch Muttersprachler und die Sifa prüfen lassen.
 - Rechtliche Einordnungen sind eine fachliche Einschätzung, keine Rechtsberatung.
 
-Weiter: [Demo-Skript](docs/DEMO-SKRIPT.md) · [Architektur & Datenschutz](docs/ARCHITEKTUR.md) · [Fremdfirmen](docs/FREMDFIRMEN.md)
+Weiter: [Demo-Skript](docs/DEMO-SKRIPT.md) · [Vorgehen aus Erfolgsprojekten](docs/VORGEHEN.md) · [Architektur & Datenschutz](docs/ARCHITEKTUR.md) · [Fremdfirmen](docs/FREMDFIRMEN.md)
 
 © KI-SCHUB. Alle Rechte vorbehalten – siehe [LICENSE](LICENSE).

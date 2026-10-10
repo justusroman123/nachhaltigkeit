@@ -58,6 +58,22 @@
     return s.replace(/\s+/g, ' ').trim();
   }
 
+  // Fasst Sprachen zusammen, deren Rückübersetzung (normalisiert) gleich ist – für die Freigabe-Ansicht
+  // und das Vorlesen: gleiche Rückübersetzung nur einmal zeigen bzw. sprechen.
+  function groupBacks(source, results, langs) {
+    var src = normDE(source), groups = [];
+    (langs || Object.keys(results || {})).forEach(function (l) {
+      var r = results && results[l] ? results[l] : {};
+      var back = String(r.back || '').trim();
+      var key = normDE(back);
+      var g = null;
+      for (var i = 0; i < groups.length; i++) if (groups[i].key === key) { g = groups[i]; break; }
+      if (!g) { g = { key: key, back: back, langs: [], same: !!key && key === src }; groups.push(g); }
+      g.langs.push(l);
+    });
+    return groups;
+  }
+
   function tokens(norm) {
     return norm.match(/[\p{L}\p{N}]+/gu) || [];
   }
@@ -399,6 +415,7 @@
     similarity: similarity,
     numbersIn: numbersIn,
     normDE: normDE,
+    groupBacks: groupBacks,
     normTarget: normTarget,
     normKey: normKey,
     OPPOSITES: OPPOSITES,

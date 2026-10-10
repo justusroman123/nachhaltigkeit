@@ -91,7 +91,7 @@
   var S = SB.S = {
     route: 'leitstand', routeLang: null,
     langs: saved.langs || ['pl', 'ro', 'tr', 'ar', 'uk'],
-    settings: Object.assign({ engine: 'auto', autoRelease: false, emergencyPolicy: 'warn', minSimilarity: 0.3, sim: true }, saved.settings || {}),
+    settings: Object.assign({ engine: 'auto', release: 'confirm', readBack: true, emergencyPolicy: 'warn', minSimilarity: 0.3, sim: true }, saved.settings || {}),
     glossary: saved.glossary || clone(D.glossary),
     contractors: saved.contractors || clone(D.demo.contractors),
     sessions: saved.sessions || clone(D.demo.sessions),
@@ -108,9 +108,12 @@
     induction: { step: 0, lang: null, answers: {}, name: '', firma: '', result: null },
     glFilter: { cat: 'alle', q: '' }, nachweisSel: null, flash: null,
     programs: saved.programs || clone(D.programs),
-    simple: { step: 'pick', programId: null, langs: saved.simpleLangs || ['uk', 'ar', 'el'], idx: 0, busy: false, pending: null, error: null, typing: false, listening: false, speakHere: true, summary: null, sessionId: null, quizAsked: false, note: '' },
+    simple: { step: 'pick', programId: null, langs: saved.simpleLangs || ['uk', 'ar', 'el'], idx: 0, busy: false, pending: null, error: null, typing: false, listening: false, heard: '', reading: false, countdown: 0, speakHere: true, summary: null, sessionId: null, quizAsked: false, note: '' },
     session: null
   };
+  // Ältere gespeicherte Einstellung „Grün automatisch freigeben“ übernehmen
+  if (S.settings.autoRelease !== undefined) { if (S.settings.autoRelease) S.settings.release = 'auto'; delete S.settings.autoRelease; }
+  if (['confirm', 'readback', 'auto'].indexOf(S.settings.release) < 0) S.settings.release = 'confirm';
 
   function persist() {
     try {
@@ -267,7 +270,7 @@
         langs: langs, results: results, analysis: analysis, confirmed: {}, pictos: pics.slice(0, 3)
       };
       S.busy = false;
-      if (S.settings.autoRelease && analysis.status === 'green') { release(false, true); return; }
+      if (S.settings.release === 'auto' && analysis.status === 'green') { release(false, true); return; }
     } catch (e) {
       S.busy = false;
       S.error = { msg: e && e.message ? e.message : 'Übersetzung fehlgeschlagen.', suggestion: e && e.suggestion ? e.suggestion : null };

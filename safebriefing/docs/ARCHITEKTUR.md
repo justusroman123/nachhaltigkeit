@@ -12,7 +12,10 @@ Edge-Server im Werk (Laptop oder Industrie-PC, eigenes WLAN, ohne Internet)
    3  Rückübersetzung mit zweiter Engine        → zurück ins Deutsche
    4  Sinnvergleich (app/js/guardrail.js)       → grün / gelb / rot je Sprache
    ▼
-Freigabe am Leitstand (Führungskraft)
+Freigabe durch die Führungskraft (Readback)
+   Sie sieht, was erkannt wurde, sieht und hört die Rückübersetzung je Sprache:
+   grün → „Senden“ · gelb → „Ja, so gemeint“ mit benanntem Grund · rot → nicht sendbar
+   „Hände frei“: vorlesen, 5 s Countdown, automatisch senden (nur grün, jederzeit „Stopp“)
    ▼
 Ausgabe: Hallen-Display · Handy (QR, Browser) · Smart-Brille · Funkkanal in den Gehörschutz
    ▼
