@@ -141,7 +141,7 @@ Der StickS3 in der Jacke merkt, wenn sich der Reisepass mit der Beacon-Karte ent
 | `VIB_DUTY` | 170 | Vibrationsstärke 0–255 (nicht zu hoch, der Grove-Ausgang liefert max. ca. 0,38 A) |
 | `SPEAKER_VOLUME` | 200 | Lautstärke 0–255 |
 | `DISPLAY_ON_MS` | 20000 | Wann das Display ausgeht |
-| `FIXED_BEACON_MAC` | "" | MAC fest eintragen statt anlernen |
+| `FIXED_BEACON_MAC` | "c3:00:00:25:ef:84" | MAC der eigenen C10-Karte (vorbelegt, Anlernen per Taste A hat Vorrang) |
 
 ## 12. Fehlersuche
 

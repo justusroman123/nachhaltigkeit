@@ -37,9 +37,10 @@
 // Einstellungen – hier kann angepasst werden
 // ============================================================================
 
-// Optional: MAC-Adresse der Karte fest eintragen (z. B. "ac:23:3f:12:34:56").
-// Leer lassen, wenn die Karte per Tastendruck angelernt wird (empfohlen).
-static const char* FIXED_BEACON_MAC = "";
+// MAC-Adresse der Karte (steht hinten auf der Karte und in der App BeaconSET Plus).
+// Wird verwendet, solange keine andere Karte per Taste A angelernt wurde.
+// Leer lassen ("") = Karte muss angelernt werden.
+static const char* FIXED_BEACON_MAC = "c3:00:00:25:ef:84";
 
 static const uint32_t CHECK_INTERVAL_MS  = 5000;  // Prüfintervall
 static const uint32_t CHECK_SCAN_SECONDS = 2;     // Scandauer pro Prüfung (1 = sparsamer, 2 = zuverlässiger)
@@ -480,7 +481,7 @@ void setup() {
 
   prefs.begin("passwaechter", false);
   targetMac = prefs.getString("mac", "");
-  if (strlen(FIXED_BEACON_MAC) > 0) targetMac = FIXED_BEACON_MAC;
+  if (targetMac.isEmpty() && strlen(FIXED_BEACON_MAC) > 0) targetMac = FIXED_BEACON_MAC;  // angelernte Karte hat Vorrang
   targetMac.toLowerCase();
   sensIndex = prefs.getUChar("sens", 0);
   if (sensIndex >= SENS_COUNT) sensIndex = 0;
