@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Dolmetscher-Bedienplatz</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/operator.css">
+</head>
+<body>
+<h1>Dolmetscher-Bedienplatz</h1>
+<p class="muted">Deutsch rein, Zielsprachen raus. Nichts wird gespeichert. <a href="mic-test.html">Mikrofon-Test</a></p>
+
+<section id="secRoom">
+  <h2>1. Sitzung</h2>
+  <label for="key">Bedienschlüssel (wird nicht gespeichert)</label>
+  <div class="row">
+    <input id="key" type="password" autocomplete="off" size="32">
+    <button id="btnCreate" class="primary">Sitzung starten</button>
+    <button id="btnEnd" disabled>Sitzung beenden</button>
+  </div>
+  <p id="roomMsg" role="status"></p>
+</section>
+
+<section id="secLinks" hidden>
+  <h2>2. Zuhörer-Links</h2>
+  <div class="row">
+    <div id="langs"></div>
+    <label>Gültigkeit (Minuten) <input id="ttl" type="number" min="1" step="1" size="5"></label>
+    <button id="btnLinks" class="primary">Links erzeugen</button>
+  </div>
+  <p class="muted">Jeder Link gilt für genau eine Sprache und läuft ab. Ton erst nach Tippen auf 🔇 am Zuhörergerät.</p>
+  <div id="links"></div>
+</section>
+
+<section id="secMic" hidden>
+  <h2>3. Mikrofon</h2>
+  <div class="row">
+    <select id="dev" aria-label="Audio-Eingang"></select>
+    <button id="btnStart" class="primary">Senden starten</button>
+    <button id="btnStop" disabled>Senden stoppen</button>
+  </div>
+  <div class="meter" aria-label="Pegel"><div id="level"></div></div>
+  <p id="micMsg" role="status"></p>
+</section>
+
+<section id="secOut" hidden>
+  <h2>4. Ausgabe und Verzögerung</h2>
+  <table>
+    <tr><th>Zuhörer je Sprache</th><td id="statL">–</td></tr>
+    <tr><th>Letzte Verzögerung (t_out − t_audio_in)</th><td id="lat">unbekannt</td></tr>
+    <tr><th>Stufen ASR / MT / TTS / Ausgabe</th><td id="stages">unbekannt</td></tr>
+  </table>
+  <div id="log" aria-live="polite"></div>
+</section>
+<script src="js/operator.js"></script>
+</body>
+</html>

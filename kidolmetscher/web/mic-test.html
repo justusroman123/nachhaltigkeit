@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mikrofon-Test – KI-Dolmetscher</title>
+<!-- Einzeldatei ohne externe Bibliotheken. Nichts wird hochgeladen oder gespeichert;
+     die Aufnahme liegt nur im Arbeitsspeicher dieses Tabs. -->
+<style>
+  :root {
+    --bg: #f6f7f9; --fg: #14181f; --muted: #5a6472; --card: #fff; --line: #d5dae1;
+    --ok: #1a7f4b; --warn: #b45309; --bad: #b91c1c; --bar: #2563eb; --accent: #1d4ed8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151b; --fg: #e8ecf2; --muted: #9aa5b5; --card: #1a202a; --line: #2f3846;
+            --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --bar: #60a5fa; --accent: #93c5fd; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+         font: 16px/1.45 system-ui, sans-serif; max-width: 760px; margin-inline: auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 .25rem; }
+  h2 { font-size: 1rem; margin: 0 0 .6rem; }
+  p.hint { color: var(--muted); margin: .2rem 0 1rem; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            padding: 14px; margin-bottom: 14px; }
+  label { display: block; margin: .35rem 0; }
+  select, button { font: inherit; padding: .5rem .7rem; border-radius: 8px;
+                   border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+  select { width: 100%; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  @media (prefers-color-scheme: dark) { button.primary { color: #0b1220; } }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .meter { position: relative; height: 26px; background: var(--bg); border: 1px solid var(--line);
+           border-radius: 6px; overflow: hidden; margin: .4rem 0; }
+  .meter > .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--bar); }
+  .meter > .peak { position: absolute; top: 0; bottom: 0; width: 3px; left: 0; background: var(--bad); }
+  .scale { display: flex; justify-content: space-between; color: var(--muted); font-size: .8rem; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: .3rem .2rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { color: var(--muted); width: 48%; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  #msg { min-height: 1.4em; }
+  audio { width: 100%; margin-top: .6rem; }
+</style>
+</head>
+<body>
+<h1>Mikrofon-Test</h1>
+<p class="hint">Für die Dolmetscher-Station. Bei Aufnahme-Wiedergabe bitte <strong>Kopfhörer</strong> tragen (sonst Rückkopplung).</p>
+
+<section>
+  <h2>1. Eingang wählen</h2>
+  <div class="row">
+    <button id="btnPerm" class="primary">Mikrofon freigeben</button>
+    <button id="btnRefresh" disabled>Liste aktualisieren</button>
+  </div>
+  <label for="dev">Audio-Eingang</label>
+  <select id="dev" disabled><option>(erst Mikrofon freigeben)</option></select>
+  <label for="ch">Kanäle anfordern</label>
+  <select id="ch" disabled>
+    <option value="">Standard des Geräts</option>
+    <option value="1">1 (Mono)</option>
+    <option value="2">2 (Stereo)</option>
+  </select>
+  <label><input type="checkbox" id="chkEcho" checked> Echo-Unterdrückung (echoCancellation)</label>
+  <label><input type="checkbox" id="chkNoise" checked> Rauschunterdrückung (noiseSuppression)</label>
+  <label><input type="checkbox" id="chkAgc" checked> Automatische Pegelregelung (autoGainControl)</label>
+  <p class="hint">Schalter ändern → Eingang wird neu gestartet. Für die Spracherkennung zunächst alle drei ausschalten und vergleichen.</p>
+  <div id="msg" role="status"></div>
+</section>
+
+<section>
+  <h2>2. Pegel</h2>
+  <div class="meter" aria-label="Pegel"><div class="fill" id="fill"></div><div class="peak" id="peak"></div></div>
+  <div class="scale"><span>−60 dBFS</span><span>−40</span><span>−20</span><span>0</span></div>
+  <table>
+    <tr><td>Effektivpegel (RMS)</td><td id="rms">–</td></tr>
+    <tr><td>Spitzenpegel (gehalten)</td><td id="pk">–</td></tr>
+    <tr><td>Übersteuerung</td><td id="clip">–</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>3. Gerät und Einstellungen (tatsächlich aktiv)</h2>
+  <table id="info"></table>
+</section>
+
+<section>
+  <h2>4. Aufnahme (5 Sekunden)</h2>
+  <div class="row">
+    <button id="btnRec" disabled>5 s aufnehmen</button>
+    <span id="recState"></span>
+  </div>
+  <audio id="player" controls hidden></audio>
+  <p class="hint">Aufgenommen wird unkomprimiert (WAV) mit der Abtastrate des AudioContext, also so, wie die Station das Signal später sieht.</p>
+</section>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    dev: $('dev'), ch: $('ch'), msg: $('msg'), fill: $('fill'), peak: $('peak'),
+    rms: $('rms'), pk: $('pk'), clip: $('clip'), info: $('info'),
+    btnPerm: $('btnPerm'), btnRefresh: $('btnRefresh'), btnRec: $('btnRec'),
+    recState: $('recState'), player: $('player'),
+    echo: $('chkEcho'), noise: $('chkNoise'), agc: $('chkAgc'),
+  };
+
+  let stream = null, ctx = null, source = null, analyser = null, recorder = null;
+  let peakHold = 0, peakHoldUntil = 0, clipCount = 0, rafId = 0, wavUrl = null;
+  let starting = Promise.resolve();   // serialisiert Start/Stopp
+
+  const DB_FLOOR = -60;
+  const toDb = (x) => (x > 1e-6 ? 20 * Math.log10(x) : -120);
+  const fmtDb = (d) => (d <= -120 ? '−∞ dBFS' : d.toFixed(1).replace('-', '−') + ' dBFS');
+  const pct = (d) => Math.max(0, Math.min(100, ((d - DB_FLOOR) / -DB_FLOOR) * 100));
+
+  function say(text, cls) {
+    el.msg.textContent = text;
+    el.msg.className = cls || '';
+  }
+
+  /* ---------- Geräteliste ---------- */
+  async function listDevices() {
+    const all = await navigator.mediaDevices.enumerateDevices();
+    const inputs = all.filter((d) => d.kind === 'audioinput');
+    const current = stream && stream.getAudioTracks()[0]
+      ? stream.getAudioTracks()[0].getSettings().deviceId : el.dev.value;
+    el.dev.replaceChildren();
+    inputs.forEach((d, i) => {
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label || ('Eingang ' + (i + 1));
+      el.dev.appendChild(o);
+    });
+    if (current && inputs.some((d) => d.deviceId === current)) el.dev.value = current;
+    el.dev.disabled = el.ch.disabled = inputs.length === 0;
+    return inputs;
+  }
+
+  /* ---------- Stream starten/stoppen ---------- */
+  function stopAll() {
+    cancelAnimationFrame(rafId);
+    if (recorder) { recorder.abort(); }
+    if (source) { try { source.disconnect(); } catch (_) {} source = null; }
+    if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+    if (ctx) { ctx.close().catch(() => {}); ctx = null; }
+    analyser = null;
+  }
+
+  async function start() {
+    stopAll();
+    peakHold = 0; clipCount = 0;
+    const audio = {
+      echoCancellation: el.echo.checked,
+      noiseSuppression: el.noise.checked,
+      autoGainControl: el.agc.checked,
+    };
+    if (el.dev.value && !el.dev.disabled) audio.deviceId = { exact: el.dev.value };
+    if (el.ch.value) audio.channelCount = { ideal: Number(el.ch.value) };
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+    } catch (e) {
+      say('Zugriff fehlgeschlagen: ' + e.name + (e.message ? ' – ' + e.message : ''), 'bad');
+      el.btnRec.disabled = true;
+      return;
+    }
+    ctx = new AudioContext();
+    if (ctx.state === 'suspended') await ctx.resume();
+    source = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);   // nicht mit ctx.destination verbunden: kein Mithören
+    await listDevices();
+    el.btnRefresh.disabled = false;
+    el.btnRec.disabled = false;
+    say('Eingang aktiv.', 'ok');
+    renderInfo();
+    loop();
+  }
+
+  const restart = () => { starting = starting.then(start); return starting; };
+
+  /* ---------- Pegelanzeige ---------- */
+  function loop() {
+    if (!analyser) return;
+    const buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0, max = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const a = Math.abs(buf[i]);
+      sum += buf[i] * buf[i];
+      if (a > max) max = a;
+    }
+    const rmsDb = toDb(Math.sqrt(sum / buf.length));
+    const now = performance.now();
+    if (max >= peakHold || now > peakHoldUntil) { peakHold = max; peakHoldUntil = now + 1500; }
+    if (max >= 0.99) clipCount++;
+    const pkDb = toDb(peakHold);
+    el.fill.style.width = pct(rmsDb) + '%';
+    el.peak.style.left = 'calc(' + pct(pkDb) + '% - 3px)';
+    el.rms.textContent = fmtDb(rmsDb);
+    el.pk.textContent = fmtDb(pkDb);
+    if (clipCount > 0) { el.clip.textContent = 'Ja (' + clipCount + ' Messungen ≥ −0,1 dBFS) – Eingangspegel am Sender senken'; el.clip.className = 'bad'; }
+    else if (pkDb > -6) { el.clip.textContent = 'Nein, aber knapp (Spitze über −6 dBFS)'; el.clip.className = 'warn'; }
+    else { el.clip.textContent = 'Nein'; el.clip.className = 'ok'; }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  /* ---------- Infotabelle ---------- */
+  function row(k, v, cls) {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td'); a.textContent = k;
+    const b = document.createElement('td'); b.textContent = v; if (cls) b.className = cls;
+    tr.append(a, b);
+    el.info.appendChild(tr);
+  }
+  const val = (v) => (v === undefined || v === null ? 'unbekannt (Browser meldet nichts)' : String(v));
+  const onOff = (v) => (v === undefined ? ['unbekannt', 'warn'] : v ? ['aktiv', 'warn'] : ['aus', 'ok']);
+
+  function renderInfo() {
+    el.info.replaceChildren();
+    const track = stream && stream.getAudioTracks()[0];
+    if (!track || !ctx) return;
+    const s = track.getSettings();
+    row('Gerät (Label)', track.label || 'unbekannt');
+    row('AudioContext.sampleRate', ctx.sampleRate + ' Hz');
+    row('track.getSettings().sampleRate', s.sampleRate !== undefined ? s.sampleRate + ' Hz' : val(s.sampleRate));
+    if (s.sampleRate !== undefined && s.sampleRate !== ctx.sampleRate) {
+      row('Hinweis', 'Raten unterscheiden sich – der Browser wandelt um.', 'warn');
+    }
+    row('Kanäle (track.getSettings().channelCount)', val(s.channelCount));
+    row('Kanäle am Analyser (Kontext, Mischung)', String(source.channelCount));
+    let [t, c] = onOff(s.echoCancellation); row('Echo-Unterdrückung', t, c);
+    [t, c] = onOff(s.noiseSuppression); row('Rauschunterdrückung', t, c);
+    [t, c] = onOff(s.autoGainControl); row('Automatische Pegelregelung', t, c);
+    row('Eingangs-Latenz laut Browser', s.latency !== undefined ? (s.latency * 1000).toFixed(1) + ' ms' : 'unbekannt');
+    row('AudioContext.baseLatency', ctx.baseLatency !== undefined ? (ctx.baseLatency * 1000).toFixed(1) + ' ms' : 'unbekannt');
+    row('Sicherer Kontext (Mikrofon erlaubt)', window.isSecureContext ? 'ja' : 'nein', window.isSecureContext ? 'ok' : 'bad');
+  }
+
+  /* ---------- Aufnahme 5 s (roh, als WAV) ---------- */
+  // ScriptProcessorNode ist veraltet, läuft aber ohne Zusatzdatei; für diesen Test ausreichend.
+  function encodeWav(chunks, rate) {
+    let n = 0; chunks.forEach((c) => { n += c.length; });
+    const out = new DataView(new ArrayBuffer(44 + n * 2));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); out.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true);
+    out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, n * 2, true);
+    let o = 44;
+    chunks.forEach((c) => { for (let i = 0; i < c.length; i++, o += 2) {
+      out.setInt16(o, Math.max(-1, Math.min(1, c[i])) * 0x7fff, true); } });
+    return new Blob([out], { type: 'audio/wav' });
+  }
+
+  function record() {
+    if (!ctx || !source) return;
+    const rate = ctx.sampleRate;
+    const chunks = [];
+    let total = 0;
+    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const mute = ctx.createGain(); mute.gain.value = 0;   // Prozessor braucht Ausgang, bleibt aber stumm
+    source.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+    el.btnRec.disabled = true;
+    el.player.hidden = true;
+    if (wavUrl) { URL.revokeObjectURL(wavUrl); wavUrl = null; }
+    const t0 = performance.now();
+    const tick = setInterval(() => {
+      el.recState.textContent = 'Aufnahme … ' + Math.max(0, 5 - (performance.now() - t0) / 1000).toFixed(1) + ' s';
+    }, 100);
+    let finished = false;
+    const finish = (aborted) => {
+      if (finished) return; finished = true;
+      clearInterval(tick);
+      proc.onaudioprocess = null;
+      try { source && source.disconnect(proc); proc.disconnect(); mute.disconnect(); } catch (_) {}
+      recorder = null;
+      if (aborted || total === 0) { el.recState.textContent = 'Aufnahme abgebrochen.'; el.btnRec.disabled = !stream; return; }
+      wavUrl = URL.createObjectURL(encodeWav(chunks, rate));
+      el.player.src = wavUrl; el.player.hidden = false;
+      el.recState.textContent = 'Fertig (' + (total / rate).toFixed(1) + ' s, ' + rate + ' Hz, Mono). Wiedergabe unten.';
+      el.btnRec.disabled = false;
+    };
+    proc.onaudioprocess = (e) => {
+      if (total >= rate * 5) return;
+      const take = Math.min(e.inputBuffer.length, rate * 5 - total);
+      chunks.push(new Float32Array(e.inputBuffer.getChannelData(0).subarray(0, take)));
+      total += take;
+      if (total >= rate * 5) finish(false);
+    };
+    recorder = { abort: () => finish(true) };
+  }
+
+  /* ---------- Ereignisse ---------- */
+  el.btnPerm.addEventListener('click', async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      say('Dieser Browser/Kontext erlaubt keinen Mikrofonzugriff (HTTPS oder localhost nötig).', 'bad');
+      return;
+    }
+    await restart();
+  });
+  el.btnRefresh.addEventListener('click', async () => { await listDevices(); say('Liste aktualisiert.', 'ok'); });
+  [el.dev, el.ch, el.echo, el.noise, el.agc].forEach((x) => x.addEventListener('change', () => {
+    if (stream) restart();
+  }));
+  el.btnRec.addEventListener('click', record);
+  if (navigator.mediaDevices) {
+    navigator.mediaDevices.addEventListener('devicechange', () => { if (stream) listDevices(); });
+  }
+  window.addEventListener('pagehide', () => {
+    stopAll();
+    if (wavUrl) URL.revokeObjectURL(wavUrl);
+  });
+  if (!window.isSecureContext) say('Kein sicherer Kontext: Mikrofon nur über HTTPS oder localhost.', 'bad');
+})();
+</script>
+</body>
+</html>

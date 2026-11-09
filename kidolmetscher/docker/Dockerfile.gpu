@@ -1,0 +1,27 @@
+# GPU-Image fuer den Server (Geruest). Nicht gebaut/getestet in Etappe 1.
+# BASE_IMAGE bewusst ohne Standardwert: Der passende CUDA-Tag haengt vom Treiber des
+# gemieteten Servers ab (unbekannt). Tag vor dem Bauen pruefen und uebergeben, z. B.
+#   docker build -f docker/Dockerfile.gpu --build-arg BASE_IMAGE=<geprueftes-cuda-image> .
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 python3-venv python3-pip \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --create-home --uid 10001 app
+
+WORKDIR /app
+COPY server/requirements.txt /app/requirements.txt
+RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install -r /app/requirements.txt
+# TODO: Modell-Abhaengigkeiten (Whisper/SimulStreaming, TranslateGemma, Piper) erst nach Entscheidung
+#       und Lizenzpruefung (docs/entscheidungen.md) in eine eigene requirements-gpu.txt aufnehmen.
+#       Modellgewichte NICHT ins Image backen und nicht im Repo ablegen; Volume nur lesend einbinden.
+
+COPY server/app /app/app
+COPY web /app/web
+ENV PATH=/opt/venv/bin:$PATH WEB_DIR=/app/web HOST=0.0.0.0 PORT=8000
+USER app
+EXPOSE 8000
+# Kein Zugriffsprotokoll (URLs); App-Logs enthalten nur Zaehler und Zeiten.
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

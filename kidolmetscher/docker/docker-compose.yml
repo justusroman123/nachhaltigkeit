@@ -1,0 +1,46 @@
+# Start (Mock, ohne GPU):   docker compose -f docker/docker-compose.yml --profile mock up --build
+# Start (GPU-Server):       docker compose -f docker/docker-compose.yml --profile gpu up --build
+# Voraussetzung: .env im Projektstamm (aus .env.example kopieren, OPERATOR_KEY setzen), BASE_IMAGE gesetzt.
+# Nicht getestet in Etappe 1 (nur Syntaxpruefung).
+x-common: &common
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.gpu
+    args:
+      BASE_IMAGE: ${BASE_IMAGE:?BASE_IMAGE setzen (gepruefter CUDA- oder Python-Basis-Tag)}
+  env_file: ../.env
+  # Im Container gelten feste Werte (ueberschreiben HOST/WEB_DIR aus der .env fuer lokalen Start).
+  # Veroeffentlicht wird nur 127.0.0.1 des Hosts (siehe ports).
+  environment: &container_env
+    HOST: 0.0.0.0
+    WEB_DIR: /app/web
+  # Nur lokal erreichbar; TLS und Veroeffentlichung uebernimmt ein vorgeschalteter Reverse Proxy (offen).
+  ports: ["127.0.0.1:8000:8000"]
+  read_only: true              # nichts wird gespeichert
+  tmpfs: ["/tmp"]
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "1m", max-file: "2" }
+
+services:
+  mock:
+    <<: *common
+    profiles: ["mock"]
+  gpu:
+    <<: *common
+    profiles: ["gpu"]
+    environment:
+      <<: *container_env
+      ASR_BACKEND: real
+      MT_BACKEND: real
+      TTS_BACKEND: real
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Live-Übersetzung</title>
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/listener.css">
+</head>
+<body>
+<header>
+  <span id="lang">…</span>
+  <span id="status" class="muted" role="status"></span>
+  <button id="btnSound" aria-label="Ton ein/aus" title="Ton ein/aus">🔇</button>
+  <button id="btnSmaller" aria-label="Schrift kleiner">A−</button>
+  <button id="btnBigger" aria-label="Schrift größer">A+</button>
+</header>
+<main id="subs" aria-live="polite"></main>
+<script src="js/listener.js"></script>
+</body>
+</html>

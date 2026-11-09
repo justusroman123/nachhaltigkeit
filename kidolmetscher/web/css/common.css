@@ -1,0 +1,20 @@
+/* Gemeinsame Stile. Nur Systemschriften, keine externen Dateien. */
+:root {
+  --bg: #f6f7f9; --fg: #14181f; --muted: #5a6472; --card: #ffffff; --line: #d5dae1;
+  --accent: #1d4ed8; --accent-fg: #ffffff; --ok: #1a7f4b; --warn: #b45309; --bad: #b91c1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #11151b; --fg: #e8ecf2; --muted: #9aa5b5; --card: #1a202a; --line: #2f3846;
+          --accent: #93c5fd; --accent-fg: #0b1220; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.45 system-ui, sans-serif; }
+button, select, input { font: inherit; color: var(--fg); background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px; padding: .5rem .75rem; }
+button { cursor: pointer; min-height: 44px; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.muted { color: var(--muted); }
+[hidden] { display: none !important; }
