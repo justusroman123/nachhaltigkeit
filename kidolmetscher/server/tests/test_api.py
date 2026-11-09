@@ -12,14 +12,14 @@ def new_room(client):
     return r.json()["room_id"]
 
 
-def new_link(client, room_id, lang="uk", **body):
+def new_link(client, room_id, lang=None, **body):
     r = client.post(f"/api/rooms/{room_id}/listener-links", headers=hdr(), json={"lang": lang, **body})
     assert r.status_code == 200, r.text
     return r.json()
 
 
 def token_of(link):
-    return link["path"].split("#t=")[1]
+    return link["path"].split("#t=")[1].split("&")[0]
 
 
 def open_operator(client, room_id):
@@ -80,7 +80,7 @@ def test_csp_hash_nur_fuer_mic_test(client):
 def test_stats_enthaelt_nur_zaehler(client):
     rid = new_room(client)
     s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
-    assert set(s) == {"room_open", "operator_active", "listeners", "counters"}
+    assert set(s) == {"room_open", "langs", "listeners_connected", "operator_active", "listeners", "counters"}
 
 
 # ---------- WebSocket Ende-zu-Ende ----------
@@ -235,3 +235,108 @@ def test_root_leitet_zum_bedienplatz_weiter(client):
 
 def test_swagger_und_openapi_aus(client):
     assert client.get("/docs").status_code == 404 and client.get("/openapi.json").status_code == 404
+
+
+# ---------- Sammel-Link, Sprachwahl, Raum-Sprachen, QR ----------
+def test_config_ist_oeffentlich_und_harmlos(client):
+    d = client.get("/api/config").json()
+    assert d["langs"] == ["uk", "ar", "en", "tr", "fa"] and d["default_langs"] == ["uk", "ar", "en", "tr"]
+    assert "operator_key" not in str(d)
+
+
+def test_sammel_link_zuhoerer_waehlt_sprache_und_wechselt(client):
+    rid = new_room(client)
+    link = new_link(client, rid)                      # keine Sprache angegeben
+    assert link["lang"] is None and link["path"].endswith(token_of(link))   # kein &l=
+    ws = open_listener(client, token_of(link))
+    r = ws.receive_json()
+    assert r["type"] == "ready" and r["lang"] is None and r["langs"] == ["uk", "ar", "en", "tr"]
+    # vor der Wahl wird nichts uebersetzt
+    s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
+    assert s["listeners"] == {} and s["listeners_connected"] == 1
+    ws.send_json({"type": "select", "lang": "ar"})
+    r = ws.receive_json()
+    assert r["lang"] == "ar" and r["rtl"] is True
+    op = open_operator(client, rid)
+    op.send_bytes(chunk(100)); op.send_bytes(chunk(100))
+    assert ws.receive_json()["text"].startswith("[ar] ")
+    ws.send_json({"type": "select", "lang": "en"})     # Wechsel waehrend der Sitzung
+    assert ws.receive_json()["lang"] == "en"
+    # ... und danach kommt Englisch (ggf. zuerst eine letzte arabische Nachricht aus der Warteschlange)
+    s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
+    assert s["listeners"] == {"en": 1}
+
+
+def test_ungueltige_sprachwahl(client):
+    rid = new_room(client)
+    ws = open_listener(client, token_of(new_link(client, rid)))
+    ws.receive_json()
+    ws.send_json({"type": "select", "lang": "xx"})
+    assert ws.receive_json()["code"] == "lang_invalid"
+    ws.send_text("kein json")                             # stoert nicht
+    ws.send_json({"type": "select", "lang": "uk"})
+    assert ws.receive_json()["lang"] == "uk"
+
+
+def test_sprache_im_hello_nach_neuladen(client):
+    rid = new_room(client)
+    tok = token_of(new_link(client, rid))
+    ws = client.stack.enter_context(client.websocket_connect("/ws/listener"))
+    ws.send_json({"type": "hello", "token": tok, "lang": "tr"})
+    assert ws.receive_json()["lang"] == "tr"
+
+
+def test_einzel_link_bleibt_an_seine_sprache_gebunden(client):
+    rid = new_room(client)
+    link = new_link(client, rid, "uk")
+    assert link["path"].endswith("&l=uk")
+    ws = open_listener(client, token_of(link).split("&")[0])
+    assert ws.receive_json()["lang"] == "uk"
+    ws.send_json({"type": "select", "lang": "en"})
+    assert ws.receive_json()["code"] == "lang_invalid"
+
+
+def test_raum_mit_teilmenge_der_sprachen(client):
+    r = client.post("/api/rooms", headers=hdr(), json={"langs": ["en", "tr"]}).json()
+    assert r["langs"] == ["en", "tr"]
+    rid = r["room_id"]
+    assert client.post(f"/api/rooms/{rid}/listener-links", headers=hdr(), json={"lang": "uk"}).status_code == 400
+    ws = open_listener(client, token_of(new_link(client, rid)))
+    assert ws.receive_json()["langs"] == ["en", "tr"]
+    ws.send_json({"type": "select", "lang": "uk"})
+    assert ws.receive_json()["code"] == "lang_invalid"
+    assert client.post("/api/rooms", headers=hdr(), json={"langs": ["xx"]}).status_code == 400
+    assert client.post("/api/rooms", headers=hdr(), json={"langs": []}).status_code == 400
+
+
+def test_qr_code_ist_ein_svg_und_braucht_schluessel(client):
+    url = "http://192.168.0.5:8000/listener.html#t=" + "a" * 32
+    assert client.post("/api/qr", json={"url": url}).status_code == 401
+    r = client.post("/api/qr", headers=hdr(), json={"url": url})
+    assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml")
+    assert r.text.lstrip().startswith("<svg") and "<script" not in r.text
+    assert client.post("/api/qr", headers=hdr(), json={"url": "javascript:alert(1)"}).status_code == 400
+    assert client.post("/api/qr", headers=hdr(), json={"url": "http://x/" + "a" * 500}).status_code == 400
+
+
+def test_qr_code_ist_mit_kamera_lesbar_und_enthaelt_die_adresse(client):
+    cv2 = pytest.importorskip("cv2")
+    np = pytest.importorskip("numpy")
+    import re
+    url = "http://192.168.0.5:8000/listener.html#t=" + "Ab_-9" * 8
+    svg = client.post("/api/qr", headers=hdr(), json={"url": url}).text
+    import segno, io
+    png = io.BytesIO()
+    segno.make(url, error="m", micro=False).save(png, kind="png", scale=8, border=4)
+    img = cv2.imdecode(np.frombuffer(png.getvalue(), np.uint8), cv2.IMREAD_GRAYSCALE)
+    text, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+    assert text == url
+
+
+def test_unbekannte_sprache_im_hello_fuehrt_zur_auswahl(client):
+    rid = new_room(client)
+    ws = client.stack.enter_context(client.websocket_connect("/ws/listener"))
+    ws.send_json({"type": "hello", "token": token_of(new_link(client, rid)), "lang": "fa"})
+    assert ws.receive_json()["code"] == "lang_invalid"
+    r = ws.receive_json()
+    assert r["type"] == "ready" and r["lang"] is None and "fa" not in r["langs"]

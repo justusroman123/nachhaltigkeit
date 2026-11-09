@@ -26,6 +26,7 @@ class Settings:
     host: str = "127.0.0.1"
     port: int = 8000
     web_dir: Path = Path(__file__).resolve().parents[2] / "web"
+    public_url: str = ""          # optional: Adresse, unter der Zuhoerer den Server erreichen (fuer Link/QR)
 
     asr_backend: str = "mock"
     mt_backend: str = "mock"
@@ -33,7 +34,8 @@ class Settings:
     tts_enabled: bool = True
 
     source_lang: str = "de"
-    target_langs: tuple[str, ...] = ("uk", "ar", "en", "tr")
+    target_langs: tuple[str, ...] = ("uk", "ar", "en", "tr", "fa")   # waehlbar (fa optional)
+    default_langs: tuple[str, ...] = ("uk", "ar", "en", "tr")        # vorab angehakt
     sample_rate: int = 16000
 
     listener_ttl_s: int = 3600
@@ -63,6 +65,10 @@ class Settings:
         bad = [x for x in self.target_langs if x not in SUPPORTED_LANGS]
         if bad:
             raise ConfigError(f"Nicht unterstuetzte Sprachen: {bad}")
+        if self.public_url and not self.public_url.startswith(("http://", "https://")):
+            raise ConfigError("PUBLIC_URL muss mit http:// oder https:// beginnen")
+        if not self.default_langs or any(x not in self.target_langs for x in self.default_langs):
+            raise ConfigError("DEFAULT_LANGS muss nicht leer und Teilmenge von TARGET_LANGS sein")
         if not (1 <= self.min_listener_ttl_s <= self.listener_ttl_s <= self.max_listener_ttl_s):
             raise ConfigError("Es muss gelten: MIN_LISTENER_TTL_S <= LISTENER_TTL_S <= MAX_LISTENER_TTL_S")
         if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0:
@@ -76,6 +82,10 @@ class Settings:
                  require_operator_key: bool = True) -> "Settings":
         e = os.environ if env is None else env
         d = cls()
+        targets = tuple(x.strip() for x in e.get("TARGET_LANGS", ",".join(d.target_langs)).split(",") if x.strip())
+        defaults_raw = e.get("DEFAULT_LANGS")
+        defaults = (tuple(x.strip() for x in defaults_raw.split(",") if x.strip()) if defaults_raw is not None
+                    else tuple(x for x in targets if x != "fa"))     # Persisch nur auf Wunsch
 
         def get(name: str, default):
             return e.get(name, default)
@@ -86,11 +96,13 @@ class Settings:
                 host=get("HOST", d.host),
                 port=int(get("PORT", d.port)),
                 web_dir=Path(get("WEB_DIR", str(d.web_dir))).resolve(),
+                public_url=get("PUBLIC_URL", "").strip().rstrip("/"),
                 asr_backend=get("ASR_BACKEND", d.asr_backend),
                 mt_backend=get("MT_BACKEND", d.mt_backend),
                 tts_backend=get("TTS_BACKEND", d.tts_backend),
                 tts_enabled=_bool(get("TTS_ENABLED", "true")),
-                target_langs=tuple(x.strip() for x in get("TARGET_LANGS", ",".join(d.target_langs)).split(",") if x.strip()),
+                target_langs=targets,
+                default_langs=defaults,
                 listener_ttl_s=int(get("LISTENER_TTL_S", d.listener_ttl_s)),
                 min_listener_ttl_s=int(get("MIN_LISTENER_TTL_S", d.min_listener_ttl_s)),
                 max_listener_ttl_s=int(get("MAX_LISTENER_TTL_S", d.max_listener_ttl_s)),

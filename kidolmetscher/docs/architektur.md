@@ -37,14 +37,18 @@ Bedienplatz (Chromebook, Browser)             Server (FastAPI, später GPU)     
 | `server/app/security.py` | CSP und Sicherheits-Header (zusätzlich zur Vorgabe) |
 | `server/app/main.py` | HTTP/WebSocket-Endpunkte, statische Dateien |
 | `web/operator.html`, `listener.html`, `mic-test.html` | Oberflächen, alles lokal ausgeliefert |
+| `docs/betrieb.md` | Bedienung, Hosting-Empfehlung |
 
 ## Ablauf einer Sitzung
 
 1. Bedienplatz: `POST /api/rooms` mit Header `X-Operator-Key` (Wert aus Umgebung `OPERATOR_KEY`).
-2. Bedienplatz erzeugt je Sprache einen Zuhörer-Link: `POST /api/rooms/{id}/listener-links`.
+2. Bedienplatz erzeugt einen **Sammel-Link** (`POST /api/rooms/{id}/listener-links` ohne Sprache) und zeigt ihn als QR-Code
+   (`POST /api/qr`, SVG, nichts wird gespeichert). Optional gibt es Einzel-Links je Sprache (`lang` angegeben, Link endet auf `&l=uk`).
    Der Token (192 Bit Zufall) steht im **Fragment** der URL (`/listener.html#t=…`), damit er nie in
    Server-Logs oder Referrer auftaucht. Der Server hält nur den SHA-256-Hash.
-3. Zuhörer öffnet den Link, die Seite sendet den Token als erste WebSocket-Nachricht.
+3. Zuhörer öffnet den Link, die Seite sendet den Token als erste WebSocket-Nachricht und wählt dann die Sprache
+   (`{"type":"select","lang":"uk"}`, jederzeit wechselbar). Die Auswahl steht nur im Arbeitsspeicher und in der Adresse (`&l=…`), nichts wird gespeichert.
+   Erst nach der Wahl zählt der Zuhörer für die Übersetzung.
 4. Bedienplatz verbindet `/ws/operator` (erste Nachricht: Raum und Schlüssel) und sendet Audio.
 5. Sitzungsende: `DELETE /api/rooms/{id}` (oder Raum-Ablauf `ROOM_TTL_S`): Tokens, Zuhörer, Ringpuffer
    werden gelöscht, Zuhörer erhalten `session_end`.
@@ -61,7 +65,7 @@ Server -> Zuhörer (`type: "translation"`):
 
 - Bedienplatz erhält dieselbe Nachricht zusätzlich mit `text_src` (deutscher Quelltext).
 - `audio` ist `null`, wenn TTS aus ist oder für die Sprache keine Stimme existiert; `t_tts` ist dann `null`.
-- Steuernachrichten: `ready`, `session_end`, `token_expired`, `error`.
+- Steuernachrichten: `ready` (mit `lang`, `langs`, `rtl`), `session_end`, `token_expired`, `error` (`token_invalid`, `room_full`, `lang_invalid`).
 - Nachrichten aus dem Ringpuffer tragen `"replay": true` und kein Audio.
 
 ### Zeitstempel (Regel 4)

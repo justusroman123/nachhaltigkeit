@@ -12,6 +12,9 @@
 | E6 | Keine externen Ressourcen, CSP ohne `unsafe-inline` | Datenschutz-Regel | entschieden |
 | E7 | `mic-test.html` bleibt Einzeldatei, CSP-Hash statt Lockerung | Etappe-0-Vorgabe (1 Datei) bei strenger CSP | entschieden |
 | E8 | Aufnahme im Mikrofontest über ScriptProcessorNode (roh, WAV) | läuft ohne Zusatzdatei; veraltete API, nur für Test | entschieden, bei Browser-Änderung ersetzen |
+| E12 | Ein Sammel-Link/QR-Code für alle; Zuhörer wählen die Sprache selbst und können wechseln | einfachste Bedienung für Veranstalter und Zuhörer; Einzel-Links bleiben möglich | entschieden |
+| E13 | QR-Code serverseitig mit `segno` als SVG | keine eigene QR-Implementierung, keine Browser-Bibliothek | entschieden |
+| E14 | Sprachen: `TARGET_LANGS` (wählbar, inkl. fa) und `DEFAULT_LANGS` (vorab angehakt, ohne fa) | Persisch optional | entschieden |
 | E9 | ASR: SimulStreaming oder WhisperLiveKit | Latenz, Lizenz, Sprachwechsel, Wartbarkeit | **offen** (messen auf GPU) |
 | E10 | TTS: Piper | Lizenz noch offen | **offen** |
 | E11 | TLS für Bedienplatz (Secure Context) | siehe Architektur, Grenzen | **offen**, Rückfrage nötig (Kosten/Konto) |
@@ -28,6 +31,8 @@ nicht aus dem Gedächtnis eintragen.
 | Uvicorn 0.54.0 | Server | BSD-3-Clause | ja | |
 | Pydantic 2.14.3 | Server | MIT | ja | |
 | websockets 17.4 | Server (über uvicorn[standard]) | BSD-3-Clause | ja | |
+| segno 1.6.6 | Server (QR-Code) | BSD (Klassifizierung in Paket-Metadaten) | ja | |
+| opencv-python-headless 5.0.0.93 | nur optionaler QR-Lesetest | Apache 2.0 (Paket-Metadaten) | ja | nicht im Produkt |
 | pytest 9.2.0 | Tests | MIT | ja | nur Entwicklung |
 | httpx 0.28.1 | Tests | BSD-3-Clause | ja | nur Entwicklung |
 | Whisper large-v3 (Modellgewichte) | ASR | unbekannt | nein | Quelle des Modells festlegen, dann Lizenz lesen |

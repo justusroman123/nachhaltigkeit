@@ -7,6 +7,16 @@ Persisch optional). Zuhörer sehen Untertitel und hören die Übersetzung über 
 Piper) sind noch nicht angebunden: `*_real.py` sind Gerüste mit TODO. Nichts hier sagt etwas über Übersetzungsqualität
 oder echte Verzögerung aus.
 
+## So wird es bedient (Kurzfassung)
+
+1. **Bedienplatz** im Browser öffnen (Adresse des Servers), Schlüssel eingeben, **„Sitzung starten“**.
+2. **QR-Code** zeigen. Zuhörer scannen ihn und **tippen auf ihre Sprache** (Ukrainisch, Arabisch, Englisch, Türkisch; Persisch optional).
+3. Mikrofon wählen, **„Senden starten“**, sprechen. Zuhörer sehen Untertitel und können den Ton (Kopfhörer) einschalten.
+4. **„Sitzung beenden“** löscht alles.
+
+Wo die Anwendung laufen soll, wie man sie aufruft und was dafür nötig ist (HTTPS, Domain): **`docs/betrieb.md`**
+(Empfehlung: auf dem gemieteten GPU-Server in Deutschland). Zum schnellen Ausprobieren ohne Server: `./start.sh`.
+
 ## Mikrofon testen (Etappe 0, Chromebook)
 
 1. Ordner `web/` auf das Chromebook bringen (z. B. USB-Stick oder Download) und `mic-test.html` im Chrome-Browser öffnen
@@ -24,25 +34,21 @@ ist **nicht geprüft** (geprüft nur: Chromium unter Linux). Über eine normale 
 ## Server starten (Mock, ohne GPU)
 
 ```bash
-cd server
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements-dev.txt
-export OPERATOR_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')"   # nicht ins Repo schreiben
-uvicorn app.main:create_app --factory --no-access-log
+./start.sh        # legt beim ersten Mal eine lokale Python-Umgebung an und zeigt einen Bedienschlüssel
 ```
 
-Dann `http://localhost:8000/` öffnen (Bedienplatz): Schlüssel eingeben, Sitzung starten, Links erzeugen, Mikrofon wählen,
-„Senden starten“. Zuhörer-Links auf anderen Geräten öffnen (Mikrofon nicht nötig). Dafür muss der Server im Netz erreichbar sein:
-`--host 0.0.0.0` anhängen (öffnet den Server im lokalen Netz, nur bewusst und in einem vertrauenswürdigen Netz tun). Die Mock-Stufen liefern Testsätze („[uk] Dies ist Testsatz Nummer 1.“) und einen
-Testton statt Sprache.
+Dann `http://localhost:8000/` öffnen. Für Handys im selben WLAN: `HOST=0.0.0.0 ./start.sh` und am Bedienplatz die Adresse
+des Rechners im Feld „Adresse für Zuhörer“ eintragen (Details: `docs/betrieb.md`). Die Mock-Stufen liefern Testsätze
+(„[uk] Dies ist Testsatz Nummer 1.“) und einen Testton statt Sprache.
 
+Von Hand: `cd server && pip install -r requirements-dev.txt && OPERATOR_KEY=... uvicorn app.main:create_app --factory --no-access-log`.
 Einstellungen: siehe `.env.example` (Kopie als `.env`, wird nie eingecheckt; Variablen müssen in der Umgebung stehen,
 der Server liest `.env` nicht selbst).
 
 ## Tests
 
 ```bash
-cd server && pytest                 # 90 Tests: Räume, Token-Ablauf, Nachrichtenformat, Zeitstempel,
+cd server && pytest                 # 103 Tests: Räume, Token-Ablauf, Sprachwahl, Nachrichtenformat, Zeitstempel,
                                     # Mock-Pipeline, WebSocket-Ende-zu-Ende, Header, Datenschutzprüfung der Web-Dateien
 node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest (siehe Kopfkommentar der Datei)
 ```
@@ -54,7 +60,7 @@ server/app/   main.py config.py rooms.py messages.py orchestrator.py security.py
 server/tests/ pytest (+ e2e/browser_smoke.js)
 web/          operator.html listener.html mic-test.html  js/ css/
 docker/       Dockerfile.gpu docker-compose.yml (nicht gebaut/getestet)
-docs/         architektur.md entscheidungen.md messprotokoll.md
+docs/         architektur.md entscheidungen.md messprotokoll.md betrieb.md
 ```
 
 ## Datenschutz in Kürze

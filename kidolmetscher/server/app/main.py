@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hmac
+import io
 import json
 import logging
 import time
@@ -17,8 +18,9 @@ from typing import Callable, Optional
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Header, HTTPException, WebSocket
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+import segno
 from pydantic import BaseModel
 
 from .config import Settings
@@ -27,7 +29,7 @@ from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FU
 from .orchestrator import Orchestrator
 from .pipeline import build_pipeline
 from .pipeline.base import Pipeline
-from .rooms import END, RoomError, RoomFullError, RoomManager, TokenError
+from .rooms import END, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
 from .security import BASE_HEADERS, build_csp, collect_page_hashes
 
 log = logging.getLogger("kidolmetscher")
@@ -43,9 +45,17 @@ MAX_AUDIO_QUEUE = 100             # Blocks; bei Rueckstau werden alte verworfen 
 REAPER_INTERVAL_S = 30
 
 
+class RoomRequest(BaseModel):
+    langs: Optional[list[str]] = None      # angebotene Sprachen; leer = alle aus TARGET_LANGS
+
+
 class LinkRequest(BaseModel):
-    lang: str
+    lang: Optional[str] = None             # None = Sammel-Link, Zuhoerer waehlt selbst
     ttl_s: Optional[int] = None
+
+
+class QrRequest(BaseModel):
+    url: str
 
 
 def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline] = None,
@@ -118,11 +128,24 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     async def healthz():
         return {"status": "ok"}
 
+    @app.get("/api/config")
+    async def public_config():
+        """Nur unkritische Werte, damit die Oberflaeche die Auswahl anzeigen kann."""
+        return {"langs": list(settings.target_langs), "default_langs": list(settings.default_langs),
+                "public_url": settings.public_url,
+                "listener_ttl_s": settings.listener_ttl_s,
+                "min_listener_ttl_s": settings.min_listener_ttl_s,
+                "max_listener_ttl_s": settings.max_listener_ttl_s}
+
     @app.post("/api/rooms")
-    async def create_room(x_operator_key: Optional[str] = Header(default=None)):
+    async def create_room(body: Optional[RoomRequest] = None,
+                          x_operator_key: Optional[str] = Header(default=None)):
         require_operator(x_operator_key)
-        room = rooms.create_room()
-        return {"room_id": room.id, "langs": list(settings.target_langs),
+        try:
+            room = rooms.create_room(body.langs if body else None)
+        except LanguageError as exc:
+            raise HTTPException(400, str(exc))
+        return {"room_id": room.id, "langs": list(room.langs),
                 "expires_in_s": settings.room_ttl_s, "sample_rate": settings.sample_rate,
                 "listener_ttl_s": settings.listener_ttl_s,
                 "min_listener_ttl_s": settings.min_listener_ttl_s,
@@ -139,8 +162,20 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         except RoomError as exc:
             raise HTTPException(400, str(exc))
         # Token im Fragment (#), damit er nie in Server-Logs oder Referrer landet.
-        return {"token": token, "path": f"/listener.html#t={token}", "lang": body.lang,
+        lang_part = f"&l={body.lang}" if body.lang else ""
+        return {"token": token, "path": f"/listener.html#t={token}{lang_part}", "lang": body.lang,
                 "expires_in_s": max(0, int(expires_at - clock()))}
+
+    @app.post("/api/qr")
+    async def qr_code(body: QrRequest, x_operator_key: Optional[str] = Header(default=None)):
+        """QR-Code als SVG. Die Adresse wird nicht gespeichert."""
+        require_operator(x_operator_key)
+        if len(body.url) > 400 or not body.url.startswith(("http://", "https://")):
+            raise HTTPException(400, "Ungueltige Adresse")
+        buf = io.BytesIO()
+        segno.make(body.url, error="m", micro=False).save(
+            buf, kind="svg", scale=8, border=2, dark="black", light="white", xmldecl=False)
+        return Response(content=buf.getvalue(), media_type="image/svg+xml")
 
     @app.get("/api/rooms/{room_id}/stats")
     async def stats(room_id: str, x_operator_key: Optional[str] = Header(default=None)):
@@ -249,19 +284,46 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             await ws.send_json(control_message("error", code="token_invalid"))
             return await safe_close(ws, WS_UNAUTHORIZED)
 
-        async def drain():             # erkennt, wenn der Client geht
+        def ready_message() -> dict:
+            return control_message(
+                "ready", lang=listener.lang, langs=list(room.langs),
+                rtl=listener.lang in RTL_LANGS,
+                expires_in_s=max(0, int(listener.expires_at - clock())))
+
+        def select(lang: object) -> bool:
+            """Sprache waehlen/wechseln; bei Erfolg kommen ready + letzte Untertitel in die Warteschlange."""
+            try:
+                room.select_language(listener, str(lang))
+            except RoomError:
+                listener.push(control_message("error", code="lang_invalid"))
+                return False
+            listener.push(ready_message())
+            for m in room.replay(listener.lang):
+                listener.push(m)
+            return True
+
+        async def drain():             # liest Auswahl-Nachrichten, erkennt, wenn der Client geht
             while True:
-                if (await ws.receive())["type"] == "websocket.disconnect":
+                msg = await ws.receive()
+                if msg["type"] == "websocket.disconnect":
                     return
+                try:
+                    data = json.loads(msg.get("text") or "")
+                except ValueError:
+                    continue
+                if isinstance(data, dict) and data.get("type") == "select":
+                    select(data.get("lang"))
 
         recv_task = asyncio.create_task(drain())
         get_task: Optional[asyncio.Task] = None
         try:
-            await ws.send_json(control_message(
-                "ready", lang=listener.lang, rtl=listener.lang in RTL_LANGS,
-                expires_in_s=max(0, int(listener.expires_at - clock()))))
-            for m in room.replay(listener.lang):
-                await ws.send_json(m)
+            if listener.lang is None and isinstance(hello.get("lang"), str):
+                if not select(hello["lang"]):       # z. B. nach Neuladen, Sprache nicht mehr angeboten
+                    listener.push(ready_message())
+            else:
+                await ws.send_json(ready_message())
+                for m in room.replay(listener.lang) if listener.lang else ():
+                    await ws.send_json(m)
             while True:
                 remaining = listener.expires_at - clock()
                 if remaining <= 0:

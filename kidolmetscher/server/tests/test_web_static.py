@@ -15,8 +15,9 @@ def test_webdateien_vorhanden():
 
 @pytest.mark.parametrize("p", FILES, ids=lambda p: str(p.relative_to(WEB)))
 def test_keine_externen_adressen(p):
-    assert not re.search(r"https?://|//cdn|@import\s+url\(", p.read_text(encoding="utf-8")), \
-        "externe Adresse gefunden (Regel 1: alles lokal)"
+    # Erlaubt sind nur Platzhalter-Beispiele im Text fuer lokale Adressen (localhost, private Netze).
+    pattern = r"https?://(?!(localhost|127\.|192\.168\.|10\.))|//cdn|@import\s+url\("
+    assert not re.search(pattern, p.read_text(encoding="utf-8")), "externe Adresse gefunden (Regel 1: alles lokal)"
 
 
 @pytest.mark.parametrize("p", FILES, ids=lambda p: str(p.relative_to(WEB)))

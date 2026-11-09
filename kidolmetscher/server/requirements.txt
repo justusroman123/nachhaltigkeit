@@ -1,3 +1,4 @@
 # Mindestversionen = in Etappe 1 getestete Staende. Echte Modelle (GPU) kommen spaeter dazu.
 fastapi>=0.162
 uvicorn[standard]>=0.54
+segno>=1.6          # QR-Code (SVG), BSD-Lizenz

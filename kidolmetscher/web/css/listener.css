@@ -2,11 +2,15 @@ html, body { height: 100%; }
 body { display: flex; flex-direction: column; }
 header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line);
          background: var(--card); flex-wrap: wrap; }
-#lang { font-weight: 600; font-size: 1.1rem; flex: 1 1 auto; }
+#lang { font-weight: 600; font-size: 1.2rem; flex: 1 1 auto; }
 #status { font-size: .9rem; }
-header button { min-width: 48px; font-size: 1.1rem; }
+header button { min-width: 52px; min-height: 48px; font-size: 1.2rem; }
 main { flex: 1 1 auto; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
        padding: 16px; gap: .8rem; }
 .sub { font-size: var(--fs, 2rem); line-height: 1.35; margin: 0; padding: .4rem 0; opacity: .55; }
 .sub:last-child { opacity: 1; }
-#msg { padding: 24px; text-align: center; font-size: 1.1rem; }
+#msg { padding: 24px; text-align: center; font-size: 1.4rem; }
+#picker { position: fixed; inset: 0; background: var(--bg); overflow: auto; padding: 24px 16px;
+          display: flex; flex-direction: column; gap: 14px; justify-content: center; align-items: stretch; }
+#picker .globe { text-align: center; font-size: 2.4rem; }
+#picker button { min-height: 72px; font-size: 1.7rem; font-weight: 600; width: 100%; max-width: 520px; margin: 0 auto; }

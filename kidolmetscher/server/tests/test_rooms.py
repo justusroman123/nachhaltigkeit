@@ -152,3 +152,37 @@ def test_zaehler_ohne_inhalte(mgr):
     room.publish("uk", {"text": "GEHEIM"})
     s = room.stats()
     assert s["counters"]["messages_out"] == 1 and "GEHEIM" not in str(s)
+
+
+def test_sammel_token_und_sprachwahl(mgr):
+    from app.rooms import LanguageError
+    room = mgr.create_room()
+    token, _ = room.create_listener_token()          # Sammel-Link
+    lst = room.attach_listener(token)
+    assert lst.lang is None and room.active_languages() == [] and room.listener_counts() == {}
+    room.select_language(lst, "tr")
+    assert room.active_languages() == ["tr"] and room.listener_counts() == {"tr": 1}
+    room.select_language(lst, "uk")                  # Wechsel
+    assert room.active_languages() == ["uk"]
+    with pytest.raises(LanguageError):
+        room.select_language(lst, "fa")              # nicht angeboten
+
+
+def test_fester_link_laesst_keinen_wechsel_zu(mgr):
+    from app.rooms import LanguageError
+    room = mgr.create_room()
+    lst = room.attach_listener(room.create_listener_token("uk")[0])
+    room.select_language(lst, "uk")
+    with pytest.raises(LanguageError):
+        room.select_language(lst, "en")
+
+
+def test_raum_mit_eigener_sprachliste(mgr):
+    from app.rooms import LanguageError
+    room = mgr.create_room(["en", "tr"])
+    assert room.langs == ("en", "tr")
+    with pytest.raises(RoomError):
+        room.create_listener_token("uk")
+    for bad in (["xx"], [], ["uk", "ru"]):           # unbekannt oder nicht in TARGET_LANGS
+        with pytest.raises(LanguageError):
+            mgr.create_room(bad)

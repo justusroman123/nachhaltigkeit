@@ -12,11 +12,15 @@
 <header>
   <span id="lang">…</span>
   <span id="status" class="muted" role="status"></span>
+  <button id="btnLang" aria-label="Sprache ändern" title="Sprache ändern">🌐</button>
   <button id="btnSound" aria-label="Ton ein/aus" title="Ton ein/aus">🔇</button>
   <button id="btnSmaller" aria-label="Schrift kleiner">A−</button>
   <button id="btnBigger" aria-label="Schrift größer">A+</button>
 </header>
 <main id="subs" aria-live="polite"></main>
+<div id="picker" hidden>
+  <div class="globe" aria-hidden="true">🌐</div>
+</div>
 <script src="js/listener.js"></script>
 </body>
 </html>

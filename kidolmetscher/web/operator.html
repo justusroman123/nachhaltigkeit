@@ -9,51 +9,70 @@
 <link rel="stylesheet" href="css/operator.css">
 </head>
 <body>
-<h1>Dolmetscher-Bedienplatz</h1>
-<p class="muted">Deutsch rein, Zielsprachen raus. Nichts wird gespeichert. <a href="mic-test.html">Mikrofon-Test</a></p>
+<header class="top">
+  <h1>Dolmetscher-Bedienplatz</h1>
+  <a href="mic-test.html">Mikrofon prüfen</a>
+</header>
 
-<section id="secRoom">
-  <h2>1. Sitzung</h2>
-  <label for="key">Bedienschlüssel (wird nicht gespeichert)</label>
-  <div class="row">
-    <input id="key" type="password" autocomplete="off" size="32">
-    <button id="btnCreate" class="primary">Sitzung starten</button>
-    <button id="btnEnd" disabled>Sitzung beenden</button>
-  </div>
+<main>
+<section id="stepStart" class="card">
+  <h2><span class="num">1</span> Sitzung starten</h2>
+  <label for="key">Bedienschlüssel</label>
+  <input id="key" type="password" autocomplete="off" placeholder="wird nicht gespeichert">
+  <fieldset>
+    <legend>Welche Sprachen sollen angeboten werden?</legend>
+    <div id="langs" class="chips"></div>
+  </fieldset>
+  <button id="btnCreate" class="big primary">▶ Sitzung starten</button>
   <p id="roomMsg" role="status"></p>
 </section>
 
-<section id="secLinks" hidden>
-  <h2>2. Zuhörer-Links</h2>
-  <div class="row">
-    <div id="langs"></div>
-    <label>Gültigkeit (Minuten) <input id="ttl" type="number" min="1" step="1" size="5"></label>
-    <button id="btnLinks" class="primary">Links erzeugen</button>
+<section id="stepInvite" class="card" hidden>
+  <h2><span class="num">2</span> Zuhörer einladen</h2>
+  <p>Zuhörer scannen den Code oder öffnen den Link und tippen auf ihre Sprache. Ein Link genügt für alle Sprachen.</p>
+  <div class="invite">
+    <img id="qr" alt="QR-Code zum Einladen der Zuhörer" width="220" height="220">
+    <div class="invite-side">
+      <code id="linkText"></code>
+      <div class="row">
+        <button id="btnCopy" class="big">Link kopieren</button>
+      </div>
+      <div class="row">
+        <label for="ttl">Link gültig für</label>
+        <select id="ttl"></select>
+        <button id="btnNewLink">Neuen Link erzeugen</button>
+      </div>
+      <label for="base">Adresse für Zuhörer (für Handys im Netz anpassen, z. B. http://192.168.0.5:8000)</label>
+      <input id="base" type="text" inputmode="url" autocomplete="off">
+      <p class="muted" id="linkInfo"></p>
+    </div>
   </div>
-  <p class="muted">Jeder Link gilt für genau eine Sprache und läuft ab. Ton erst nach Tippen auf 🔇 am Zuhörergerät.</p>
-  <div id="links"></div>
 </section>
 
-<section id="secMic" hidden>
-  <h2>3. Mikrofon</h2>
+<section id="stepMic" class="card" hidden>
+  <h2><span class="num">3</span> Sprechen</h2>
+  <label for="dev">Mikrofon</label>
+  <select id="dev"></select>
   <div class="row">
-    <select id="dev" aria-label="Audio-Eingang"></select>
-    <button id="btnStart" class="primary">Senden starten</button>
-    <button id="btnStop" disabled>Senden stoppen</button>
+    <button id="btnStart" class="big primary">🎙 Senden starten</button>
+    <button id="btnStop" class="big" disabled>⏸ Pause</button>
   </div>
   <div class="meter" aria-label="Pegel"><div id="level"></div></div>
   <p id="micMsg" role="status"></p>
 </section>
 
-<section id="secOut" hidden>
-  <h2>4. Ausgabe und Verzögerung</h2>
+<section id="stepLive" class="card" hidden>
+  <h2>Live</h2>
+  <p><strong id="statTotal">Noch keine Zuhörer verbunden.</strong></p>
+  <div id="statL" class="chips"></div>
   <table>
-    <tr><th>Zuhörer je Sprache</th><td id="statL">–</td></tr>
-    <tr><th>Letzte Verzögerung (t_out − t_audio_in)</th><td id="lat">unbekannt</td></tr>
+    <tr><th>Verzögerung (nur Server, ohne Netz und Mikrofon)</th><td id="lat">unbekannt</td></tr>
     <tr><th>Stufen ASR / MT / TTS / Ausgabe</th><td id="stages">unbekannt</td></tr>
   </table>
   <div id="log" aria-live="polite"></div>
+  <button id="btnEnd" class="danger">Sitzung beenden und alles löschen</button>
 </section>
+</main>
 <script src="js/operator.js"></script>
 </body>
 </html>

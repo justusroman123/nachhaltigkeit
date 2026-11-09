@@ -30,6 +30,10 @@ class RoomFullError(RoomError):
     pass
 
 
+class LanguageError(RoomError):
+    """Sprache nicht angeboten oder nicht erlaubt."""
+
+
 END = object()   # Marker in Zuhoererwarteschlange: Sitzung beendet
 
 
@@ -39,7 +43,7 @@ def _hash(token: str) -> str:
 
 @dataclass
 class TokenInfo:
-    lang: str
+    lang: Optional[str]          # None = Sammel-Link: Zuhoerer waehlt die Sprache selbst
     expires_at: float
 
 
@@ -47,9 +51,10 @@ class Listener:
     """Ein verbundener Zuhoerer. Langsame Clients verlieren alte Nachrichten, nie der Server."""
     _ids = itertools.count(1)
 
-    def __init__(self, lang: str, expires_at: float, maxsize: int = 50):
+    def __init__(self, fixed_lang: Optional[str], expires_at: float, maxsize: int = 50):
         self.id = next(Listener._ids)
-        self.lang = lang
+        self.fixed_lang = fixed_lang     # Sprache des Links (falls festgelegt)
+        self.lang: Optional[str] = fixed_lang   # aktuell gewaehlte Sprache, None bis zur Auswahl
         self.expires_at = expires_at
         self.queue: asyncio.Queue = asyncio.Queue(maxsize)
         self.dropped = 0
@@ -65,9 +70,11 @@ class Listener:
 
 
 class Room:
-    def __init__(self, room_id: str, settings: Settings, clock: Callable[[], float]):
+    def __init__(self, room_id: str, settings: Settings, clock: Callable[[], float],
+                 langs: Optional[tuple] = None):
         self.id = room_id
         self.settings = settings
+        self.langs: tuple[str, ...] = tuple(langs) if langs else tuple(settings.default_langs)
         self._clock = clock
         self.created_at = clock()
         self.expires_at = self.created_at + settings.room_ttl_s
@@ -80,10 +87,12 @@ class Room:
         self._seq = itertools.count(0)
 
     # --- Tokens ---
-    def create_listener_token(self, lang: str, ttl_s: Optional[int] = None) -> tuple[str, float]:
+    def create_listener_token(self, lang: Optional[str] = None,
+                              ttl_s: Optional[int] = None) -> tuple[str, float]:
+        """lang=None erzeugt einen Sammel-Link (alle Sprachen des Raums, Auswahl durch den Zuhoerer)."""
         self._ensure_open()
         s = self.settings
-        if lang not in SUPPORTED_LANGS or lang not in s.target_langs:
+        if lang is not None and (lang not in SUPPORTED_LANGS or lang not in self.langs):
             raise RoomError(f"Sprache nicht aktiviert: {lang}")
         ttl = s.listener_ttl_s if ttl_s is None else ttl_s
         if not (s.min_listener_ttl_s <= ttl <= s.max_listener_ttl_s):
@@ -123,16 +132,26 @@ class Room:
         self.counters["listeners_peak"] = max(self.counters["listeners_peak"], len(self._listeners))
         return lst
 
+    def select_language(self, listener: Listener, lang: str) -> None:
+        """Zuhoerer waehlt oder wechselt die Sprache (nur bei Sammel-Link)."""
+        if self.closed or listener.id not in self._listeners:
+            raise RoomError("Zuhoerer nicht mehr verbunden")
+        if lang not in self.langs:
+            raise LanguageError(f"Sprache nicht angeboten: {lang}")
+        if listener.fixed_lang is not None and lang != listener.fixed_lang:
+            raise LanguageError("Dieser Link gilt nur fuer eine Sprache")
+        listener.lang = lang
+
     def detach_listener(self, listener: Listener) -> None:
         self._listeners.pop(listener.id, None)
 
     def listener_counts(self) -> dict[str, int]:
-        c = Counter(l.lang for l in self._listeners.values())
+        c = Counter(l.lang for l in self._listeners.values() if l.lang is not None)
         return dict(c)
 
     def active_languages(self) -> list[str]:
         """Nur Sprachen mit mindestens einem Zuhoerer werden uebersetzt (spart GPU)."""
-        return sorted({l.lang for l in self._listeners.values()})
+        return sorted({l.lang for l in self._listeners.values() if l.lang is not None})
 
     def replay(self, lang: str) -> list[dict]:
         return list(self._ring.get(lang, ()))
@@ -177,6 +196,8 @@ class Room:
     def stats(self) -> dict:
         return {
             "room_open": not self.closed,
+            "langs": list(self.langs),
+            "listeners_connected": len(self._listeners),
             "operator_active": self.operator_active,
             "listeners": self.listener_counts(),
             "counters": dict(self.counters),
@@ -189,8 +210,12 @@ class RoomManager:
         self._clock = clock
         self._rooms: dict[str, Room] = {}
 
-    def create_room(self) -> Room:
-        room = Room(secrets.token_urlsafe(12), self.settings, self._clock)
+    def create_room(self, langs: Optional[list] = None) -> Room:
+        if langs is not None:
+            bad = [l for l in langs if l not in self.settings.target_langs]
+            if bad or not langs:
+                raise LanguageError(f"Sprachen nicht erlaubt oder leer: {bad or langs}")
+        room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs)
         self._rooms[room.id] = room
         return room
 

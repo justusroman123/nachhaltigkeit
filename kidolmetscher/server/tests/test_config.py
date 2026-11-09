@@ -9,7 +9,8 @@ def env(**kw):
 
 def test_defaults_aus_env():
     s = Settings.from_env(env())
-    assert s.asr_backend == "mock" and s.target_langs == ("uk", "ar", "en", "tr")
+    assert s.asr_backend == "mock" and s.target_langs == ("uk", "ar", "en", "tr", "fa")
+    assert s.default_langs == ("uk", "ar", "en", "tr")           # Persisch optional, nicht vorab gewaehlt
 
 
 def test_operator_key_pflicht():
@@ -27,8 +28,19 @@ def test_ungueltige_werte():
             Settings.from_env(env(**bad))
 
 
+def test_public_url():
+    assert Settings.from_env(env(PUBLIC_URL="https://d.example.org/")).public_url == "https://d.example.org"
+    assert Settings.from_env(env()).public_url == ""
+    with pytest.raises(ConfigError):
+        Settings.from_env(env(PUBLIC_URL="javascript:alert(1)"))
+
+
 def test_persisch_optional():
-    assert "fa" in Settings.from_env(env(TARGET_LANGS="uk,fa")).target_langs
+    s = Settings.from_env(env(TARGET_LANGS="uk,fa"))
+    assert "fa" in s.target_langs and s.default_langs == ("uk",)
+    assert Settings.from_env(env(TARGET_LANGS="uk,fa", DEFAULT_LANGS="uk,fa")).default_langs == ("uk", "fa")
+    with pytest.raises(ConfigError):
+        Settings.from_env(env(TARGET_LANGS="uk,en", DEFAULT_LANGS="uk,tr"))
 
 
 def test_env_example_ist_vollstaendig_und_ohne_geheimnisse():

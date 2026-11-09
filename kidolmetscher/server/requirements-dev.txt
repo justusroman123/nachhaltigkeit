@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=9.0
 httpx>=0.28
+# Optional: opencv-python-headless numpy  (nur damit der QR-Lesetest laeuft; sonst wird er uebersprungen)

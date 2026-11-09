@@ -1,21 +1,39 @@
-// Zuhoererseite: Untertitel + Ton. Speichert nichts (kein Storage, keine Cookies).
+// Zuhoererseite: Sprache waehlen, Untertitel + Ton. Speichert nichts (kein Storage, keine Cookies).
 (() => {
   'use strict';
   const NAMES = { uk: 'Українська', ar: 'العربية', en: 'English', tr: 'Türkçe', fa: 'فارسی' };
+  const RTL = ['ar', 'fa'];
   const MAX_LINES = 4;
   const $ = (id) => document.getElementById(id);
-  const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound');
+  const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker');
 
-  const m = /(?:^|[#&])t=([A-Za-z0-9_-]+)/.exec(location.hash);
-  const token = m ? m[1] : null;
-  let ws = null, retry = 0, ended = false, fontRem = 2;
-  let audioCtx = null, soundOn = false, nextStart = 0, wake = null;
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const token = /^[A-Za-z0-9_-]+$/.test(hash.get('t') || '') ? hash.get('t') : null;
+  let lang = NAMES[hash.get('l')] ? hash.get('l') : null;      // gewaehlte Sprache (nur im Arbeitsspeicher/URL)
+  let ws = null, retry = 0, ended = false, fontRem = 2, offered = [];
+  let audioCtx = null, soundOn = false, nextStart = 0;
 
   function status(text, cls) { statusEl.textContent = text; statusEl.className = cls || 'muted'; }
   function notice(text) {
     subs.replaceChildren();
     const d = document.createElement('div'); d.id = 'msg'; d.textContent = text; subs.appendChild(d);
   }
+
+  /* ---------- Sprachauswahl ---------- */
+  function showPicker(langs) {
+    picker.querySelectorAll('button').forEach((b) => b.remove());
+    langs.forEach((l) => {
+      const b = document.createElement('button');
+      b.textContent = NAMES[l] || l; b.lang = l; b.dir = RTL.includes(l) ? 'rtl' : 'ltr';
+      b.addEventListener('click', () => choose(l));
+      picker.appendChild(b);
+    });
+    picker.hidden = false;
+  }
+  function choose(l) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'select', lang: l }));
+  }
+  $('btnLang').addEventListener('click', () => showPicker(offered));
 
   /* ---------- Untertitel ---------- */
   function addLine(text, rtl) {
@@ -60,44 +78,51 @@
   });
 
   async function keepAwake() {
-    try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (_) {}
+    try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (_) {}
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !ended) keepAwake(); });
 
   /* ---------- Verbindung ---------- */
+  function end(text, cls, symbol) { ended = true; status(text, cls); picker.hidden = true; notice(symbol); }
+
   function connect() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(proto + '//' + location.host + '/ws/listener');
     status('Verbinde …');
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'hello', token }));
+    ws.onopen = () => ws.send(JSON.stringify({ type: 'hello', token, lang }));
     ws.onmessage = (ev) => {
       let d; try { d = JSON.parse(ev.data); } catch (_) { return; }
       if (d.type === 'ready') {
-        retry = 0;
-        langEl.textContent = NAMES[d.lang] || d.lang;
-        document.documentElement.lang = d.lang;
+        retry = 0; offered = d.langs || [];
         status('● live', 'ok');
-        if (!subs.children.length) notice('…');
         keepAwake();
+        if (!d.lang) { langEl.textContent = '🌐'; notice('…'); showPicker(offered); return; }
+        const changed = d.lang !== lang;
+        lang = d.lang;
+        picker.hidden = true;
+        langEl.textContent = NAMES[lang] || lang;
+        document.documentElement.lang = lang;
+        history.replaceState(null, '', '#t=' + token + '&l=' + lang);
+        if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
       } else if (d.type === 'translation') {
-        addLine(d.text, d.lang === 'ar' || d.lang === 'fa');
+        addLine(d.text, RTL.includes(d.lang));
         play(d.audio);
       } else if (d.type === 'session_end') {
-        ended = true; status('Ende', 'muted'); notice('✔'); 
+        end('Ende', 'muted', '✔');
       } else if (d.type === 'token_expired') {
-        ended = true; status('Link abgelaufen', 'bad'); notice('⏱');
+        end('Link abgelaufen', 'bad', '⏱');
       } else if (d.type === 'error') {
-        ended = true; status('Link ungültig', 'bad'); notice('⚠');
+        if (d.code === 'lang_invalid') status('Sprache nicht verfügbar', 'warn');
+        else end('Link ungültig', 'bad', '⚠');
       }
     };
     ws.onclose = () => {
       if (ended) return;
       status('Verbindung weg, neuer Versuch …', 'warn');
-      const wait = Math.min(10000, 1000 * 2 ** retry++);
-      setTimeout(connect, wait);
+      setTimeout(connect, Math.min(10000, 1000 * 2 ** retry++));
     };
   }
 
-  if (!token) { ended = true; status('Link ungültig', 'bad'); notice('⚠'); }
+  if (!token) end('Link ungültig', 'bad', '⚠');
   else connect();
 })();
