@@ -77,6 +77,7 @@ ob die Muttergesellschaft des Anbieters außerhalb der EU sitzt. Antworten dazu:
 - **Docker mit HTTPS:** `docker compose -f docker/docker-compose.yml --profile gpu up --build` startet die Anwendung (Dienst `gpu`, Modelle als Nur-lese-Volume `/models`) und davor Caddy (`docker/Caddyfile`).
   Nötig: `.env` mit `OPERATOR_KEY`, Umgebungsvariablen `BASE_IMAGE`, `DOMAIN`, `MODELS_DIR`. **Nicht gebaut und nicht getestet.**
 - **Firewall:** nur Vorschlag, nichts aktiviert: `docs/firewall-vorschlag.md`.
+- **Achtung Kosten:** Laut centron-Seite (gelesen 11.11.2026) laufen Kosten auch bei gestoppter Instanz weiter, bis sie gelöscht wird. „Server pausieren“ spart nach dieser Aussage **kein** Geld; verbindlich beim Anbieter klären.
 - **Kosten und Budget:** `docs/kosten.md`; Anzeige am Bedienplatz über `SERVER_HOURLY_EUR` und `BUDGET_EUR`.
 - **Vorführung:** Skript und Checkliste in `docs/vorfuehrung.md`.
 - Die Frage nach dem Anbieter ist damit beantwortet. Offen bleiben: Domain (Subdomain von kischub.de?) und Budgetgrenze (Vorschlag des Plans: 50 €).

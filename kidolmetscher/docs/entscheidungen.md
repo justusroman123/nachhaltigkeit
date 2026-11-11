@@ -42,12 +42,13 @@ nicht aus dem Gedächtnis eintragen.
 | opencv-python-headless 5.0.0.93 | nur optionaler QR-Lesetest | Apache 2.0 (Paket-Metadaten) | ja | nicht im Produkt |
 | pytest 9.2.0 | Tests | MIT | ja | nur Entwicklung |
 | httpx 0.28.1 | Tests | BSD-3-Clause | ja | nur Entwicklung |
-| Whisper large-v3 (Modellgewichte) | ASR | unbekannt | nein | Quelle des Modells festlegen, dann Lizenz lesen |
+| Whisper large-v3 (Modellgewichte) | ASR | Apache-2.0 | gelesen (Hugging-Face-Metadaten 11.11.2026) | frühere Annahme „MIT“ war falsch |
 | SimulStreaming | ASR-Streaming | MIT | gelesen | Autoren bitten kommerzielle Nutzer um einen Fragebogen |
 | WhisperLiveKit | ASR-Streaming | Apache-2.0 | gelesen | Deutsch dort nicht ausdrücklich bestätigt |
-| TranslateGemma 12B | MT | unbekannt | nein | Nutzungsbedingungen des Herstellers lesen, auch Vorgaben zur Weitergabe |
+| TranslateGemma 12B | MT | Gemma-Nutzungsbedingungen (`gemma`), Zugang manuell freizugeben | gelesen (Metadaten und Bedingungen 11.11.2026) | gehosteter Dienst gilt als „Distribution“: Pflichten siehe `docs/lizenzen-recherche.md`; Sprachen/Prompt-Format nicht lesbar |
+| NLLB-200 (600M, 1.3B) | MT-Option in WhisperLiveKit | **CC-BY-NC-4.0** | gelesen | nicht kommerziell |
 | Piper (Programm) | TTS | Nachfolger piper1-gpl: GPL-3.0; Original rhasspy/piper: MIT, archiviert 06.10.2025 | gelesen | Pflichten der GPL für unseren Einsatz klären; Projekt sucht Maintainer |
-| Piper-Stimmen je Sprache (uk, ar, en, tr, fa) | TTS | je Stimme verschieden (uk lada Apache 2.0, ukrainian_tts CC0, en_GB alba CC BY 4.0, de thorsten medium CC0; ryan/lessac nicht-kommerziell) | teilweise (Sekundärquelle) | ar_JO und tr_TR in den gelesenen Dokumenten nicht genannt: **ungeklärt**; MODEL_CARDs nicht gelesen (Netzsperre); für fa nennt der Plan keine Piper-Stimme |
+| Piper-Stimmen je Sprache (uk, ar, en, tr, fa) | TTS | uk lada Apache 2.0, ukrainian_tts CC0; **tr dfki CC BY-NC-SA 4.0 (nicht kommerziell)**; **ar kareem „See URL“, von lessac abgeleitet (ungeklärt)**; en alba CC BY 4.0, ryan CC BY-NC-SA 4.0; de thorsten medium CC0 | gelesen (MODEL_CARDs 11.11.2026) | Details und Vorbehalte: `docs/lizenzen-recherche.md`; für fa keine Piper-Stimme im Repository |
 | Chromium/Playwright | nur Testwerkzeug im Entwicklungs-Container | unbekannt | nein | nicht Teil des Produkts |
 
 ## Offene Fragen (Antwort unbekannt)

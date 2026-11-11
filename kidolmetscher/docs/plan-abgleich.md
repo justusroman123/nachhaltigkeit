@@ -11,8 +11,8 @@ Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** t
 | DJI am Chromebook prüfen | ○ | Hardware nötig. Werkzeug vorhanden: `web/mic-test.html` (✔ in Chromium mit Fake-Gerät). Anleitung in der README. |
 | Fallback 3,5-mm-Weg | ○ | Hardware. |
 | Tablets vorbereiten (Gastprofil, Updates, Kopfhörer-Anschluss), 2. Tablet, Kopfhörer | ○ | Checkliste in `docs/vorfuehrung.md`. |
-| Lizenzen klären (Piper-Stimmen, Gemma, NLLB) | ◐ | Teil gelesen (GitHub), Rest wegen Netzsperre nicht: `docs/lizenzen-recherche.md`. |
-| centron schriftlich fragen, STACKIT | ○ | Fragenliste vorbereitet (`docs/kosten.md`), nichts versendet. Anbieterseiten waren nicht abrufbar. |
+| Lizenzen klären (Piper-Stimmen, Gemma, NLLB) | ◐ | Gelesen (MODEL_CARDs, Metadaten, Gemma-Bedingungen): `docs/lizenzen-recherche.md`. **Ergebnis: Türkisch-Stimme nicht-kommerziell, Arabisch-Stimme ungeklärt, NLLB nicht-kommerziell.** Rechtliche Bewertung und Entscheidung 3 offen. |
+| centron schriftlich fragen, STACKIT | ◐ | centron-Seiten gelesen (Preis bestätigt, **gestoppt kostet laut Seite weiter**, Hallstadt, C5 Typ 1); AVV nicht gefunden. Fragenliste in `docs/kosten.md`, nichts versendet. STACKIT nicht gelesen. |
 | Muttersprachler anfragen | ○ | Bewertungsbogen vorbereitet: `docs/bewertungsbogen.md`. |
 
 ## Phase 1: Server aufsetzen (erst nach Abnahme Phase 0)
@@ -75,7 +75,7 @@ Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** t
 
 | Prompt | Status | Stand |
 | --- | --- | --- |
-| E Recherche | ◐ | GitHub-Teil gelesen (`docs/lizenzen-recherche.md`). Hugging Face, Google, centron, STACKIT: aus dieser Sitzung nicht erreichbar. |
+| E Recherche | ◐ | Gelesen: GitHub, Hugging Face (Piper-MODEL_CARDs, Modell-Metadaten), Gemma-Bedingungen, centron. Nicht gelesen: STACKIT, TranslateGemma-Modellkarte (gesperrt), Prohibited-Use-Policy (nicht ausgewertet), lessac-Lizenztext. |
 | F Webseiten testen | ✔ | Automatisiert mit Chromium, Ergebnis im Testbericht (19 Punkte ok). Echtes WLAN aus/an am Tablet: ○. |
 | G Vorführung vorbereiten | ◐ | Checkliste in `docs/vorfuehrung.md`; die automatisierbaren Schritte laufen im Browser-Test. |
 

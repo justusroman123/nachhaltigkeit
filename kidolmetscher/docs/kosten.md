@@ -1,7 +1,6 @@
 # Kosten und Budget (Stand 11.11.2026)
 
-**Alle Preise stammen aus dem Plan (Listenpreise, vom Plan als „belegt“ bzw. „Annahme“ gekennzeichnet). Ich habe sie nicht selbst geprüft
-(centron-Seiten waren aus dieser Sitzung nicht erreichbar). Nichts bestellt.**
+**Preise stammen aus dem Plan (Listenpreise). Die centron-Angaben habe ich am 11.11.2026 auf www.centron.de gegengelesen (siehe Abschnitt „Gegenlesen“), STACKIT nicht. Nichts bestellt.**
 
 | Posten | Preis laut Plan | Hinweis |
 | --- | --- | --- |
@@ -33,3 +32,13 @@ Das ist **nicht** die Laufzeit der gemieteten Maschine. Server nach jeder Sitzun
 5. Zertifizierungen (C5, ISO 27001) für die GPU-Instanzen?
 6. Welche Firewall ist dem Server vorgelagert; wird der Datenverkehr protokolliert und wie lange (Snapshots, Logs)?
 7. Welche CUDA-/Treiberversion hat das Standard-Image (bestimmt das Basis-Image für Docker)?
+
+## Gegenlesen der centron-Angaben (11.11.2026, www.centron.de, nur gelesen)
+
+- **Preis bestätigt:** RTX 6000 Ada 48 GB: 1,1919 € pro Stunde netto (Plan: 1,19 €); 858,19 € pro Monat bei Dauerbetrieb. Alle Preise netto.
+- **Zuschläge bestätigt, Höhe unbekannt:** vCPU, RAM und NVMe-Speicher kommen zu den ccloud³-Ressourcenpreisen hinzu; diese Preise habe ich nicht gelesen.
+- **Wichtig für das Budget: pausiert/gestoppt kostet laut Seite weiter.** Wörtlich sinngemäß: Gebühren fallen an, solange die Instanz existiert, auch wenn sie gestoppt ist; abgerechnet wird jede angefangene Stunde von der Erstellung bis zum Löschen.
+  Die Seite wirbt an anderer Stelle mit Start/Pause und stundengenauer Abrechnung („widerspricht sich“, wie der Plan vermerkt). **Für die Planung gilt vorsichtig: nur Löschen beendet die Kosten.**
+  Dann gehen Daten auf der Instanz verloren (Modelle müssten neu geladen werden, Zeit und Datenvolumen unbekannt). Verbindliche Auskunft beim Anbieter einholen (Frage 2 unten).
+- **Startguthaben:** 200 € in den ersten 60 Tagen für neue Konten (Angabe von centron; Bedingungen nicht gelesen). Das würde die geplanten rund 24 bis 26 € für die Demo-Stunden decken. Konto anlegen macht laut Plan Jonas.
+- Mit 1,1919 € statt 1,19 € ändern sich die Planrechnungen nur geringfügig (50 € ÷ 1,1919 € ≈ 41,9 Stunden ohne Zuschläge).
