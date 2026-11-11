@@ -9,3 +9,4 @@ __pycache__/
 # gesprochene Testsaetze und Platzhalter nicht einchecken
 tests/audio/*.wav
 tests/audio/platzhalter/
+docs/hoerproben/*.wav
