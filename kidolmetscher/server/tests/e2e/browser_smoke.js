@@ -59,6 +59,18 @@ const shot = async (page, name, opts = {}) => { if (SHOTS) await page.screenshot
     await p.click('#picker button[lang="' + wanted + '"]');
     await p.waitForSelector('#picker', { state: 'hidden' });
     await p.waitForFunction(() => document.getElementById('status').textContent.includes('live'));
+    await p.waitForSelector('#startScreen:not([hidden])');
+    if (listeners.length === 0) {
+      ok((await p.textContent('#btnStartSound')).includes('Торкніться'), '"Tippen zum Starten" erscheint in der gewaehlten Sprache (Ukrainisch)');
+      ok((await p.textContent('#startAi')).includes('штучним інтелектом'), 'KI-Hinweis in der gewaehlten Sprache');
+      await shot(p, 'listener-1b-start.png');
+      await p.click('#btnStartSound');                         // Ton-Freigabe per Tipp
+      ok((await p.textContent('#btnSound')) === '🔊', 'Ton ist erst nach dem Tippen an');
+    } else {
+      await p.click('#btnSubsOnly');
+      ok((await p.textContent('#btnSound')) === '🔇', 'ohne Tippen bleibt der Ton aus');
+    }
+    await p.waitForSelector('#startScreen', { state: 'hidden' });
     listeners.push(p);
   }
   ok(true, 'drei Zuhoerer haben ihre Sprache gewaehlt (uk, ar, ar)');
@@ -85,16 +97,28 @@ const shot = async (page, name, opts = {}) => { if (SHOTS) await page.screenshot
   await listeners[0].waitForFunction(() => { const s = document.querySelectorAll('.sub'); return s.length && s[s.length - 1].textContent.startsWith('[en]'); }, null, { timeout: 15000 });
   ok(true, 'Zuhoerer wechselt waehrend der Sitzung auf Englisch und bekommt englische Untertitel');
   await listeners[0].click('#btnSound');
-  ok((await listeners[0].textContent('#btnSound')) === '🔊', 'Ton laesst sich einschalten');
+  ok((await listeners[0].textContent('#btnSound')) === '🔇', 'Ton laesst sich ausschalten');
+  await listeners[0].fill('#vol', '0.5');
+  ok((await listeners[0].inputValue('#vol')) === '0.5', 'Lautstaerke-Regler vorhanden');
   await op.waitForSelector('#log div', { timeout: 5000 });
   const lat = await op.textContent('#lat');
   ok(/^\d+ ms/.test(lat), 'Bedienplatz zeigt Verzoegerung: ' + lat + ' | ' + await op.textContent('#stages'));
   ok((await op.textContent('#micMsg')).includes('Sendet'), 'Bedienplatz meldet: Sendet');
+  await op.waitForFunction(() => /ms/.test(document.getElementById('rtt').textContent), null, { timeout: 8000 });
+  ok(true, 'Ping/Netzlaufzeit am Bedienplatz: ' + await op.textContent('#rtt') + ' | ' + await op.textContent('#t1'));
+  ok(/Anwendung läuft seit/.test(await op.textContent('#cost')), 'Laufzeit-/Kostenzeile: ' + (await op.textContent('#cost')).slice(0, 60) + ' ...');
+  // Einzel-Link je Sprache mit QR
+  await op.click('#single summary');
+  await op.click('#singleList .link:nth-child(3) button');          // Englisch
+  await op.waitForFunction(() => { const i = document.querySelector('#singleList .qr-small'); return i && (i.src || '').startsWith('data:image/svg+xml'); });
+  const single = await op.$eval('#singleList code', (n) => n.textContent);
+  ok(/&l=en$/.test(single), 'Einzel-Link je Sprache mit QR-Code: ' + single.replace(/t=[^&]*/, 't=…'));
   await shot(op, 'operator-2-live.png', { fullPage: true });
 
   // Neuladen eines Zuhoerers behaelt die Sprache (steht in der Adresse, nichts wird gespeichert)
   await listeners[1].reload();
   await listeners[1].waitForFunction(() => document.getElementById('status').textContent.includes('live'));
+  await listeners[1].click('#btnSubsOnly');
   ok((await listeners[1].textContent('#lang')) === 'العربية', 'Nach Neuladen bleibt Arabisch gewaehlt');
 
   await op.click('#btnEnd');

@@ -22,7 +22,7 @@ class MockAsrStream:
 
     def _emit(self) -> AsrSegment:
         self._n += 1
-        seg = AsrSegment(text=f"Dies ist Testsatz Nummer {self._n}.", final=True,
+        seg = AsrSegment(text=f"Dies ist Testsatz Nummer {self._n} zur Probe.", final=True,
                          t_audio_in=self._first_in if self._first_in is not None else self._clock(),
                          t_asr=self._clock())
         self._acc, self._first_in = 0.0, None

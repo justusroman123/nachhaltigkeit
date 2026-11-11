@@ -107,3 +107,17 @@ Dafür gibt es noch keinen Messpunkt (siehe Messprotokoll, Abschnitt „Offene M
 - Kein Schutz gegen Dauer-Raten des Bedienschlüssels (nur Länge ≥ 16 Zeichen); bei Veröffentlichung ins Internet ergänzen.
 - Zuhörer-Obergrenze und Warteschlangengrößen sind Platzhalter, keine Messwerte.
 - Zeitstempel sind Wanduhr-Zeit des Servers (NTP-Sprünge möglich).
+
+## Ergänzungen vom 11.11.2026 (Abgleich mit dem Plan, siehe `docs/plan-abgleich.md`)
+
+- **Segmentierer** (`pipeline/segmenter.py`): nur bestätigte ASR-Textstücke; Schnitt am Satzende (Abkürzungen und ein-/zweistellige Ordnungszahlen zählen nicht)
+  oder nach `SEGMENT_MAX_WORDS` Wörtern, bevorzugt an Komma/Semikolon/Doppelpunkt.
+- **Rückstau je Sprache** (`orchestrator.py`): eigene Warteschlange und eigener Arbeiter je Sprache. Ab `TTS_SKIP_BACKLOG` wartenden Segmenten entfällt der Ton
+  (Untertitel kommen weiter), über `LANG_QUEUE_MAX` hinaus werden die ältesten Segmente verworfen. Zähler: `audio_skipped_backpressure`, `segments_dropped_backpressure`, `audio_dropped`.
+  Zuhörerseite: Ton wird ausgelassen, wenn mehr als 6 s Ton wartet.
+- **Netzmessung:** Bedienplatz sendet alle 2 s `ping`, Server antwortet `pong` mit demselben Zeitwert. Die Seite zeigt Ping und eine Schätzung für „Mikrofon bis Server“ (Plan-Messpunkt t1).
+- **Wiederverbinden des Bedienplatzes:** bei Verbindungsabbruch während des Sendens neuer Aufbau mit steigender Wartezeit, das Mikrofon läuft weiter.
+- **`POST /api/session`:** legt Sitzung an und liefert Sammel-Link sowie Links je Sprache (für Skripte und Plan-Prompt D).
+- **Kosten-Anzeige:** `GET /api/rooms/{id}/stats` enthält Laufzeit der Anwendung und optional `SERVER_HOURLY_EUR`/`BUDGET_EUR` (nur Bedienplatz).
+- **Zuhörerseite:** „Tippen zum Starten“ nach der Sprachwahl (einmalig, mit „Nur Untertitel“), Lautstärkeregler, KI-Hinweis in der gewählten Sprache, Link zum Datenschutz-Merkblatt.
+- **Abweichung vom Plan:** Token und Sprache der Zuhörer stehen in der ersten WebSocket-Nachricht (nicht in der Adresse), damit sie in keinem Protokoll landen.

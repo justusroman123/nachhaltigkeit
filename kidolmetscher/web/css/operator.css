@@ -31,3 +31,7 @@ table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
 td, th { padding: .35rem .4rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 #log { max-height: 240px; overflow: auto; margin-top: .6rem; }
 #log div { padding: .3rem 0; border-bottom: 1px solid var(--line); }
+details { margin-top: 1rem; }
+summary { cursor: pointer; padding: .4rem 0; }
+.single-out { flex: 1 1 100%; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.qr-small { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 4px; }

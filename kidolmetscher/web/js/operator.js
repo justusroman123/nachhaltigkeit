@@ -12,9 +12,11 @@
     langs: $('langs'), qr: $('qr'), linkText: $('linkText'), copy: $('btnCopy'), ttl: $('ttl'),
     newLink: $('btnNewLink'), base: $('base'), linkInfo: $('linkInfo'), dev: $('dev'), start: $('btnStart'), stop: $('btnStop'),
     level: $('level'), micMsg: $('micMsg'), statTotal: $('statTotal'), statL: $('statL'), lat: $('lat'),
-    stages: $('stages'), log: $('log') };
+    stages: $('stages'), log: $('log'), singleList: $('singleList'), rtt: $('rtt'), t1: $('t1'),
+    backlog: $('backlog'), cost: $('cost') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
+  let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [];
 
   const api = (method, path, body) => fetch(path, {
     method, headers: { 'X-Operator-Key': key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -57,6 +59,7 @@
     e.stepStart.hidden = true;
     [e.stepInvite, e.stepMic, e.stepLive].forEach((s) => { s.hidden = false; });
     await createInvite();
+    renderSingleLinks();
     await listDevices();
     statTimer = setInterval(pollStats, 2000); pollStats();
   });
@@ -70,7 +73,8 @@
     e.log.replaceChildren(); e.statL.replaceChildren(); e.qr.removeAttribute('src'); e.linkText.textContent = '';
     [e.stepInvite, e.stepMic, e.stepLive].forEach((s) => { s.hidden = true; });
     e.stepStart.hidden = false;
-    say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht.', 'ok');
+    say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt beenden oder pausieren (Kosten laufen sonst weiter) und auf den Tablets den Browserverlauf löschen.', 'ok');
+    e.cost.textContent = ''; rtts = [];
   }
 
   /* ---------- Einladung: Link + QR ---------- */
@@ -89,6 +93,36 @@
     } catch (_) { /* Link bleibt nutzbar */ }
   }
   e.newLink.addEventListener('click', createInvite);
+
+  // Einzel-Link je Sprache (Plan, Phase 4: QR-Code und Link je Sprache)
+  function renderSingleLinks() {
+    e.singleList.replaceChildren();
+    room.langs.forEach((l) => {
+      const row = document.createElement('div'); row.className = 'link';
+      const name = document.createElement('strong'); name.textContent = SHORT[l] || l;
+      const btn = document.createElement('button'); btn.textContent = 'Link und QR-Code erzeugen';
+      const out = document.createElement('div'); out.className = 'single-out';
+      btn.addEventListener('click', async () => {
+        const r = await api('POST', '/api/rooms/' + room.room_id + '/listener-links', { lang: l, ttl_s: Number(e.ttl.value) });
+        if (!r.ok) return say(out, 'Fehler ' + r.status, 'bad');
+        const d = await r.json();
+        const url = e.base.value.trim().replace(/\/+$/, '') + d.path;
+        out.replaceChildren();
+        const code = document.createElement('code'); code.textContent = url;
+        const copy = document.createElement('button'); copy.textContent = 'Kopieren';
+        copy.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(url); copy.textContent = 'Kopiert ✓'; } catch (_) { copy.textContent = 'Von Hand markieren'; }
+        });
+        const img = document.createElement('img'); img.width = 140; img.height = 140; img.alt = 'QR-Code ' + (SHORT[l] || l); img.className = 'qr-small';
+        out.append(code, copy, img);
+        try {
+          const q = await api('POST', '/api/qr', { url });
+          if (q.ok) img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(await q.text());
+        } catch (_) {}
+      });
+      row.append(name, btn, out); e.singleList.appendChild(row);
+    });
+  }
   e.copy.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(e.linkText.textContent); e.copy.textContent = 'Kopiert ✓'; }
     catch (_) { e.copy.textContent = 'Bitte Link von Hand markieren'; }
@@ -114,19 +148,45 @@
     say(e.micMsg, dji ? 'DJI-Mikrofon erkannt und gewählt.' : 'Bitte das Mikrofon in der Liste prüfen.', dji ? 'ok' : 'warn');
   }
 
-  e.start.addEventListener('click', () => {
-    if (ws) return;
+  // Verbindung zum Server; bei Abbruch waehrend des Sendens automatisch neu verbinden (Mikrofon laeuft weiter)
+  function connectOperator() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(proto + '//' + location.host + '/ws/operator');
-    ws.binaryType = 'arraybuffer';
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'hello', room_id: room.room_id, operator_key: key }));
-    ws.onclose = () => { if (ws) { ws = null; stopSending(); say(e.micMsg, 'Verbindung zum Server beendet.', 'warn'); } };
-    ws.onmessage = async (ev) => {
-      const d = JSON.parse(ev.data);
-      if (d.type === 'ready') { await startCapture(d.sample_rate); }
-      else if (d.type === 'translation') showMessage(d);
+    const sock = new WebSocket(proto + '//' + location.host + '/ws/operator');
+    ws = sock;
+    sock.binaryType = 'arraybuffer';
+    sock.onopen = () => sock.send(JSON.stringify({ type: 'hello', room_id: room.room_id, operator_key: key }));
+    sock.onclose = () => {
+      clearInterval(pingTimer);
+      if (ws !== sock) return;                       // bewusst beendet
+      ws = null;
+      if (wantSending && room) {
+        say(e.micMsg, 'Verbindung zum Server weg, neuer Versuch … (Mikrofon läuft weiter)', 'warn');
+        setTimeout(() => { if (wantSending && room && !ws) connectOperator(); }, Math.min(8000, 1000 * 2 ** wsRetry++));
+      } else { stopSending(); say(e.micMsg, 'Verbindung zum Server beendet.', 'warn'); }
     };
-  });
+    sock.onmessage = async (ev) => {
+      const d = JSON.parse(ev.data);
+      if (d.type === 'ready') {
+        wsRetry = 0;
+        if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, sendet.', 'ok');
+        clearInterval(pingTimer);
+        pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
+      } else if (d.type === 'translation') showMessage(d);
+      else if (d.type === 'pong') showPing(performance.now() - d.t);
+    };
+  }
+  e.start.addEventListener('click', () => { if (ws) return; wantSending = true; wsRetry = 0; connectOperator(); });
+
+  function showPing(rtt) {
+    rtts.push(rtt); if (rtts.length > 10) rtts.shift();
+    const sorted = [...rtts].sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)];
+    e.rtt.textContent = Math.round(rtt) + ' ms (Median der letzten ' + rtts.length + ': ' + Math.round(med) + ' ms)';
+    // Schaetzung: halber Ping + 50 ms Blockgroesse + Eingangslatenz des Browsers (Annahme, keine Messung der echten Strecke)
+    const base = ctx && ctx.baseLatency ? ctx.baseLatency * 1000 : 0;
+    const est = med / 2 + 50 + base;
+    e.t1.textContent = '≈ ' + Math.round(est) + ' ms (Schätzung)';
+    e.t1.className = est <= 300 ? 'ok' : 'warn';
+  }
 
   async function startCapture(rate) {
     try {
@@ -152,6 +212,7 @@
   }
 
   function stopSending() {
+    wantSending = false; clearInterval(pingTimer);
     if (ws) { const w = ws; ws = null; try { w.send(JSON.stringify({ type: 'end' })); } catch (_) {} w.close(); }
     if (node) { node.disconnect(); node = null; }
     if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
@@ -174,6 +235,24 @@
     while (e.log.children.length > 30) e.log.removeChild(e.log.lastElementChild);
   }
 
+  function showCost(s) {
+    const h = Math.floor(s.server_uptime_s / 3600), m = Math.floor((s.server_uptime_s % 3600) / 60);
+    let text = 'Anwendung läuft seit ' + h + ' h ' + String(m).padStart(2, '0') + ' min. ';
+    let cls = 'muted';
+    if (s.server_hourly_eur) {
+      const eur = s.server_uptime_s / 3600 * s.server_hourly_eur;
+      text += 'Geschätzte Serverkosten seit Programmstart: ' + eur.toFixed(2).replace('.', ',') + ' € netto (ohne Zuschläge, Stundenpreis ' +
+        String(s.server_hourly_eur).replace('.', ',') + ' €).';
+      if (s.budget_eur) {
+        text += ' Budget ' + s.budget_eur + ' €.';
+        if (eur >= s.budget_eur) { cls = 'bad'; text += ' BUDGET ERREICHT: Server beenden oder pausieren!'; }
+        else if (eur >= 0.8 * s.budget_eur) { cls = 'warn'; text += ' Über 80 % des Budgets.'; }
+      }
+    } else text += 'Kosten: unbekannt (SERVER_HOURLY_EUR nicht gesetzt).';
+    text += ' Gezählt wird die Laufzeit dieser Anwendung, nicht die der gemieteten Maschine.';
+    e.cost.textContent = text; e.cost.className = cls;
+  }
+
   async function pollStats() {
     if (!room) return;
     try {
@@ -184,6 +263,10 @@
       e.statTotal.textContent = s.listeners_connected === 0 ? 'Noch keine Zuhörer verbunden.'
         : s.listeners_connected + ' Zuhörer verbunden' +
           (s.listeners_connected > chosen ? ' (' + (s.listeners_connected - chosen) + ' wählen gerade ihre Sprache)' : '') + '.';
+      const c = s.counters || {};
+      e.backlog.textContent = (c.audio_skipped_backpressure || 0) + ' / ' + (c.segments_dropped_backpressure || 0) +
+        ((c.audio_dropped || 0) ? ' (Audio-Blöcke verworfen: ' + c.audio_dropped + ')' : '');
+      showCost(s);
       e.statL.replaceChildren();
       Object.entries(s.listeners).forEach(([l, c]) => {
         const chip = document.createElement('span'); chip.className = 'chip static';

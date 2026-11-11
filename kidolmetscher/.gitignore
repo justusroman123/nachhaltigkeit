@@ -5,4 +5,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
-docs/drive-export/
+
+# gesprochene Testsaetze und Platzhalter nicht einchecken
+tests/audio/*.wav
+tests/audio/platzhalter/

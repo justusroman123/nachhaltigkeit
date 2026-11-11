@@ -47,6 +47,11 @@
       <p class="muted" id="linkInfo"></p>
     </div>
   </div>
+  <details id="single">
+    <summary>Einzel-Links je Sprache (z. B. für fest zugeordnete Tablets)</summary>
+    <p class="muted">Ein Einzel-Link öffnet direkt eine Sprache, ohne Auswahl.</p>
+    <div id="singleList"></div>
+  </details>
 </section>
 
 <section id="stepMic" class="card" hidden>
@@ -68,7 +73,11 @@
   <table>
     <tr><th>Verzögerung (nur Server, ohne Netz und Mikrofon)</th><td id="lat">unbekannt</td></tr>
     <tr><th>Stufen ASR / MT / TTS / Ausgabe</th><td id="stages">unbekannt</td></tr>
+    <tr><th>Netz hin und zurück (Ping zum Server)</th><td id="rtt">unbekannt</td></tr>
+    <tr><th>Mikrofon bis Server, geschätzt (Zielwert unter 300 ms)</th><td id="t1">unbekannt</td></tr>
+    <tr><th>Rückstau (Ton ausgelassen / Segmente verworfen)</th><td id="backlog">unbekannt</td></tr>
   </table>
+  <p id="cost" class="muted"></p>
   <div id="log" aria-live="polite"></div>
   <button id="btnEnd" class="danger">Sitzung beenden und alles löschen</button>
 </section>

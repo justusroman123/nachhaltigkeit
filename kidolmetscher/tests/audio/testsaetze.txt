@@ -1,0 +1,11 @@
+# Erfundene deutsche Testsaetze (Plan, Prompt C). Keine echten Namen oder Daten.
+# Dateiname je Zeile: satz01.wav ... satz08.wav (16 kHz, mono, 16 Bit), Nummer = Zeilenreihenfolge.
+# Format: Kennung | Art | Text
+satz01 | kurz | Guten Tag, willkommen zur Vorführung.
+satz02 | kurz | Bitte nehmen Sie Platz.
+satz03 | lang | Heute zeigen wir Ihnen, wie ein gesprochener Vortrag in Echtzeit in mehrere Sprachen übersetzt wird, damit alle Anwesenden den Inhalt ohne Wartezeit verfolgen können.
+satz04 | lang | Wenn Sie Fragen haben, melden Sie sich bitte am Ende des Vortrags, und wir beantworten sie der Reihe nach.
+satz05 | Zahlen | Der Termin findet am 14. März um 9 Uhr 30 im Raum 204 statt, und es sind 85 Plätze frei.
+satz06 | Zahlen | Die Teilnahme kostet 12 Euro 50, ermäßigt 7 Euro.
+satz07 | Eigennamen | Frau Beispielmann und Herr Musterfeld aus Teststadt begrüßen die Gäste im Haus der Erfindungen.
+satz08 | Fachwort | Die Spracherkennung wandelt Audio in Text um, danach folgen Übersetzung und Sprachausgabe.

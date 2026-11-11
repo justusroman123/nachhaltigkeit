@@ -1,22 +1,35 @@
-// Zuhoererseite: Sprache waehlen, Untertitel + Ton. Speichert nichts (kein Storage, keine Cookies).
+// Zuhoererseite: Sprache waehlen, "Tippen zum Starten", Untertitel + Ton. Speichert nichts (kein Storage, keine Cookies).
 (() => {
   'use strict';
   const NAMES = { uk: 'Українська', ar: 'العربية', en: 'English', tr: 'Türkçe', fa: 'فارسی' };
   const RTL = ['ar', 'fa'];
   const MAX_LINES = 4;
+  const MAX_AUDIO_BACKLOG_S = 6;      // Rueckstau: mehr wartender Ton wird verworfen, Untertitel laufen weiter
   const $ = (id) => document.getElementById(id);
-  const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker');
+  const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker'),
+        startScreen = $('startScreen'), vol = $('vol');
 
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const token = /^[A-Za-z0-9_-]+$/.test(hash.get('t') || '') ? hash.get('t') : null;
   let lang = NAMES[hash.get('l')] ? hash.get('l') : null;      // gewaehlte Sprache (nur im Arbeitsspeicher/URL)
-  let ws = null, retry = 0, ended = false, fontRem = 2, offered = [];
-  let audioCtx = null, soundOn = false, nextStart = 0;
+  let ws = null, retry = 0, ended = false, fontRem = 2, offered = [], startShown = false;
+  let audioCtx = null, gain = null, soundOn = false, nextStart = 0;
 
+  const t = () => STRINGS[lang] || STRINGS.de;
   function status(text, cls) { statusEl.textContent = text; statusEl.className = cls || 'muted'; }
   function notice(text) {
     subs.replaceChildren();
     const d = document.createElement('div'); d.id = 'msg'; d.textContent = text; subs.appendChild(d);
+  }
+
+  /* ---------- Hinweis (KI) und Texte in der gewaehlten Sprache ---------- */
+  function applyStrings() {
+    const s = t(), dir = RTL.includes(lang) ? 'rtl' : 'ltr';
+    $('aiText').textContent = s.ai; $('privacyLink').textContent = s.privacy;
+    $('notice').dir = dir;
+    $('btnStartSound').textContent = '🔊  ' + s.start; $('btnSubsOnly').textContent = s.subsOnly;
+    $('startAi').textContent = s.ai; startScreen.dir = dir;
+    vol.setAttribute('aria-label', s.volume); vol.title = s.volume;
   }
 
   /* ---------- Sprachauswahl ---------- */
@@ -59,23 +72,26 @@
   }
   async function play(audio) {
     if (!soundOn || !audioCtx || !audio) return;
+    if (nextStart - audioCtx.currentTime > MAX_AUDIO_BACKLOG_S) return;     // zu viel Rueckstau: Ton auslassen
     try {
       const buf = await audioCtx.decodeAudioData(b64ToBuf(audio.data_b64));
       const src = audioCtx.createBufferSource();
-      src.buffer = buf; src.connect(audioCtx.destination);
-      const at = Math.max(audioCtx.currentTime + 0.05, nextStart);
+      src.buffer = buf; src.connect(gain);
+      const at = Math.max(audioCtx.currentTime + 0.05, nextStart);            // Warteschlange: nie ueberlappen
       src.start(at); nextStart = at + buf.duration;
     } catch (_) { /* defektes Audio ueberspringen */ }
   }
-  btnSound.addEventListener('click', async () => {
-    if (!soundOn) {
-      audioCtx = audioCtx || new AudioContext();    // erst nach Tipp erlaubt (Autoplay-Regeln)
-      await audioCtx.resume();
-      soundOn = true; btnSound.textContent = '🔊';
-    } else {
-      soundOn = false; btnSound.textContent = '🔇'; nextStart = 0;
-    }
-  });
+  async function enableSound() {
+    audioCtx = audioCtx || new AudioContext();    // erst nach Tipp erlaubt (Autoplay-Regeln der Tablets)
+    if (!gain) { gain = audioCtx.createGain(); gain.connect(audioCtx.destination); gain.gain.value = Number(vol.value); }
+    await audioCtx.resume();
+    soundOn = true; btnSound.textContent = '🔊';
+  }
+  function disableSound() { soundOn = false; btnSound.textContent = '🔇'; nextStart = 0; }
+  btnSound.addEventListener('click', () => (soundOn ? disableSound() : enableSound()));
+  vol.addEventListener('input', () => { if (gain) gain.gain.value = Number(vol.value); });
+  $('btnStartSound').addEventListener('click', async () => { await enableSound(); startScreen.hidden = true; });
+  $('btnSubsOnly').addEventListener('click', () => { startScreen.hidden = true; });
 
   async function keepAwake() {
     try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (_) {}
@@ -83,7 +99,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !ended) keepAwake(); });
 
   /* ---------- Verbindung ---------- */
-  function end(text, cls, symbol) { ended = true; status(text, cls); picker.hidden = true; notice(symbol); }
+  function end(text, cls, symbol) { ended = true; status(text, cls); picker.hidden = true; startScreen.hidden = true; notice(symbol); }
 
   function connect() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -102,8 +118,10 @@
         picker.hidden = true;
         langEl.textContent = NAMES[lang] || lang;
         document.documentElement.lang = lang;
+        applyStrings();
         history.replaceState(null, '', '#t=' + token + '&l=' + lang);
         if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
+        if (!startShown) { startShown = true; startScreen.hidden = false; }   // einmal: "Tippen zum Starten"
       } else if (d.type === 'translation') {
         addLine(d.text, RTL.includes(d.lang));
         play(d.audio);
@@ -123,6 +141,7 @@
     };
   }
 
+  applyStrings();
   if (!token) end('Link ungültig', 'bad', '⚠');
   else connect();
 })();

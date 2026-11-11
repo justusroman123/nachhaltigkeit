@@ -1,3 +1,4 @@
+import concurrent.futures
 import contextlib
 import dataclasses
 
@@ -38,12 +39,22 @@ def make_settings(**kw) -> Settings:
                  listener_ttl_s=60, ring_buffer_size=3), **kw).validate()
 
 
+class _WsStack(contextlib.ExitStack):
+    """Schliesst Test-WebSockets. Der Starlette-Testclient bricht den Server-Handler beim Schliessen ab, auch wenn dieser
+    noch aufraeumt; das fuehrt sporadisch zu CancelledError beim Schliessen und ist kein Fehler der Anwendung."""
+    def __exit__(self, *exc):
+        try:
+            return super().__exit__(*exc)
+        except concurrent.futures.CancelledError:
+            return False
+
+
 @contextlib.contextmanager
 def app_client(settings, clock=None):
     """TestClient, der alle geoeffneten WebSockets vor dem Beenden schliesst."""
     kw = {"clock": clock} if clock else {}
     with TestClient(create_app(settings, **kw)) as c:
-        c.stack = contextlib.ExitStack()
+        c.stack = _WsStack()
         try:
             yield c
         finally:

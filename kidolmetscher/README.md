@@ -39,7 +39,7 @@ ist **nicht geprüft** (geprüft nur: Chromium unter Linux). Über eine normale 
 
 Dann `http://localhost:8000/` öffnen. Für Handys im selben WLAN: `HOST=0.0.0.0 ./start.sh` und am Bedienplatz die Adresse
 des Rechners im Feld „Adresse für Zuhörer“ eintragen (Details: `docs/betrieb.md`). Die Mock-Stufen liefern Testsätze
-(„[uk] Dies ist Testsatz Nummer 1.“) und einen Testton statt Sprache.
+(„[uk] Dies ist Testsatz Nummer 1 zur Probe.“) und einen Testton statt Sprache.
 
 Von Hand: `cd server && pip install -r requirements-dev.txt && OPERATOR_KEY=... uvicorn app.main:create_app --factory --no-access-log`.
 Einstellungen: siehe `.env.example` (Kopie als `.env`, wird nie eingecheckt; Variablen müssen in der Umgebung stehen,
@@ -48,10 +48,21 @@ der Server liest `.env` nicht selbst).
 ## Tests
 
 ```bash
-cd server && pytest                 # 103 Tests: Räume, Token-Ablauf, Sprachwahl, Nachrichtenformat, Zeitstempel,
+cd server && pytest                 # 151 Tests: Räume, Token-Ablauf, Sprachwahl, Segmentierer, Rückstau, Nachrichtenformat, Zeitstempel, Messhilfen,
                                     # Mock-Pipeline, WebSocket-Ende-zu-Ende, Header, Datenschutzprüfung der Web-Dateien
 node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest (siehe Kopfkommentar der Datei)
 ```
+
+## Skripte (Messen und Testen ohne Mikrofon)
+
+```bash
+python3 scripts/make_placeholder_audio.py     # Platzhalter-Audio (kein Sprechen) aus tests/audio/testsaetze.txt
+scripts/smoke_test.sh                          # laedt jede Stufe, verarbeitet einen Satz, zeigt Zeit und VRAM
+python3 scripts/bench_asr.py|bench_mt.py|bench_tts.py|bench_load.py [--write]   # Messungen (Plan, Phase 2)
+OPERATOR_KEY=... python3 scripts/fake_speaker.py --wav tests/audio/platzhalter/satz03.wav --langs uk,en   # Rundlauf mit Zeitstempeln
+```
+
+Die Messskripte schreiben bei Mock-Backend **nicht** ins Messprotokoll. Backend je Stufe: `ASR_BACKEND`, `MT_BACKEND`, `TTS_BACKEND`.
 
 ## Aufbau
 
@@ -60,7 +71,9 @@ server/app/   main.py config.py rooms.py messages.py orchestrator.py security.py
 server/tests/ pytest (+ e2e/browser_smoke.js)
 web/          operator.html listener.html mic-test.html  js/ css/
 docker/       Dockerfile.gpu docker-compose.yml (nicht gebaut/getestet)
-docs/         architektur.md entscheidungen.md messprotokoll.md betrieb.md
+scripts/      Messskripte, fake_speaker, Rauchtest
+docs/         architektur.md entscheidungen.md messprotokoll.md betrieb.md plan-abgleich.md lizenzen-recherche.md
+              kosten.md bewertungsbogen.md vorfuehrung.md firewall-vorschlag.md testberichte/
 ```
 
 ## Datenschutz in Kürze
@@ -72,4 +85,4 @@ keine externen Ressourcen, strenge CSP, Zuhörer-Links mit Zufalls-Token und Abl
 ## Offen
 
 TLS für den Bedienplatz auf entferntem Server, echte Modelle und Lizenzen, Messungen mit GPU, Test auf Zuhörer-Tablets
-(Safari/iPad), Docker-Build. Siehe `docs/entscheidungen.md` und `docs/messprotokoll.md`.
+(Safari/iPad), Docker-Build. Siehe `docs/plan-abgleich.md` (Stand je Planpunkt), `docs/entscheidungen.md` und `docs/messprotokoll.md`.

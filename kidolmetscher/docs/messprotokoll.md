@@ -44,3 +44,33 @@ Aufbau: Cloud-Container, Chromium mit Fake-Mikrofon (Testton), Mock-Stufen, Mock
 | Ende-zu-Ende (Sprecher -> Ohr) | externe Messung (z. B. Klatsch-Test mit Stoppuhr/Video), Methode noch festlegen | unbekannt |
 | GPU-Speicher und -Auslastung | `nvidia-smi` während des Betriebs | unbekannt |
 | Maximale Zuhörerzahl je Raum | Lasttest | unbekannt |
+
+## D. Zielwerte aus dem Plan (Abschnitt 5)
+
+| Messpunkt | Zielwert laut Plan | Ergebnis |
+| --- | --- | --- |
+| t1 Audio im Browser bis Server | unter 0,3 s | unbekannt (Schätzung am Bedienplatz: halber Ping + 50 ms Blockgröße + Eingangslatenz; keine Messung der echten Strecke) |
+| t2 Spracherkennung (Satzteil stabil) | offen | unbekannt |
+| t3 Übersetzung je Sprache | offen | unbekannt |
+| t4 Sprachausgabe je Sprache | offen | unbekannt |
+| Gesamt Sprecher bis Untertitel (t1 bis t3) | 3–5 s | unbekannt |
+| Gesamt Sprecher bis Ton (t1 bis t4) | nahe 5 s | unbekannt |
+| VRAM belegt bei 4 Sprachen | unter 48 GB mit Reserve | unbekannt |
+| Qualität uk / ar / en / tr (Muttersprachler, Skala 1–5) | mindestens 4 | unbekannt (Bogen: `docs/bewertungsbogen.md`) |
+| Direkt vs. Umweg über Englisch | besserer Weg je Sprache | unbekannt (`scripts/bench_mt.py`) |
+| Ausfälle in 10 Minuten | 0 | unbekannt |
+
+Annahme der Skripte: Das Gesamtbudget von 5000 ms wird gleichmäßig auf ASR, MT und TTS verteilt (je 1666 ms). Das ist **keine Planvorgabe**, nur ein Markierungs-Schwellenwert („ZU HOCH“).
+
+## E. Messwerkzeuge (Plan, Prompt C)
+
+| Skript | Misst | Hinweis |
+| --- | --- | --- |
+| `scripts/bench_asr.py` | Zeit bis erstes Wort, Ende-Verzögerung, Wortfehlerrate je Testsatz | Echtzeit-Wiedergabe als Standard; `--fast` macht Latenzwerte ungültig |
+| `scripts/bench_mt.py` | Zeit je Satz und Sprache, Wege direkt und über Englisch | Qualität wird nicht gemessen |
+| `scripts/bench_tts.py` | Zeit bis Audio je Stimme | Hörprobe separat |
+| `scripts/bench_load.py` | 4 Übersetzungen und 4 Stimmen gleichzeitig, VRAM vorher/nachher | |
+| `scripts/smoke_test.sh` | lädt jede Stufe, verarbeitet einen Satz | |
+| `scripts/fake_speaker.py` | speist eine WAV-Datei wie ein Mikrofon ein, zeigt Zeitstempel | Rundlauf siehe Testbericht |
+
+Ergebnisse der Skripte mit echtem Backend lassen sich mit `--write` an dieses Protokoll anhängen. Bisher wurde **nichts** mit echtem Backend gemessen.

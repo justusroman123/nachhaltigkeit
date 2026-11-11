@@ -14,13 +14,21 @@
   <span id="status" class="muted" role="status"></span>
   <button id="btnLang" aria-label="Sprache ändern" title="Sprache ändern">🌐</button>
   <button id="btnSound" aria-label="Ton ein/aus" title="Ton ein/aus">🔇</button>
+  <input id="vol" type="range" min="0" max="1" step="0.1" value="1" aria-label="Lautstärke">
   <button id="btnSmaller" aria-label="Schrift kleiner">A−</button>
   <button id="btnBigger" aria-label="Schrift größer">A+</button>
 </header>
 <main id="subs" aria-live="polite"></main>
+<footer id="notice"><span id="aiText"></span> <a id="privacyLink" href="datenschutz.html" target="_blank" rel="noopener"></a></footer>
 <div id="picker" hidden>
   <div class="globe" aria-hidden="true">🌐</div>
 </div>
+<div id="startScreen" hidden>
+  <button id="btnStartSound" class="big"></button>
+  <button id="btnSubsOnly"></button>
+  <p id="startAi"></p>
+</div>
+<script src="js/strings.js"></script>
 <script src="js/listener.js"></script>
 </body>
 </html>

@@ -54,6 +54,11 @@ class LinkRequest(BaseModel):
     ttl_s: Optional[int] = None
 
 
+class SessionRequest(BaseModel):
+    langs: Optional[list[str]] = None
+    ttl_s: Optional[int] = None
+
+
 class QrRequest(BaseModel):
     url: str
 
@@ -64,6 +69,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     pipeline = pipeline or build_pipeline(settings)
     rooms = RoomManager(settings, clock)
     page_hashes = collect_page_hashes(settings.web_dir)
+    started_at = clock()
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -151,20 +157,37 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "min_listener_ttl_s": settings.min_listener_ttl_s,
                 "max_listener_ttl_s": settings.max_listener_ttl_s}
 
+    def make_link(room, lang: Optional[str], ttl_s: Optional[int]) -> dict:
+        try:
+            token, expires_at = room.create_listener_token(lang, ttl_s)
+        except RoomError as exc:
+            raise HTTPException(400, str(exc))
+        # Token im Fragment (#), damit er nie in Server-Logs oder Referrer landet.
+        lang_part = f"&l={lang}" if lang else ""
+        return {"token": token, "path": f"/listener.html#t={token}{lang_part}", "lang": lang,
+                "expires_in_s": max(0, int(expires_at - clock()))}
+
     @app.post("/api/rooms/{room_id}/listener-links")
     async def create_link(room_id: str, body: LinkRequest, x_operator_key: Optional[str] = Header(default=None)):
         require_operator(x_operator_key)
         room = rooms.get(room_id)
         if room is None:
             raise HTTPException(404, "Raum unbekannt")
+        return make_link(room, body.lang, body.ttl_s)
+
+    @app.post("/api/session")
+    async def create_session(body: Optional[SessionRequest] = None,
+                             x_operator_key: Optional[str] = Header(default=None)):
+        """Plan, Phase 3: erstellt eine Sitzung und gibt Sammel-Link sowie Links je Sprache zurueck."""
+        require_operator(x_operator_key)
+        body = body or SessionRequest()
         try:
-            token, expires_at = room.create_listener_token(body.lang, body.ttl_s)
-        except RoomError as exc:
+            room = rooms.create_room(body.langs)
+        except LanguageError as exc:
             raise HTTPException(400, str(exc))
-        # Token im Fragment (#), damit er nie in Server-Logs oder Referrer landet.
-        lang_part = f"&l={body.lang}" if body.lang else ""
-        return {"token": token, "path": f"/listener.html#t={token}{lang_part}", "lang": body.lang,
-                "expires_in_s": max(0, int(expires_at - clock()))}
+        return {"room_id": room.id, "langs": list(room.langs), "sample_rate": settings.sample_rate,
+                "shared": make_link(room, None, body.ttl_s),
+                "links": {l: make_link(room, l, body.ttl_s) for l in room.langs}}
 
     @app.post("/api/qr")
     async def qr_code(body: QrRequest, x_operator_key: Optional[str] = Header(default=None)):
@@ -183,7 +206,11 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         room = rooms.get(room_id)
         if room is None:
             raise HTTPException(404, "Raum unbekannt")
-        return room.stats()
+        s = room.stats()
+        s["server_uptime_s"] = max(0, int(clock() - started_at))     # Laufzeit dieser Anwendung, nicht der VM
+        s["server_hourly_eur"] = settings.server_hourly_eur or None
+        s["budget_eur"] = settings.budget_eur or None
+        return s
 
     @app.delete("/api/rooms/{room_id}")
     async def delete_room(room_id: str, x_operator_key: Optional[str] = Header(default=None)):
@@ -211,12 +238,17 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             return await safe_close(ws, WS_CONFLICT)
 
         room.operator_active = True
-        orch = Orchestrator(room, pipeline, settings)
-        audio_q: asyncio.Queue = asyncio.Queue(MAX_AUDIO_QUEUE)
+        send_lock = asyncio.Lock()             # ein Sender zur Zeit (Untertitel und Ping-Antwort)
 
-        async def send_to_operator(msgs):
-            for m in msgs:
-                await ws.send_json(m.to_dict(for_listener=False))
+        async def to_operator(obj: dict) -> None:
+            async with send_lock:
+                await ws.send_json(obj)
+
+        async def sink(m) -> None:
+            await to_operator(m.to_dict(for_listener=False))
+
+        orch = Orchestrator(room, pipeline, settings, sink=sink)
+        audio_q: asyncio.Queue = asyncio.Queue(MAX_AUDIO_QUEUE)
 
         async def worker():
             while True:
@@ -224,15 +256,15 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 if pcm is None:
                     return
                 try:
-                    await send_to_operator(await orch.on_audio(pcm))
+                    await orch.on_audio(pcm)
                 except Exception as exc:       # nie Inhalte loggen, nur den Typ
                     room.counters["pipeline_errors"] += 1
                     log.error("pipeline_fehler typ=%s", type(exc).__name__)
 
         worker_task = asyncio.create_task(worker())
         try:
-            await ws.send_json(control_message("ready", langs=list(settings.target_langs),
-                                               sample_rate=settings.sample_rate))
+            await to_operator(control_message("ready", langs=list(room.langs),
+                                              sample_rate=settings.sample_rate))
             while not room.closed:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
@@ -248,21 +280,30 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     audio_q.put_nowait(data)
                 elif msg.get("text"):
                     try:
-                        if json.loads(msg["text"]).get("type") == "end":
+                        data_t = json.loads(msg["text"])
+                        kind = data_t.get("type")
+                        if kind == "end":
                             break
+                        if kind == "ping" and isinstance(data_t.get("t"), (int, float)):
+                            await to_operator(control_message("pong", t=data_t["t"]))   # Netz-Laufzeit-Messung
                     except Exception:
                         room.counters["bad_frames"] += 1
         finally:
-            if audio_q.full():
-                audio_q.get_nowait()
-            audio_q.put_nowait(None)
-            with contextlib.suppress(Exception):
-                await asyncio.wait_for(worker_task, 5)
-            worker_task.cancel()
-            with contextlib.suppress(Exception):
-                await send_to_operator(await orch.finish())
-            room.operator_active = False
-            await safe_close(ws, 1000)
+            try:
+                if audio_q.full():
+                    audio_q.get_nowait()
+                audio_q.put_nowait(None)
+                with contextlib.suppress(Exception):
+                    await asyncio.wait_for(worker_task, 5)
+                worker_task.cancel()
+                with contextlib.suppress(Exception):
+                    await orch.finish()        # Rest ausgeben, Puffer loeschen, Arbeiter beenden
+                await safe_close(ws, 1000)
+            finally:
+                # Auch wenn das Aufraeumen abgebrochen wird (z. B. Serverstopp): Bedienplatz wieder freigeben
+                worker_task.cancel()
+                orch.cancel_workers()
+                room.operator_active = False
 
     # ---------- WebSocket: Zuhoerer ----------
     @app.websocket("/ws/listener")

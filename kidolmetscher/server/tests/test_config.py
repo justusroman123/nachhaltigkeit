@@ -51,3 +51,13 @@ def test_env_example_ist_vollstaendig_und_ohne_geheimnisse():
         assert vals[secret] == ""
     # Beispieldatei muss mit gesetztem Schluessel ladbar sein
     Settings.from_env({**vals, "OPERATOR_KEY": "y" * 20, "WEB_DIR": "../web"})
+
+
+def test_neue_einstellungen_und_pruefung():
+    s = Settings.from_env(env(SEGMENT_MAX_WORDS="8", LANG_QUEUE_MAX="4", TTS_SKIP_BACKLOG="1",
+                              SERVER_HOURLY_EUR="1.19", BUDGET_EUR="50"))
+    assert (s.segment_max_words, s.lang_queue_max, s.tts_skip_backlog) == (8, 4, 1)
+    assert s.server_hourly_eur == 1.19 and s.budget_eur == 50
+    for bad in ({"SEGMENT_MAX_WORDS": "0"}, {"LANG_QUEUE_MAX": "0"}, {"BUDGET_EUR": "-1"}):
+        with pytest.raises(ConfigError):
+            Settings.from_env(env(**bad))

@@ -69,3 +69,14 @@ ob die Muttergesellschaft des Anbieters außerhalb der EU sitzt. Antworten dazu:
 1. Bei welchem Anbieter ist der GPU-Server gemietet? (bestimmt die konkreten Schritte, Basis-Image und Netzwerkregeln)
 2. Gibt es schon eine Domain, die genutzt werden kann?
 3. Soll ich Schritt für Schritt eine Installationsanleitung für diesen Anbieter schreiben? (Installation auf dem Server nur nach Ihrer Freigabe.)
+
+## Nachtrag 11.11.2026: Angaben aus dem Plan-Dokument
+
+- **Anbieter laut Plan: centron** (RTX 6000 Ada 48 GB, Standort Hallstadt, 1,19 € pro Stunde netto, stündliche Abrechnung); Alternative STACKIT L40S (1,74 € pro Stunde).
+  Von mir **nicht** geprüft (Seiten aus der Sitzung nicht erreichbar). Offene Punkte beim Anbieter: AVV, Kosten pausierter Server, Gesamtpreis, Zertifizierungen. Fragenliste: `docs/kosten.md`.
+- **Docker mit HTTPS:** `docker compose -f docker/docker-compose.yml --profile gpu up --build` startet die Anwendung (Dienst `gpu`, Modelle als Nur-lese-Volume `/models`) und davor Caddy (`docker/Caddyfile`).
+  Nötig: `.env` mit `OPERATOR_KEY`, Umgebungsvariablen `BASE_IMAGE`, `DOMAIN`, `MODELS_DIR`. **Nicht gebaut und nicht getestet.**
+- **Firewall:** nur Vorschlag, nichts aktiviert: `docs/firewall-vorschlag.md`.
+- **Kosten und Budget:** `docs/kosten.md`; Anzeige am Bedienplatz über `SERVER_HOURLY_EUR` und `BUDGET_EUR`.
+- **Vorführung:** Skript und Checkliste in `docs/vorfuehrung.md`.
+- Die Frage nach dem Anbieter ist damit beantwortet. Offen bleiben: Domain (Subdomain von kischub.de?) und Budgetgrenze (Vorschlag des Plans: 50 €).

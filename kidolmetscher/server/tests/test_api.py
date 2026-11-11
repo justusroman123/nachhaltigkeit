@@ -80,7 +80,8 @@ def test_csp_hash_nur_fuer_mic_test(client):
 def test_stats_enthaelt_nur_zaehler(client):
     rid = new_room(client)
     s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
-    assert set(s) == {"room_open", "langs", "listeners_connected", "operator_active", "listeners", "counters"}
+    assert set(s) == {"room_open", "langs", "listeners_connected", "operator_active", "listeners", "counters",
+                      "server_uptime_s", "server_hourly_eur", "budget_eur"}
 
 
 # ---------- WebSocket Ende-zu-Ende ----------
@@ -340,3 +341,47 @@ def test_unbekannte_sprache_im_hello_fuehrt_zur_auswahl(client):
     assert ws.receive_json()["code"] == "lang_invalid"
     r = ws.receive_json()
     assert r["type"] == "ready" and r["lang"] is None and "fa" not in r["langs"]
+
+
+def test_api_session_liefert_sammel_link_und_links_je_sprache(client):
+    assert client.post("/api/session").status_code == 401
+    r = client.post("/api/session", headers=hdr(), json={"ttl_s": 120}).json()
+    assert r["langs"] == ["uk", "ar", "en", "tr"] and r["sample_rate"] == 16000
+    assert r["shared"]["lang"] is None and "&l=" not in r["shared"]["path"]
+    assert set(r["links"]) == {"uk", "ar", "en", "tr"}
+    assert r["links"]["uk"]["path"].endswith("&l=uk")
+    tokens = {r["shared"]["token"], *(v["token"] for v in r["links"].values())}
+    assert len(tokens) == 5                                    # alle verschieden
+    ws = open_listener(client, r["links"]["en"]["token"])
+    assert ws.receive_json()["lang"] == "en"
+    assert client.post("/api/session", headers=hdr(), json={"langs": ["xx"]}).status_code == 400
+
+
+def test_ping_pong_fuer_netzmessung(client):
+    rid = new_room(client)
+    op = open_operator(client, rid)
+    op.send_json({"type": "ping", "t": 12345})
+    assert op.receive_json() == {"type": "pong", "v": 1, "t": 12345}
+    op.send_json({"type": "ping", "t": "kein-zahl"})          # wird ignoriert, nicht abgestuerzt
+    op.send_json({"type": "ping", "t": 7})
+    assert op.receive_json()["t"] == 7
+
+
+def test_stats_enthaelt_laufzeit_und_optional_kosten(client):
+    rid = new_room(client)
+    s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
+    assert s["server_uptime_s"] >= 0 and s["server_hourly_eur"] is None and s["budget_eur"] is None
+    with app_client(make_settings(server_hourly_eur=1.5, budget_eur=50)) as c:
+        rid = new_room(c)
+        s = c.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
+        assert s["server_hourly_eur"] == 1.5 and s["budget_eur"] == 50
+
+
+def test_bedienplatz_kann_nach_abbruch_neu_verbinden(client):
+    rid = new_room(client)
+    op = open_operator(client, rid)
+    op.close()
+    time.sleep(0.3)
+    op2 = open_operator(client, rid)                           # kein 4409, Raum ist wieder frei
+    op2.send_json({"type": "ping", "t": 1})
+    assert op2.receive_json()["type"] == "pong"

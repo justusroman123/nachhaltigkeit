@@ -45,6 +45,12 @@ class Settings:
     max_listeners_per_room: int = 100      # Platzhalter, nicht gemessen
     ring_buffer_size: int = 5
 
+    segment_max_words: int = 12            # Segmentierer: hoechstens so viele Woerter je Uebersetzung
+    lang_queue_max: int = 8                # Warteschlange je Sprache; darueber werden aelteste Segmente verworfen
+    tts_skip_backlog: int = 2              # ab so vielen wartenden Segmenten entfaellt der Ton, Untertitel bleiben
+    server_hourly_eur: float = 0.0         # optional, netto; 0 = unbekannt
+    budget_eur: float = 0.0                # optional; 0 = keine Grenze
+
     mock_asr_segment_s: float = 2.0
     mock_delay_ms: int = 0
 
@@ -73,6 +79,10 @@ class Settings:
             raise ConfigError("Es muss gelten: MIN_LISTENER_TTL_S <= LISTENER_TTL_S <= MAX_LISTENER_TTL_S")
         if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0:
             raise ConfigError("ROOM_TTL_S, MAX_LISTENERS_PER_ROOM oder RING_BUFFER_SIZE ungueltig")
+        if self.segment_max_words < 1 or self.lang_queue_max < 1 or self.tts_skip_backlog < 1:
+            raise ConfigError("SEGMENT_MAX_WORDS, LANG_QUEUE_MAX, TTS_SKIP_BACKLOG muessen >= 1 sein")
+        if self.server_hourly_eur < 0 or self.budget_eur < 0:
+            raise ConfigError("SERVER_HOURLY_EUR und BUDGET_EUR duerfen nicht negativ sein")
         if self.mock_asr_segment_s <= 0 or self.mock_delay_ms < 0:
             raise ConfigError("MOCK_ASR_SEGMENT_S/MOCK_DELAY_MS ungueltig")
         return self
@@ -109,6 +119,11 @@ class Settings:
                 room_ttl_s=int(get("ROOM_TTL_S", d.room_ttl_s)),
                 max_listeners_per_room=int(get("MAX_LISTENERS_PER_ROOM", d.max_listeners_per_room)),
                 ring_buffer_size=int(get("RING_BUFFER_SIZE", d.ring_buffer_size)),
+                segment_max_words=int(get("SEGMENT_MAX_WORDS", d.segment_max_words)),
+                lang_queue_max=int(get("LANG_QUEUE_MAX", d.lang_queue_max)),
+                tts_skip_backlog=int(get("TTS_SKIP_BACKLOG", d.tts_skip_backlog)),
+                server_hourly_eur=float(get("SERVER_HOURLY_EUR", d.server_hourly_eur)),
+                budget_eur=float(get("BUDGET_EUR", d.budget_eur)),
                 mock_asr_segment_s=float(get("MOCK_ASR_SEGMENT_S", d.mock_asr_segment_s)),
                 mock_delay_ms=int(get("MOCK_DELAY_MS", d.mock_delay_ms)),
                 asr_model=get("ASR_MODEL", d.asr_model),

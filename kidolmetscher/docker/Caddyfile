@@ -1,0 +1,6 @@
+# Reverse Proxy mit automatischem Zertifikat (Caddy). DOMAIN kommt aus der Umgebung (docker-compose.yml).
+# Bewusst KEIN "log"-Block: keine Zugriffsprotokolle (Datenschutz). Standardverhalten der eingesetzten Version pruefen.
+# WebSockets (/ws/...) leitet reverse_proxy ohne Zusatz weiter.
+{$DOMAIN} {
+	reverse_proxy gpu:8000
+}

@@ -22,3 +22,7 @@ Pipeline: Whisper large-v3 (SimulStreaming oder WhisperLiveKit) -> TranslateGemm
 ## Arbeitsweise
 - Nichts als fertig melden, was nicht gelaufen ist. Tests: `cd server && pytest`.
 - Start: siehe README. Web-Dateien liegen unter `web/`, Server unter `server/app/`.
+
+## Plan-Dokument
+Maßgeblich für Phasen, Zielwerte und Entscheidungen ist das Google-Dokument „Plan Prototyp KI-Dolmetscher: Aufgaben, Prüfungen und Prompts (Stand 09.11.2026)“
+im Drive-Ordner. Stand der Umsetzung: `docs/plan-abgleich.md`. Provider laut Plan: centron (GPU-Server, Hallstadt); nichts davon vom Assistenten geprüft.

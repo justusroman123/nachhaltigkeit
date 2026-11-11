@@ -1,7 +1,8 @@
-# Start (Mock, ohne GPU):   docker compose -f docker/docker-compose.yml --profile mock up --build
-# Start (GPU-Server):       docker compose -f docker/docker-compose.yml --profile gpu up --build
-# Voraussetzung: .env im Projektstamm (aus .env.example kopieren, OPERATOR_KEY setzen), BASE_IMAGE gesetzt.
-# Nicht getestet in Etappe 1 (nur Syntaxpruefung).
+# Start (Mock, ohne GPU, nur lokal):  docker compose -f docker/docker-compose.yml --profile mock up --build
+# Start (GPU-Server mit HTTPS):       docker compose -f docker/docker-compose.yml --profile gpu up --build
+# Voraussetzungen: .env im Projektstamm (aus .env.example kopieren, OPERATOR_KEY setzen), BASE_IMAGE gesetzt,
+# fuer das Profil gpu zusaetzlich DOMAIN (zeigt auf den Server; Standard example.invalid ist ein Platzhalter) und MODELS_DIR.
+# NICHT gebaut/getestet in dieser Umgebung (nur Syntaxpruefung mit "docker compose config").
 x-common: &common
   build:
     context: ..
@@ -10,12 +11,9 @@ x-common: &common
       BASE_IMAGE: ${BASE_IMAGE:?BASE_IMAGE setzen (gepruefter CUDA- oder Python-Basis-Tag)}
   env_file: ../.env
   # Im Container gelten feste Werte (ueberschreiben HOST/WEB_DIR aus der .env fuer lokalen Start).
-  # Veroeffentlicht wird nur 127.0.0.1 des Hosts (siehe ports).
   environment: &container_env
     HOST: 0.0.0.0
     WEB_DIR: /app/web
-  # Nur lokal erreichbar; TLS und Veroeffentlichung uebernimmt ein vorgeschalteter Reverse Proxy (offen).
-  ports: ["127.0.0.1:8000:8000"]
   read_only: true              # nichts wird gespeichert
   tmpfs: ["/tmp"]
   cap_drop: ["ALL"]
@@ -29,6 +27,9 @@ services:
   mock:
     <<: *common
     profiles: ["mock"]
+    ports: ["127.0.0.1:8000:8000"]       # nur lokal erreichbar
+
+  # Dienst "pipeline" aus dem Plan (Prompt B), hier "gpu" genannt: Port nur im internen Netz, davor Caddy mit TLS.
   gpu:
     <<: *common
     profiles: ["gpu"]
@@ -37,6 +38,10 @@ services:
       ASR_BACKEND: real
       MT_BACKEND: real
       TTS_BACKEND: real
+      PUBLIC_URL: https://${DOMAIN:-example.invalid}
+    expose: ["8000"]
+    volumes:
+      - ${MODELS_DIR:-./models}:/models:ro   # Modelle nur lesend, nicht im Image, nicht im Repo
     deploy:
       resources:
         reservations:
@@ -44,3 +49,21 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  caddy:
+    image: caddy:2                        # Tag vor Einsatz pruefen
+    profiles: ["gpu"]
+    environment:
+      DOMAIN: ${DOMAIN:-example.invalid}
+    ports: ["80:80", "443:443"]           # einzige von aussen erreichbare Ports (neben SSH auf dem Host)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data                  # Zertifikate (keine Nutzerdaten)
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    depends_on: [gpu]
+
+volumes:
+  caddy_data:

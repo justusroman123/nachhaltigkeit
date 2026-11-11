@@ -86,8 +86,7 @@ def test_mock_mt_und_tts():
 
 
 # ---- Orchestrator ----
-def make_orch(settings, clock=None, langs=("uk", "en")):
-    clock = clock or FakeClock(10_000)
+def make_orch(settings, langs=("uk", "en"), asr=None, mt=None, tts=None, sink=None):
     mgr = RoomManager(settings)
     room = mgr.create_room()
     listeners = {l: room.attach_listener(room.create_listener_token(l)[0]) for l in langs}
@@ -97,22 +96,26 @@ def make_orch(settings, clock=None, langs=("uk", "en")):
         tick["t"] += 5
         return tick["t"]
 
-    from app.pipeline.asr_mock import MockAsr as A
     p = build_pipeline(settings)
-    p.asr = A(settings.mock_asr_segment_s, 0, ms)
-    return Orchestrator(room, p, settings, clock=ms), room, listeners
+    p.asr = asr or MockAsr(settings.mock_asr_segment_s, 0, ms)
+    if mt:
+        p.mt = mt
+    if tts:
+        p.tts = tts
+    return Orchestrator(room, p, settings, clock=ms, sink=sink, collect=True), room, listeners
+
+
+def feed(orch, n, ms=100):
+    async def go():
+        for _ in range(n):
+            await orch.on_audio(chunk(ms))
+        return await orch.drain()
+    return run(go())
 
 
 def test_orchestrator_uebersetzt_nur_aktive_sprachen_mit_zeitstempeln(settings):
     orch, room, lst = make_orch(settings)
-
-    async def go():
-        out = []
-        for _ in range(2):
-            out += await orch.on_audio(chunk(100))
-        return out
-
-    msgs = run(go())
+    msgs = feed(orch, 2)
     assert sorted(m.lang for m in msgs) == ["en", "uk"]       # tr/ar haben keine Zuhoerer
     for m in msgs:
         t = m.t.to_dict()
@@ -126,14 +129,12 @@ def test_orchestrator_uebersetzt_nur_aktive_sprachen_mit_zeitstempeln(settings):
 
 def test_orchestrator_ohne_zuhoerer_keine_uebersetzung(settings):
     orch, room, _ = make_orch(settings, langs=())
-    msgs = run(orch.on_audio(chunk(300)))
-    assert msgs == [] and room.counters["segments_no_listener"] == 1
+    assert feed(orch, 3) == [] and room.counters["segments_no_listener"] == 1
 
 
 def test_tts_aus(settings):
-    s = make_settings(tts_enabled=False)
-    orch, _, _ = make_orch(s, langs=("uk",))
-    m = run(orch.on_audio(chunk(300)))[0]
+    orch, _, _ = make_orch(make_settings(tts_enabled=False), langs=("uk",))
+    m = feed(orch, 3)[0]
     assert m.t.t_tts is None and m.audio is None
     m.t.validate()
 
@@ -142,16 +143,115 @@ def test_keine_inhalte_in_logs(settings, caplog):
     import logging
     caplog.set_level(logging.DEBUG)
     orch, _, _ = make_orch(settings, langs=("uk",))
-    msgs = run(orch.on_audio(chunk(300)))
+    msgs = feed(orch, 3)
     assert msgs and caplog.records
     log_text = "\n".join(r.getMessage() for r in caplog.records)
     assert msgs[0].text not in log_text and msgs[0].text_src not in log_text
     assert "Testsatz" not in log_text and "gesamt_ms=" in log_text
 
 
-def test_finish_leert_asr_puffer(settings):
-    orch, _, _ = make_orch(make_settings(mock_asr_segment_s=9), langs=("uk",))
-    run(orch.on_audio(chunk(100)))
-    out = run(orch.finish())
-    assert len(out) == 1                      # Rest wurde ausgegeben
-    assert run(orch._stream.flush()) == []    # und danach ist nichts mehr da
+def test_finish_gibt_rest_aus_und_leert_puffer(settings):
+    orch, room, _ = make_orch(make_settings(mock_asr_segment_s=9), langs=("uk",))
+
+    async def go():
+        await orch.on_audio(chunk(100))
+        out = await orch.finish()
+        return out, await orch._stream.flush()
+
+    out, again = run(go())
+    assert len(out) == 1 and again == []
+    assert orch._workers == {} and orch._queues == {}          # Arbeiter beendet, nichts bleibt liegen
+
+
+def test_segmentierung_zwischen_asr_und_uebersetzung():
+    from app.pipeline.base import AsrSegment
+
+    class WortAsr:
+        """Liefert einen langen Text ohne Satzzeichen in einem Stueck."""
+        async def load(self): ...
+        def new_stream(self):
+            class S:
+                done = False
+                async def feed(self, c):
+                    if S.done:
+                        return []
+                    S.done = True
+                    text = "eins zwei drei vier fuenf sechs sieben acht neun zehn elf zwoelf dreizehn vierzehn"
+                    return [AsrSegment(text, True, c.t_audio_in, c.t_audio_in + 1), AsrSegment("halb", False, 1, 2)]
+                async def flush(self): return []
+                async def close(self): ...
+            return S()
+
+    orch, room, _ = make_orch(make_settings(segment_max_words=5), langs=("en",), asr=WortAsr())
+    msgs = feed(orch, 1)
+    assert [m.text_src for m in msgs] == ["eins zwei drei vier fuenf", "sechs sieben acht neun zehn",
+                                           "elf zwoelf dreizehn vierzehn"][:2]
+    assert room.counters["partials_skipped"] == 1
+
+
+class _LangsamMt:
+    """MT-Attrappe, deren Sprache 'uk' haengt, bis sie freigegeben wird."""
+    def __init__(self):
+        self.gate = asyncio.Event()
+    async def load(self): ...
+    async def translate(self, text, src, tgt):
+        if tgt == "uk":
+            await self.gate.wait()
+        return f"[{tgt}] {text}"
+
+
+def test_langsame_sprache_bremst_andere_nicht():
+    s = make_settings(mock_asr_segment_s=0.1)
+    mt = _LangsamMt()
+    got = []
+
+    async def sink(m):
+        got.append(m.lang)
+
+    orch, room, _ = make_orch(s, langs=("uk", "en"), mt=mt, sink=sink)
+
+    async def go():
+        for _ in range(3):
+            await orch.on_audio(chunk(100))
+        for _ in range(20):                    # Englisch muss fertig werden, waehrend Ukrainisch haengt
+            await asyncio.sleep(0.01)
+        en_waehrend = got.count("en")
+        mt.gate.set()
+        await orch.drain()
+        return en_waehrend
+
+    assert run(go()) == 3 and got.count("uk") == 3
+
+
+def test_rueckstau_verwirft_aelteste_segmente_und_ton_entfaellt():
+    s = make_settings(mock_asr_segment_s=0.1, lang_queue_max=2, tts_skip_backlog=1)
+    mt = _LangsamMt()
+    orch, room, _ = make_orch(s, langs=("uk",), mt=mt)
+
+    async def go():
+        for _ in range(6):                      # 6 Segmente, Warteschlange fasst 2, eines in Arbeit
+            await orch.on_audio(chunk(100))
+            await asyncio.sleep(0)
+        mt.gate.set()
+        return await orch.drain()
+
+    msgs = run(go())
+    assert room.counters["segments_dropped_backpressure"] >= 1
+    assert len(msgs) < 6 and len(msgs) >= 2
+    assert any(m.audio is None for m in msgs) and room.counters["audio_skipped_backpressure"] >= 1
+    assert all(m.text for m in msgs)            # Untertitel kommen trotzdem
+
+
+def test_pipeline_fehler_stoppt_den_arbeiter_nicht(settings):
+    class KaputtMt:
+        n = 0
+        async def load(self): ...
+        async def translate(self, text, src, tgt):
+            KaputtMt.n += 1
+            if KaputtMt.n == 1:
+                raise RuntimeError("GEHEIMER INHALT")
+            return "ok"
+
+    orch, room, _ = make_orch(make_settings(mock_asr_segment_s=0.1), langs=("uk",), mt=KaputtMt())
+    msgs = feed(orch, 3)
+    assert len(msgs) == 2 and room.counters["pipeline_errors"] == 1
