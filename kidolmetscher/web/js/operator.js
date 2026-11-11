@@ -13,10 +13,10 @@
     newLink: $('btnNewLink'), base: $('base'), linkInfo: $('linkInfo'), dev: $('dev'), start: $('btnStart'), stop: $('btnStop'),
     level: $('level'), micMsg: $('micMsg'), statTotal: $('statTotal'), statL: $('statL'), lat: $('lat'),
     stages: $('stages'), log: $('log'), singleList: $('singleList'), rtt: $('rtt'), t1: $('t1'),
-    backlog: $('backlog'), cost: $('cost') };
+    backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
-  let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [];
+  let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
 
   const api = (method, path, body) => fetch(path, {
     method, headers: { 'X-Operator-Key': key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -168,14 +168,24 @@
       const d = JSON.parse(ev.data);
       if (d.type === 'ready') {
         wsRetry = 0;
-        if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, sendet.', 'ok');
+        if (demoMode) { if (!demoTimer) startDemo(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, Demo läuft.', 'ok'); }
+        else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, sendet.', 'ok');
         clearInterval(pingTimer);
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
       } else if (d.type === 'translation') showMessage(d);
       else if (d.type === 'pong') showPing(performance.now() - d.t);
     };
   }
-  e.start.addEventListener('click', () => { if (ws) return; wantSending = true; wsRetry = 0; connectOperator(); });
+  e.start.addEventListener('click', () => { if (ws) return; demoMode = false; wantSending = true; wsRetry = 0; connectOperator(); });
+  e.demo.addEventListener('click', () => { if (ws) return; demoMode = true; wantSending = true; wsRetry = 0; connectOperator(); });
+
+  // Demo ohne Mikrofon: 50-ms-Bloecke Stille, damit die Attrappen Testsaetze liefern
+  function startDemo(rate) {
+    const block = new Int16Array(Math.round(rate * 0.05)).buffer;
+    demoTimer = setInterval(() => { if (ws && ws.readyState === 1) ws.send(block.slice(0)); }, 50);
+    e.start.disabled = true; e.demo.disabled = true; e.stop.disabled = false;
+    say(e.micMsg, '● Demo läuft: es wird Stille gesendet, die Attrappe liefert Testsätze.', 'ok');
+  }
 
   function showPing(rtt) {
     rtts.push(rtt); if (rtts.length > 10) rtts.shift();
@@ -212,7 +222,7 @@
   }
 
   function stopSending() {
-    wantSending = false; clearInterval(pingTimer);
+    wantSending = false; clearInterval(pingTimer); clearInterval(demoTimer); demoTimer = 0; demoMode = false; e.demo.disabled = false;
     if (ws) { const w = ws; ws = null; try { w.send(JSON.stringify({ type: 'end' })); } catch (_) {} w.close(); }
     if (node) { node.disconnect(); node = null; }
     if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }

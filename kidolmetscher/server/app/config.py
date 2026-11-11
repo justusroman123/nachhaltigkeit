@@ -26,6 +26,7 @@ class Settings:
     host: str = "127.0.0.1"
     port: int = 8000
     web_dir: Path = Path(__file__).resolve().parents[2] / "web"
+    origin_check: bool = True     # WebSocket-Herkunftspruefung; nur fuer Vorschau-Tests hinter Zwischenservern abschalten
     public_url: str = ""          # optional: Adresse, unter der Zuhoerer den Server erreichen (fuer Link/QR)
 
     asr_backend: str = "mock"
@@ -106,6 +107,7 @@ class Settings:
                 host=get("HOST", d.host),
                 port=int(get("PORT", d.port)),
                 web_dir=Path(get("WEB_DIR", str(d.web_dir))).resolve(),
+                origin_check=_bool(get("ORIGIN_CHECK", "true")),
                 public_url=get("PUBLIC_URL", "").strip().rstrip("/"),
                 asr_backend=get("ASR_BACKEND", d.asr_backend),
                 mt_backend=get("MT_BACKEND", d.mt_backend),

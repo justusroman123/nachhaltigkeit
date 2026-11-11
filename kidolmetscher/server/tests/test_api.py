@@ -210,6 +210,13 @@ def test_fremder_origin_wird_abgewiesen(client):
         assert ws.receive_json()["code"] == "token_invalid"
 
 
+def test_herkunftspruefung_laesst_sich_fuer_vorschau_abschalten():
+    with app_client(make_settings(origin_check=False)) as c:
+        with c.websocket_connect("/ws/listener", headers={"origin": "https://zwischenserver.example"}) as ws:
+            ws.send_json({"type": "hello", "token": "x"})
+            assert ws.receive_json()["code"] == "token_invalid"      # Verbindung wurde angenommen
+
+
 def test_kaputte_frames_werden_gezaehlt_nicht_verarbeitet(client):
     rid = new_room(client)
     op = open_operator(client, rid)

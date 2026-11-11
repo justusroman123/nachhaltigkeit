@@ -114,6 +114,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
     def origin_ok(ws: WebSocket) -> bool:
         """Schutz gegen fremde Webseiten: Origin muss zum Host passen (fehlt Origin: kein Browser)."""
+        if not settings.origin_check:
+            return True
         origin = ws.headers.get("origin")
         return not origin or urlparse(origin).netloc == ws.headers.get("host")
 
