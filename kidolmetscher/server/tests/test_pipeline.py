@@ -4,7 +4,7 @@ import wave
 
 import pytest
 
-from app.config import Settings
+from app.config import ConfigError, Settings
 from app.messages import AudioPayload
 from app.orchestrator import Orchestrator
 from app.pipeline import build_pipeline
@@ -43,9 +43,11 @@ def test_fabrik_waehlt_nach_konfiguration():
 
 def test_echte_stufen_sind_nur_geruest():
     p = build_pipeline(make_settings(asr_backend="real", mt_backend="real", tts_backend="real"))
-    for stage in (p.asr, p.mt, p.tts):
+    for stage in (p.asr, p.mt):
         with pytest.raises(NotImplementedError, match="TODO"):
             run(stage.load())
+    with pytest.raises(ConfigError, match="TTS_VOICES"):          # TTS ist umgesetzt, aber ohne Stimmen nicht startbar
+        run(p.tts.load())
     with pytest.raises(NotImplementedError):
         run(p.mt.translate("a", "de", "uk"))
 

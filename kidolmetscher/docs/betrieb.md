@@ -81,3 +81,21 @@ ob die Muttergesellschaft des Anbieters außerhalb der EU sitzt. Antworten dazu:
 - **Kosten und Budget:** `docs/kosten.md`; Anzeige am Bedienplatz über `SERVER_HOURLY_EUR` und `BUDGET_EUR`.
 - **Vorführung:** Skript und Checkliste in `docs/vorfuehrung.md`.
 - Die Frage nach dem Anbieter ist damit beantwortet. Offen bleiben: Domain (Subdomain von kischub.de?) und Budgetgrenze (Vorschlag des Plans: 50 €).
+
+## 5. Echte Sprachausgabe (Piper) einrichten (Stand 12.11.2026)
+
+Umgesetzt und mit Attrappen-Modul sowie mit echten Stimmen getestet. Läuft auf der CPU, braucht keine GPU.
+
+1. Paket installieren (optional, GPL-3.0, Entscheidung E10 offen): `pip install -r server/requirements-tts.txt`
+2. Stimmen laden (nur vor dem Termin; Lizenz jeder Stimme vorher prüfen, `docs/lizenzen-recherche.md`):
+   `python3 scripts/fetch_voices.py models/voices uk_UA-ukrainian_tts-medium en_GB-alba-medium`
+3. Einstellen (Umgebung oder `.env`):
+   `TTS_BACKEND=real`, `TTS_VOICE_DIR=models/voices`, `TTS_VOICES=uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium`
+   (Format `sprache=stimme[:sprecher]`; `ukrainian_tts` hat mehrere Sprecher, 0 bis 2).
+4. Sprache ohne Stimme (z. B. Arabisch, Türkisch, solange keine freie Stimme gewählt ist): nur Untertitel, kein Ton.
+
+Hinweise:
+- Die Stimme `en_GB-alba-medium` steht unter CC BY 4.0 (Namensnennung nötig), `ukrainian_tts` unter CC0 (laut MODEL_CARD).
+- Die Stimme `ukrainian_tts` kennt nur Kleinbuchstaben; die Anwendung schreibt den Text für sie klein.
+- Audio bleibt im Arbeitsspeicher, es wird keine Datei geschrieben (Test).
+- Starten mit nur echter Sprachausgabe (ASR und MT als Attrappe) ist möglich: `ASR_BACKEND=mock MT_BACKEND=mock TTS_BACKEND=real`. Die Attrappen-Übersetzung ist aber kein Ukrainisch, dann klingt die Stimme falsch; das ist erst mit echter Übersetzung hörbar sinnvoll.

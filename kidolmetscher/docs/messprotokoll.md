@@ -74,3 +74,15 @@ Annahme der Skripte: Das Gesamtbudget von 5000 ms wird gleichmäßig auf ASR, MT
 | `scripts/fake_speaker.py` | speist eine WAV-Datei wie ein Mikrofon ein, zeigt Zeitstempel | Rundlauf siehe Testbericht |
 
 Ergebnisse der Skripte mit echtem Backend lassen sich mit `--write` an dieses Protokoll anhängen. Bisher wurde **nichts** mit echtem Backend gemessen.
+
+
+## Nachtrag 12.11.2026: Sprachausgabe auf der CPU der Entwicklungsumgebung (keine Servermessung)
+
+Piper 1.8.0, `uk_UA-ukrainian_tts-medium` (Sprecher 0) und `en_GB-alba-medium`, je drei erfundene Sätze nach einem Aufwärmlauf, Rechenzeit pro Satz. **Nicht der gemietete Server, Wert ist eine Orientierung.** Ladezeit beider Stimmen: 3,6 s.
+
+| Sprache | Rechenzeit je Satz | Länge des Audios |
+| --- | --- | --- |
+| uk | 71 ms, 158 ms, 132 ms | 2,3 s, 4,1 s, 4,1 s |
+| en | 75 ms, 168 ms, 121 ms | 1,9 s, 4,9 s, 3,5 s |
+
+Qualität (Klang) habe ich nicht beurteilt; das ist eine Hörprobe (`docs/bewertungsbogen.md`).

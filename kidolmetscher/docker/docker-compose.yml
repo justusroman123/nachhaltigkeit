@@ -38,6 +38,8 @@ services:
       ASR_BACKEND: real
       MT_BACKEND: real
       TTS_BACKEND: real
+      TTS_VOICE_DIR: /models/voices
+      TTS_VOICES: ${TTS_VOICES:-uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium}
       # Keine Verbindungen der Modell-Bibliotheken ins Internet zur Laufzeit (Modelle liegen unter /models):
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"

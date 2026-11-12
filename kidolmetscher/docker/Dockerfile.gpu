@@ -14,7 +14,10 @@ RUN apt-get update \
 WORKDIR /app
 COPY server/requirements.txt /app/requirements.txt
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install -r /app/requirements.txt
-# TODO: Modell-Abhaengigkeiten (Whisper/SimulStreaming, TranslateGemma, Piper) erst nach Entscheidung
+# Piper (Sprachausgabe, GPL-3.0; Entscheidung E10 offen). Entfernen, falls die Lizenzpruefung dagegen ausfaellt.
+COPY server/requirements-tts.txt /app/requirements-tts.txt
+RUN /opt/venv/bin/pip install -r /app/requirements-tts.txt
+# TODO: weitere Modell-Abhaengigkeiten (Whisper/SimulStreaming, TranslateGemma, Piper) erst nach Entscheidung
 #       und Lizenzpruefung (docs/entscheidungen.md) in eine eigene requirements-gpu.txt aufnehmen.
 #       Modellgewichte NICHT ins Image backen und nicht im Repo ablegen; Volume nur lesend einbinden.
 

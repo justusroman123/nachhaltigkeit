@@ -1,0 +1,2 @@
+# Sprachausgabe (optional, GPL-3.0; Entscheidung E10 offen, siehe docs/lizenzen-recherche.md)
+piper-tts>=1.8

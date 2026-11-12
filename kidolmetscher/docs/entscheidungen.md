@@ -22,7 +22,7 @@
 | E19 | Kein Backup-Mitschnitt für Netzausfall | widerspricht „keine Speicherung“; Alternative Folien | entschieden, auf Wunsch neu bewerten |
 | E20 | Kosten-Anzeige zeigt Laufzeit der Anwendung, nicht der Maschine | die Anwendung kennt die Abrechnung des Anbieters nicht | entschieden |
 | E9 | ASR: SimulStreaming oder WhisperLiveKit | Latenz, Lizenz, Sprachwechsel, Wartbarkeit | **offen** (messen auf GPU) |
-| E10 | TTS: Piper | Lizenz noch offen | **offen** |
+| E10 | TTS: Piper | Umgesetzt in `tts_real.py` (Stimmen je Sprache über `TTS_VOICES`); Lizenz des Pakets (GPL-3.0) und der Stimmen weiter offen | **offen** |
 | E11 | TLS für Bedienplatz (Secure Context) | siehe Architektur, Grenzen | **offen**, Rückfrage nötig (Kosten/Konto) |
 
 ## Lizenztabelle

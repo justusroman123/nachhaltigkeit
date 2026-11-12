@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional
@@ -19,6 +20,28 @@ class ConfigError(ValueError):
 
 def _bool(v: str) -> bool:
     return v.strip().lower() in ("1", "true", "yes", "ja", "on")
+
+
+def parse_tts_voices(raw: str) -> dict[str, tuple[str, Optional[int]]]:
+    """'uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium' -> {'uk': ('uk_UA-...', 0), 'en': ('en_GB-...', None)}."""
+    out: dict[str, tuple[str, Optional[int]]] = {}
+    for part in (x.strip() for x in raw.split(",") if x.strip()):
+        lang, sep, voice = part.partition("=")
+        lang, voice = lang.strip(), voice.strip()
+        speaker: Optional[int] = None
+        if ":" in voice:
+            voice, _, sp = voice.partition(":")
+            try:
+                speaker = int(sp)
+            except ValueError:
+                raise ConfigError(f"TTS_VOICES: Sprecher-Nummer ungueltig in '{part}'") from None
+            if speaker < 0:
+                raise ConfigError(f"TTS_VOICES: Sprecher-Nummer ungueltig in '{part}'")
+        # Stimmenname wird zum Dateinamen: keine Pfadanteile zulassen
+        if not sep or lang not in SUPPORTED_LANGS or not re.fullmatch(r"[A-Za-z0-9_.-]+", voice) or ".." in voice:
+            raise ConfigError(f"TTS_VOICES: erwartet 'sprache=stimme[:sprecher]', unzulaessig: '{part}'")
+        out[lang] = (voice, speaker)
+    return out
 
 
 @dataclass(frozen=True)
@@ -61,6 +84,7 @@ class Settings:
     asr_model: str = "large-v3"
     mt_model_id: str = ""
     tts_voice_dir: str = ""
+    tts_voices: str = ""                   # z. B. "uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium"
 
     def validate(self, require_operator_key: bool = True) -> "Settings":
         if self.allow_no_key and not self.operator_key:
@@ -89,6 +113,7 @@ class Settings:
             raise ConfigError("SEGMENT_MAX_WORDS, LANG_QUEUE_MAX, TTS_SKIP_BACKLOG muessen >= 1 sein")
         if self.server_hourly_eur < 0 or self.budget_eur < 0:
             raise ConfigError("SERVER_HOURLY_EUR und BUDGET_EUR duerfen nicht negativ sein")
+        parse_tts_voices(self.tts_voices)       # wirft ConfigError bei falschem Format
         if self.mock_asr_segment_s <= 0 or self.mock_delay_ms < 0:
             raise ConfigError("MOCK_ASR_SEGMENT_S/MOCK_DELAY_MS ungueltig")
         return self
@@ -137,6 +162,7 @@ class Settings:
                 asr_model=get("ASR_MODEL", d.asr_model),
                 mt_model_id=get("MT_MODEL_ID", d.mt_model_id),
                 tts_voice_dir=get("TTS_VOICE_DIR", d.tts_voice_dir),
+                tts_voices=get("TTS_VOICES", d.tts_voices).strip(),
             )
         except ValueError as exc:   # z. B. int("abc")
             raise ConfigError(f"Ungueltiger Konfigurationswert: {exc}") from exc

@@ -3,8 +3,9 @@
 Ein deutscher Sprecher wird live in bis zu vier Zielsprachen übersetzt (Ukrainisch, Arabisch, Englisch, Türkisch;
 Persisch optional). Zuhörer sehen Untertitel und hören die Übersetzung über Kopfhörer, je Gerät eine Sprache.
 
-**Stand: Etappe 0 und 1.** Der Server läuft mit **Attrappen** (Mocks). Die echten Modelle (Whisper, TranslateGemma,
-Piper) sind noch nicht angebunden: `*_real.py` sind Gerüste mit TODO. Nichts hier sagt etwas über Übersetzungsqualität
+**Stand: Etappe 0 und 1.** Der Server läuft mit **Attrappen** (Mocks). Die echten Modelle Whisper und TranslateGemma
+sind noch nicht angebunden: `asr_real.py` und `mt_real.py` sind Gerüste mit TODO. **Die Sprachausgabe (Piper) ist umgesetzt**
+(`tts_real.py`, Einrichtung: `docs/betrieb.md`, Abschnitt 5). Nichts hier sagt etwas über Übersetzungsqualität
 oder echte Verzögerung aus.
 
 ## So wird es bedient (Kurzfassung)
