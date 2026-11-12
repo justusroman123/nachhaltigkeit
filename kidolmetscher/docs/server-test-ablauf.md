@@ -60,8 +60,8 @@ Im Browser `http://localhost:8000` öffnen, Bedienschlüssel eingeben, Sitzung s
 
 - Erfundene deutsche Sätze sprechen (z. B. `tests/audio/testsaetze.txt`), Ukrainisch und Englisch mit Ton, Arabisch und Türkisch nur Untertitel (dafür gibt es noch keine freie Stimme).
 - **Qualitätslauf (wichtigster Schritt für die Qualität):** Ein Aufruf übersetzt 12 erfundene Sätze in alle Sprachen, erzeugt den Ton (wo eine Stimme da ist) und schreibt einen Bewertungsbogen zum Anhören und Ausfüllen:
-  `cd ~/kidolmetscher/src/kidolmetscher && set -a && . ~/kidolmetscher/server.env && set +a && ~/kidolmetscher/.venv/bin/python scripts/quality_run.py --modes plain,structured --out ~/kidolmetscher/qualitaetslauf`
-  (`--modes` stellt zwei Prompt-Formate der Übersetzung nebeneinander; das richtige Format für TranslateGemma ist unbekannt.) Den Ordner `qualitaetslauf` mit `scp -r` auf den eigenen Rechner kopieren, `bewertungsbogen.html` öffnen und von Muttersprachlern bewerten lassen. Ohne den Server-Prozess zu stoppen geht das nicht gleichzeitig mit großen Modellen im VRAM: vorher `server_ctl.sh stop`.
+  `cd ~/kidolmetscher/src/kidolmetscher && set -a && . ~/kidolmetscher/server.env && set +a && ~/kidolmetscher/.venv/bin/python scripts/quality_run.py --modes structured,plain --out ~/kidolmetscher/qualitaetslauf`
+  (`--modes` stellt zwei Prompt-Formate nebeneinander: `structured` ist das offizielle Format laut Modellkarte, `plain` der Plan-Prompt als Text. Fehlerzeilen im Bogen zeigen, ob ein Sprachcode abgelehnt wurde.) Den Ordner `qualitaetslauf` mit `scp -r` auf den eigenen Rechner kopieren, `bewertungsbogen.html` öffnen und von Muttersprachlern bewerten lassen. Ohne den Server-Prozess zu stoppen geht das nicht gleichzeitig mit großen Modellen im VRAM: vorher `server_ctl.sh stop`.
 - Arabisch/Türkisch-Ton ausprobieren: `docs/tts-kandidaten-ar-tr.md` und `scripts/tts_candidate_try.py` (nicht getestet).
 - Verzögerung ablesen: Der Server schreibt je Satz eine Zeile mit `asr_ms`, `mt_ms`, `tts_ms`, `gesamt_ms` (keine Inhalte): `tail -n 20 ~/kidolmetscher/server.log`. Zielwert laut Plan: 3 bis 5 Sekunden insgesamt.
 - Messskripte (schreiben ins Messprotokoll): im Ordner `kidolmetscher/server` mit `source ~/kidolmetscher/server.env` und `~/kidolmetscher/.venv/bin/python ../scripts/bench_mt.py --write` usw. (`bench_asr.py` braucht Testaudio, siehe `scripts/make_placeholder_audio.py`).
@@ -81,7 +81,8 @@ Auf dem Server `server_ctl.sh stop`, dann in der Console die **Instanz löschen*
 | CTranslate2: `libcublas.so.12` / `libcudnn` nicht gefunden | Bibliotheken fehlen für die Spracherkennung | `pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"` und `LD_LIBRARY_PATH` auf die Ordner setzen (Anleitung der faster-whisper-Projektseite); ob das mit der installierten PyTorch-Version verträglich ist: unbekannt |
 | `Out of memory` beim Laden | VRAM oder RAM zu klein | `nvidia-smi` prüfen; RAM-Limit beim Support erhöhen lassen |
 | TranslateGemma: 401 / 403 | Freigabe fehlt oder Token falsch | Freigabe auf Hugging Face prüfen, `HF_TOKEN` neu setzen |
-| Übersetzung wirkt falsch oder gibt Zusatztext aus | Prompt-Format von TranslateGemma unbekannt | Chat-Template des Modells prüfen (`tokenizer.chat_template`), `mt_real.py` anpassen; die Modellkarte war bisher gesperrt |
+| Übersetzung bricht mit Fehler beim Template ab | Sprachcode wird vom Modell nicht unterstützt oder anders geschrieben | In `server.env` `MT_LANG_CODES=ar=ar-SA,uk=uk-UA` setzen (Schreibweise mit Land, siehe `docs/translategemma-modellkarte.md`), danach `stop` und `start` |
+| Übersetzung wirkt falsch oder gibt Zusatztext aus | Prompt-Format | `MT_PROMPT_MODE=plain` ausprobieren und im Qualitätslauf vergleichen |
 | Browser: Mikrofon nicht verfügbar | Adresse nicht `localhost` | Über den SSH-Tunnel `http://localhost:8000` öffnen |
 | Port 8000 belegt | alter Tunnel/Prozess | Fenster schließen, anderen lokalen Port nehmen: `ssh -L 8001:127.0.0.1:8000 ...` |
 

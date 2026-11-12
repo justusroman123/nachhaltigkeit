@@ -169,7 +169,7 @@ def test_echtes_asr_modell_laedt_und_verarbeitet_stille():
 def test_echtes_mt_modell_liefert_text():
     async def go():
         m = RealMt(make_settings(mt_backend="real", mt_model_id=MT_DIR, mt_device="cpu", mt_dtype="float32",
-                                 mt_max_new_tokens=30))
+                                 mt_max_new_tokens=30, mt_prompt_mode="plain"))     # Ersatzmodell kennt nur Textformat
         await m.load()
         return await m.translate("Der Vortrag beginnt in fünf Minuten.", "de", "en")
     assert run(go()).strip()
@@ -177,6 +177,8 @@ def test_echtes_mt_modell_liefert_text():
 
 def test_mt_prompt_modus_plain_und_structured():
     mt = RealMt(make_settings(mt_backend="real", mt_model_id="x"))
+    assert mt.prompt_mode == "structured"                          # Standard laut Modellkarte
+    mt.prompt_mode = "plain"
     plain = mt.build_messages("Hallo", "de", "uk")
     assert plain[0]["role"] == "user" and "German (de) to Ukrainian (uk) translator" in plain[0]["content"] \
         and plain[0]["content"].endswith("Hallo")
@@ -188,6 +190,19 @@ def test_mt_prompt_modus_plain_und_structured():
         Settings.from_env({"OPERATOR_KEY": "0123456789abcdef0123", "MT_PROMPT_MODE": "quatsch"})
 
 
+def test_mt_sprachcodes_ueberschreiben_und_pruefen():
+    from app.config import Settings, parse_lang_codes
+    assert parse_lang_codes("ar=ar-SA, uk=uk_UA") == {"ar": "ar-SA", "uk": "uk_UA"}
+    for bad in ("ar", "xx=ar", "ar=../x", "ar="):
+        with pytest.raises(ConfigError):
+            parse_lang_codes(bad)
+    with pytest.raises(ConfigError):
+        Settings.from_env({"OPERATOR_KEY": "0123456789abcdef0123", "MT_LANG_CODES": "kaputt"})
+    mt = RealMt(make_settings(mt_backend="real", mt_model_id="x", mt_lang_codes="ar=ar-SA"))
+    c = mt.build_messages("Hallo", "de", "ar")[0]["content"][0]
+    assert (c["source_lang_code"], c["target_lang_code"]) == ("de", "ar-SA")
+
+
 def test_mt_laden_faellt_auf_bild_text_modell_zurueck(monkeypatch, tmp_path):
     import types
     calls = []
@@ -196,20 +211,20 @@ def test_mt_laden_faellt_auf_bild_text_modell_zurueck(monkeypatch, tmp_path):
         def eval(self):
             calls.append("eval")
 
-    def causal(*a, **k):
-        calls.append("causal")
-        raise ValueError("Unrecognized configuration class")
-
     def image_text(*a, **k):
         calls.append("image_text")
+        raise ValueError("Unrecognized configuration class")
+
+    def causal(*a, **k):
+        calls.append("causal")
         return Model()
     fake = types.SimpleNamespace(
-        AutoTokenizer=types.SimpleNamespace(from_pretrained=lambda *a, **k: object()),
-        AutoModelForCausalLM=types.SimpleNamespace(from_pretrained=causal),
-        AutoModelForImageTextToText=types.SimpleNamespace(from_pretrained=image_text))
+        AutoProcessor=types.SimpleNamespace(from_pretrained=lambda *a, **k: object()),
+        AutoModelForImageTextToText=types.SimpleNamespace(from_pretrained=image_text),
+        AutoModelForCausalLM=types.SimpleNamespace(from_pretrained=causal))
     mod = types.ModuleType("transformers")
     mod.__dict__.update(vars(fake))
     monkeypatch.setitem(sys.modules, "transformers", mod)
     mt = RealMt(make_settings(mt_backend="real", mt_model_id=str(tmp_path), mt_device="cpu", mt_dtype="float32"))
     run(mt.load())
-    assert calls == ["causal", "image_text", "eval"]
+    assert calls == ["image_text", "causal", "eval"]

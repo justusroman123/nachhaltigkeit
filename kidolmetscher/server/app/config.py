@@ -22,6 +22,17 @@ def _bool(v: str) -> bool:
     return v.strip().lower() in ("1", "true", "yes", "ja", "on")
 
 
+def parse_lang_codes(raw: str) -> dict[str, str]:
+    """'ar=ar-SA,uk=uk-UA' -> {'ar': 'ar-SA', 'uk': 'uk-UA'} (Sprachcode fuer die Uebersetzung)."""
+    out: dict[str, str] = {}
+    for part in (x.strip() for x in raw.split(",") if x.strip()):
+        lang, sep, code = (p.strip() for p in part.partition("="))
+        if not sep or lang not in (*SUPPORTED_LANGS, "de") or not re.fullmatch(r"[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,4})?", code):
+            raise ConfigError(f"MT_LANG_CODES: erwartet 'sprache=code' (z. B. ar=ar-SA), unzulaessig: '{part}'")
+        out[lang] = code
+    return out
+
+
 def parse_tts_voices(raw: str) -> dict[str, tuple[str, Optional[int]]]:
     """'uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium' -> {'uk': ('uk_UA-...', 0), 'en': ('en_GB-...', None)}."""
     out: dict[str, tuple[str, Optional[int]]] = {}
@@ -93,7 +104,8 @@ class Settings:
     mt_device: str = "auto"                # auto | cuda | cpu
     mt_dtype: str = "auto"                 # auto | bfloat16 | float16 | float32
     mt_max_new_tokens: int = 256
-    mt_prompt_mode: str = "plain"          # plain = Plan-Prompt als Text | structured = Sprachcodes im Chat-Format (UNGEPRUEFT)
+    mt_prompt_mode: str = "structured"     # structured = Format laut TranslateGemma-Modellkarte | plain = Plan-Prompt als Text
+    mt_lang_codes: str = ""                # Sprachcode-Ueberschreibungen, z. B. "ar=ar-SA,uk=uk-UA" (Standard: eigener Code, ISO 639-1)
     tts_voice_dir: str = ""
     tts_voices: str = ""                   # z. B. "uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium"
 
@@ -132,6 +144,7 @@ class Settings:
                 or self.asr_min_speech_ms < 0 or self.asr_vad_rms < 1 or self.mt_max_new_tokens < 1):
             raise ConfigError("ASR_BEAM_SIZE, ASR_SILENCE_MS (>=100), ASR_MAX_UTTERANCE_S (>=2), ASR_MIN_SPEECH_MS, "
                               "ASR_VAD_RMS oder MT_MAX_NEW_TOKENS ungueltig")
+        parse_lang_codes(self.mt_lang_codes)
         parse_tts_voices(self.tts_voices)       # wirft ConfigError bei falschem Format
         if self.mock_asr_segment_s <= 0 or self.mock_delay_ms < 0:
             raise ConfigError("MOCK_ASR_SEGMENT_S/MOCK_DELAY_MS ungueltig")
@@ -191,6 +204,7 @@ class Settings:
                 mt_dtype=get("MT_DTYPE", d.mt_dtype),
                 mt_max_new_tokens=int(get("MT_MAX_NEW_TOKENS", d.mt_max_new_tokens)),
                 mt_prompt_mode=get("MT_PROMPT_MODE", d.mt_prompt_mode),
+                mt_lang_codes=get("MT_LANG_CODES", d.mt_lang_codes).strip(),
                 tts_voice_dir=get("TTS_VOICE_DIR", d.tts_voice_dir),
                 tts_voices=get("TTS_VOICES", d.tts_voices).strip(),
             )
