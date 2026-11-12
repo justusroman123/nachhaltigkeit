@@ -109,6 +109,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             raise HTTPException(status_code=401, detail="Bedienschluessel falsch")
 
     def key_ok(key: Optional[str]) -> bool:
+        if settings.allow_no_key and not settings.operator_key:
+            return True                       # Demo nur auf diesem Rechner (siehe config.validate)
         return isinstance(key, str) and hmac.compare_digest(
             key.encode("utf-8"), settings.operator_key.encode("utf-8"))
 
@@ -140,6 +142,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     async def public_config():
         """Nur unkritische Werte, damit die Oberflaeche die Auswahl anzeigen kann."""
         return {"langs": list(settings.target_langs), "default_langs": list(settings.default_langs),
+                "key_required": not (settings.allow_no_key and not settings.operator_key),
                 "public_url": settings.public_url,
                 "listener_ttl_s": settings.listener_ttl_s,
                 "min_listener_ttl_s": settings.min_listener_ttl_s,

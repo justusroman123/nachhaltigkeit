@@ -142,6 +142,7 @@
   }
 
   applyStrings();
-  if (!token) end('Link ungültig', 'bad', '⚠');
+  if (location.protocol === 'file:') end('Bitte über den Server öffnen (nicht als Datei)', 'bad', '⚠');
+  else if (!token) end('Link ungültig', 'bad', '⚠');
   else connect();
 })();

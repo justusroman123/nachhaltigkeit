@@ -14,6 +14,12 @@ oder echte Verzögerung aus.
 3. Mikrofon wählen, **„Senden starten“**, sprechen. Zuhörer sehen Untertitel und können den Ton (Kopfhörer) einschalten.
 4. **„Sitzung beenden“** löscht alles.
 
+**Schnell ausprobieren auf dem eigenen Rechner (Demo mit Attrappen, ohne Bedienschlüssel):**
+Windows: `start.bat` doppelklicken (Python 3 muss installiert sein, https://www.python.org/downloads/, „Add python.exe to PATH“ ankreuzen).
+Mac/Linux: `./start.sh`. Der Browser öffnet `http://localhost:8000/`. **Nicht** die HTML-Dateien aus dem Ordner direkt öffnen: Bedienplatz und
+Zuhörerseite brauchen den Server (nur `web/mic-test.html` geht auch als Datei). Dort „Sitzung starten“, dann „Demo ohne Mikrofon“ oder „Senden starten“.
+Anmeldung und Ablauf für einen Server-Test: `docs/server-test-einstunde.md`.
+
 Wo die Anwendung laufen soll, wie man sie aufruft und was dafür nötig ist (HTTPS, Domain): **`docs/betrieb.md`**
 (Empfehlung: auf dem gemieteten GPU-Server in Deutschland). Zum schnellen Ausprobieren ohne Server: `./start.sh`.
 

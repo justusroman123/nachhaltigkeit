@@ -24,11 +24,19 @@
   const say = (el, text, cls) => { el.textContent = text; el.className = cls || ''; };
 
   /* ---------- Start: Sprachen anzeigen ---------- */
+  if (location.protocol === 'file:') {      // Seite wurde als Datei geoeffnet: ohne Server geht nichts
+    e.create.disabled = true;
+    say(e.roomMsg, 'Diese Seite muss über den Server geöffnet werden, nicht als Datei. ' +
+      'Server starten (Windows: start.bat doppelklicken, sonst ./start.sh) und dann http://localhost:8000/ im Browser öffnen. ' +
+      'Nur das Mikrofon prüfen geht auch ohne Server: mic-test.html.', 'bad');
+    return;
+  }
   (async () => {
     try {
       cfg = await (await fetch('/api/config', { cache: 'no-store' })).json();
     } catch (_) { return say(e.roomMsg, 'Server nicht erreichbar. Läuft er und stimmt die Adresse?', 'bad'); }
     e.base.value = cfg.public_url || location.origin;
+    if (cfg.key_required === false) { $('keyRow').hidden = true; key = ''; }   // Demo ohne Schluessel
     cfg.langs.forEach((l) => {
       const lab = document.createElement('label'); lab.className = 'chip';
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = l; cb.checked = cfg.default_langs.includes(l);
@@ -45,10 +53,10 @@
 
   /* ---------- Sitzung ---------- */
   e.create.addEventListener('click', async () => {
-    key = e.key.value;
+    if (!(cfg && cfg.key_required === false)) key = e.key.value;
     const chosen = [...e.langs.querySelectorAll('input:checked')].map((c) => c.value);
     if (!chosen.length) return say(e.roomMsg, 'Bitte mindestens eine Sprache anhaken.', 'warn');
-    if (!key) return say(e.roomMsg, 'Bitte den Bedienschlüssel eingeben.', 'warn');
+    if (!key && !(cfg && cfg.key_required === false)) return say(e.roomMsg, 'Bitte den Bedienschlüssel eingeben.', 'warn');
     try {
       const r = await api('POST', '/api/rooms', { langs: chosen });
       if (r.status === 401) return say(e.roomMsg, 'Bedienschlüssel falsch.', 'bad');

@@ -11,14 +11,21 @@ if [ ! -x .venv/bin/uvicorn ]; then
   .venv/bin/pip install -q -r requirements.txt
 fi
 
-if [ -z "${OPERATOR_KEY:-}" ]; then
-  OPERATOR_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(18))')"
-  export OPERATOR_KEY
-  echo "Bedienschlüssel (gilt nur bis zum Beenden dieses Programms): $OPERATOR_KEY"
-fi
-
 PORT="${PORT:-8000}"
 HOST="${HOST:-127.0.0.1}"
+export HOST
+
+if [ -z "${OPERATOR_KEY:-}" ]; then
+  if [ "$HOST" = "127.0.0.1" ] || [ "$HOST" = "localhost" ]; then
+    export ALLOW_NO_KEY=true          # Demo ohne Schluessel, nur auf diesem Rechner
+    echo "Demo ohne Bedienschlüssel (gilt nur auf diesem Rechner)."
+  else
+    OPERATOR_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(18))')"
+    export OPERATOR_KEY
+    echo "Bedienschlüssel (gilt nur bis zum Beenden dieses Programms): $OPERATOR_KEY"
+  fi
+fi
+
 echo "Bedienplatz im Browser öffnen: http://localhost:${PORT}/"
 echo "Beenden mit Strg+C."
 exec .venv/bin/uvicorn app.main:create_app --factory --host "$HOST" --port "$PORT" --no-access-log

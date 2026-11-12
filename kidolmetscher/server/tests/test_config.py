@@ -35,6 +35,17 @@ def test_public_url():
         Settings.from_env(env(PUBLIC_URL="javascript:alert(1)"))
 
 
+def test_demo_ohne_schluessel_nur_lokal():
+    s = Settings.from_env({"ALLOW_NO_KEY": "true", "HOST": "127.0.0.1"})
+    assert s.operator_key == "" and s.allow_no_key
+    with pytest.raises(ConfigError, match="127.0.0.1"):
+        Settings.from_env({"ALLOW_NO_KEY": "true", "HOST": "0.0.0.0"})
+    with pytest.raises(ConfigError):                       # ohne Schalter bleibt der Schluessel Pflicht
+        Settings.from_env({"HOST": "127.0.0.1"})
+    # mit gesetztem Schluessel gilt er weiterhin, auch bei ALLOW_NO_KEY
+    assert Settings.from_env({"ALLOW_NO_KEY": "true", "OPERATOR_KEY": "x" * 20, "HOST": "0.0.0.0"}).operator_key
+
+
 def test_persisch_optional():
     s = Settings.from_env(env(TARGET_LANGS="uk,fa"))
     assert "fa" in s.target_langs and s.default_langs == ("uk",)

@@ -217,6 +217,22 @@ def test_herkunftspruefung_laesst_sich_fuer_vorschau_abschalten():
             assert ws.receive_json()["code"] == "token_invalid"      # Verbindung wurde angenommen
 
 
+def test_demo_ohne_schluessel():
+    s = make_settings(operator_key="", allow_no_key=True)
+    with app_client(s) as c:
+        assert c.get("/api/config").json()["key_required"] is False
+        r = c.post("/api/rooms")                                  # ohne Header
+        assert r.status_code == 200
+        rid = r.json()["room_id"]
+        assert c.post(f"/api/rooms/{rid}/listener-links", json={}).status_code == 200
+        ws = c.stack.enter_context(c.websocket_connect("/ws/operator"))
+        ws.send_json({"type": "hello", "room_id": rid, "operator_key": ""})
+        assert ws.receive_json()["type"] == "ready"
+    with app_client(make_settings()) as c:                        # normaler Betrieb: Schluessel bleibt Pflicht
+        assert c.get("/api/config").json()["key_required"] is True
+        assert c.post("/api/rooms").status_code == 401
+
+
 def test_kaputte_frames_werden_gezaehlt_nicht_verarbeitet(client):
     rid = new_room(client)
     op = open_operator(client, rid)

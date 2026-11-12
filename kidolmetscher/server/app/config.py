@@ -10,6 +10,7 @@ from .messages import SUPPORTED_LANGS
 
 BACKENDS = ("mock", "real")
 MIN_OPERATOR_KEY_LEN = 16
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 class ConfigError(ValueError):
@@ -26,6 +27,7 @@ class Settings:
     host: str = "127.0.0.1"
     port: int = 8000
     web_dir: Path = Path(__file__).resolve().parents[2] / "web"
+    allow_no_key: bool = False    # Demo ohne Bedienschluessel, nur zusammen mit HOST=127.0.0.1 (nur dieser Rechner)
     origin_check: bool = True     # WebSocket-Herkunftspruefung; nur fuer Vorschau-Tests hinter Zwischenservern abschalten
     public_url: str = ""          # optional: Adresse, unter der Zuhoerer den Server erreichen (fuer Link/QR)
 
@@ -61,7 +63,10 @@ class Settings:
     tts_voice_dir: str = ""
 
     def validate(self, require_operator_key: bool = True) -> "Settings":
-        if require_operator_key and len(self.operator_key) < MIN_OPERATOR_KEY_LEN:
+        if self.allow_no_key and not self.operator_key:
+            if self.host not in LOOPBACK_HOSTS:
+                raise ConfigError("ALLOW_NO_KEY ohne OPERATOR_KEY ist nur mit HOST=127.0.0.1 (nur dieser Rechner) erlaubt")
+        elif require_operator_key and len(self.operator_key) < MIN_OPERATOR_KEY_LEN:
             raise ConfigError(
                 f"OPERATOR_KEY fehlt oder ist kuerzer als {MIN_OPERATOR_KEY_LEN} Zeichen")
         for name in ("asr_backend", "mt_backend", "tts_backend"):
@@ -107,6 +112,7 @@ class Settings:
                 host=get("HOST", d.host),
                 port=int(get("PORT", d.port)),
                 web_dir=Path(get("WEB_DIR", str(d.web_dir))).resolve(),
+                allow_no_key=_bool(get("ALLOW_NO_KEY", "false")),
                 origin_check=_bool(get("ORIGIN_CHECK", "true")),
                 public_url=get("PUBLIC_URL", "").strip().rstrip("/"),
                 asr_backend=get("ASR_BACKEND", d.asr_backend),
