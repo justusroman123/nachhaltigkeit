@@ -113,3 +113,12 @@ Nicht gelesen: `www.stackit.de` leitet auf `stackit.com` weiter, diese Adresse i
 
 ## Weiterhin ungeklärt
 Sprachen und Prompt-Format von TranslateGemma (Modellkarte gesperrt); Lizenz des arabischen Datensatzes (GitHub 403); lessac-Lizenztext; Inhalt der Gemma-Prohibited-Use-Policy; centron-AVV und Kosten der Zusatz-Ressourcen; STACKIT.
+
+## Nachtrag 12.11.2026: Welche Piper-Stimmen es überhaupt gibt (voices.json im Repository rhasspy/piper-voices)
+
+- Türkisch: nur `tr_TR-dfki-medium` (laut früherer Lesung CC BY-NC-SA 4.0, nicht kommerziell).
+- Arabisch: nur `ar_JO-kareem` (low, medium); Lizenz ungeklärt (siehe oben).
+- Persisch: `fa_IR-amir`, `ganji`, `ganji_adabi`, `gyro`, `reza_ibrahim` (alle medium); **Lizenzen nicht gelesen**.
+- Ukrainisch: `lada` (x_low), `mykyta`, `oleksa`, `tetiana` (high), `ukrainian_tts` (medium, 3 Sprecher).
+
+**Folge:** Für Türkisch und Arabisch gibt es in Piper keine Stimme mit geklärter freier Lizenz. Für Ton in diesen Sprachen wäre ein anderes Sprachausgabe-Modell nötig (noch nicht recherchiert). Bis dahin: nur Untertitel.
