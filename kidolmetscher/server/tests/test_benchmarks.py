@@ -101,3 +101,13 @@ def test_messskript_schreibt_mit_mock_nicht_ins_messprotokoll():
                        text=True, env=env, timeout=60)
     assert r.returncode == 0 and "Nicht in docs/messprotokoll.md geschrieben" in r.stdout and "ACHTUNG" in r.stdout
     assert (ROOT / "docs" / "messprotokoll.md").read_bytes() == before
+
+
+def test_qualitaetslauf_schreibt_bewertungsbogen_mit_mock(tmp_path):
+    env = {**os.environ, "ASR_BACKEND": "mock", "MT_BACKEND": "mock", "TTS_BACKEND": "mock"}
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "quality_run.py"), "--out", str(tmp_path), "--limit", "2",
+                        "--langs", "uk,ar"], capture_output=True, text=True, env=env, timeout=60)
+    assert r.returncode == 0, r.stderr
+    page = (tmp_path / "bewertungsbogen.html").read_text(encoding="utf-8")
+    assert "Guten Tag, meine Damen und Herren" in page and "Ukrainisch" in page and "dir='rtl'" in page
+    assert (tmp_path / "uk" / "q01.wav").is_file() and "<audio" in page

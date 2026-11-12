@@ -58,6 +58,10 @@ Im Browser `http://localhost:8000` öffnen, Bedienschlüssel eingeben, Sitzung s
 ## Schritt 4: Testen und messen
 
 - Erfundene deutsche Sätze sprechen (z. B. `tests/audio/testsaetze.txt`), Ukrainisch und Englisch mit Ton, Arabisch und Türkisch nur Untertitel (dafür gibt es noch keine freie Stimme).
+- **Qualitätslauf (wichtigster Schritt für die Qualität):** Ein Aufruf übersetzt 12 erfundene Sätze in alle Sprachen, erzeugt den Ton (wo eine Stimme da ist) und schreibt einen Bewertungsbogen zum Anhören und Ausfüllen:
+  `cd ~/kidolmetscher/src/kidolmetscher && set -a && . ~/kidolmetscher/server.env && set +a && ~/kidolmetscher/.venv/bin/python scripts/quality_run.py --modes plain,structured --out ~/kidolmetscher/qualitaetslauf`
+  (`--modes` stellt zwei Prompt-Formate der Übersetzung nebeneinander; das richtige Format für TranslateGemma ist unbekannt.) Den Ordner `qualitaetslauf` mit `scp -r` auf den eigenen Rechner kopieren, `bewertungsbogen.html` öffnen und von Muttersprachlern bewerten lassen. Ohne den Server-Prozess zu stoppen geht das nicht gleichzeitig mit großen Modellen im VRAM: vorher `server_ctl.sh stop`.
+- Arabisch/Türkisch-Ton ausprobieren: `docs/tts-kandidaten-ar-tr.md` und `scripts/tts_candidate_try.py` (nicht getestet).
 - Verzögerung ablesen: Der Server schreibt je Satz eine Zeile mit `asr_ms`, `mt_ms`, `tts_ms`, `gesamt_ms` (keine Inhalte): `tail -n 20 ~/kidolmetscher/server.log`. Zielwert laut Plan: 3 bis 5 Sekunden insgesamt.
 - Messskripte (schreiben ins Messprotokoll): im Ordner `kidolmetscher/server` mit `source ~/kidolmetscher/server.env` und `~/kidolmetscher/.venv/bin/python ../scripts/bench_mt.py --write` usw. (`bench_asr.py` braucht Testaudio, siehe `scripts/make_placeholder_audio.py`).
 - Qualität: ukrainische und englische Stimme anhören, Bewertungsbogen `docs/bewertungsbogen.md`. Übersetzungsqualität für uk, ar, tr von jemandem prüfen lassen, der die Sprache kann.

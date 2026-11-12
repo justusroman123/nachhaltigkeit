@@ -1,0 +1,14 @@
+# Erfundene deutsche Saetze fuer den Qualitaetslauf (scripts/quality_run.py). Keine echten Namen, Orte oder Daten.
+# Format: Kennung | Art | Text
+q01 | Begruessung | Guten Tag, meine Damen und Herren, herzlich willkommen zu unserer Informationsveranstaltung.
+q02 | Hinweis | Bitte schalten Sie Ihre Mobiltelefone aus oder stellen Sie diese auf lautlos.
+q03 | Zahlen | Die Sprechstunde findet jeden Dienstag von 8 Uhr 30 bis 12 Uhr im Zimmer 117 statt.
+q04 | Zahlen | Der Antrag muss bis zum 31. Januar eingereicht werden, die Gebühr beträgt 45 Euro.
+q05 | Amtsdeutsch | Für die Bearbeitung benötigen wir einen gültigen Ausweis sowie eine Meldebescheinigung, die nicht älter als drei Monate ist.
+q06 | Amtsdeutsch | Gegen diesen Bescheid können Sie innerhalb eines Monats schriftlich Widerspruch einlegen.
+q07 | Eigennamen | Frau Beispielmann von der Musterbehörde in Teststadt erklärt Ihnen den Ablauf.
+q08 | Fachwort | Die Anwendung wandelt gesprochene Sprache in Text um und übersetzt diesen dann automatisch.
+q09 | Lang | Wenn Sie Unterstützung beim Ausfüllen der Formulare benötigen, wenden Sie sich bitte an die Mitarbeiterinnen und Mitarbeiter am Empfang, die Ihnen gerne weiterhelfen.
+q10 | Kurz | Haben Sie noch Fragen?
+q11 | Verneinung | Eine Anmeldung ist leider nicht mehr möglich, die Veranstaltung ist bereits ausgebucht.
+q12 | Umgang | Vielen Dank für Ihre Aufmerksamkeit, wir wünschen Ihnen einen guten Heimweg.

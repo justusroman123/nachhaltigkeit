@@ -25,6 +25,7 @@ class RealMt:
         self._torch: Any = None
         self._device = "cpu"
         self._lock: Optional[asyncio.Lock] = None
+        self.prompt_mode = settings.mt_prompt_mode        # zur Laufzeit umschaltbar (Vergleich im Qualitaetslauf)
 
     async def load(self) -> None:
         if not self._model_id:
@@ -50,9 +51,16 @@ class RealMt:
         self._tok, self._model = await asyncio.to_thread(_load)
         self._lock = asyncio.Lock()
 
+    def build_messages(self, text: str, src: str, tgt: str) -> list:
+        if self.prompt_mode == "structured":
+            # Sprachcodes als Felder; Format nach gaengiger Beschreibung, fuer TranslateGemma NICHT geprueft
+            return [{"role": "user", "content": [{"type": "text", "source_lang_code": src,
+                                                   "target_lang_code": tgt, "text": text}]}]
+        return [{"role": "user", "content": f"{build_prompt(src, tgt)}\n\n{text}"}]
+
     def _run(self, text: str, src: str, tgt: str) -> str:
         torch = self._torch
-        messages = [{"role": "user", "content": f"{build_prompt(src, tgt)}\n\n{text}"}]
+        messages = self.build_messages(text, src, tgt)
         inputs = self._tok.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt",
                                                return_dict=True).to(self._device)
         with torch.inference_mode():

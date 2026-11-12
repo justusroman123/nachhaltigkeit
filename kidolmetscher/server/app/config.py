@@ -93,6 +93,7 @@ class Settings:
     mt_device: str = "auto"                # auto | cuda | cpu
     mt_dtype: str = "auto"                 # auto | bfloat16 | float16 | float32
     mt_max_new_tokens: int = 256
+    mt_prompt_mode: str = "plain"          # plain = Plan-Prompt als Text | structured = Sprachcodes im Chat-Format (UNGEPRUEFT)
     tts_voice_dir: str = ""
     tts_voices: str = ""                   # z. B. "uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium"
 
@@ -124,8 +125,9 @@ class Settings:
         if self.server_hourly_eur < 0 or self.budget_eur < 0:
             raise ConfigError("SERVER_HOURLY_EUR und BUDGET_EUR duerfen nicht negativ sein")
         if (self.asr_device not in ("auto", "cuda", "cpu") or self.mt_device not in ("auto", "cuda", "cpu")
-                or self.mt_dtype not in ("auto", "bfloat16", "float16", "float32")):
-            raise ConfigError("ASR_DEVICE/MT_DEVICE: auto|cuda|cpu, MT_DTYPE: auto|bfloat16|float16|float32")
+                or self.mt_dtype not in ("auto", "bfloat16", "float16", "float32")
+                or self.mt_prompt_mode not in ("plain", "structured")):
+            raise ConfigError("ASR_DEVICE/MT_DEVICE: auto|cuda|cpu, MT_DTYPE: auto|bfloat16|float16|float32, MT_PROMPT_MODE: plain|structured")
         if (self.asr_beam_size < 1 or self.asr_silence_ms < 100 or self.asr_max_utterance_s < 2
                 or self.asr_min_speech_ms < 0 or self.asr_vad_rms < 1 or self.mt_max_new_tokens < 1):
             raise ConfigError("ASR_BEAM_SIZE, ASR_SILENCE_MS (>=100), ASR_MAX_UTTERANCE_S (>=2), ASR_MIN_SPEECH_MS, "
@@ -188,6 +190,7 @@ class Settings:
                 mt_device=get("MT_DEVICE", d.mt_device),
                 mt_dtype=get("MT_DTYPE", d.mt_dtype),
                 mt_max_new_tokens=int(get("MT_MAX_NEW_TOKENS", d.mt_max_new_tokens)),
+                mt_prompt_mode=get("MT_PROMPT_MODE", d.mt_prompt_mode),
                 tts_voice_dir=get("TTS_VOICE_DIR", d.tts_voice_dir),
                 tts_voices=get("TTS_VOICES", d.tts_voices).strip(),
             )

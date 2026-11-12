@@ -173,3 +173,16 @@ def test_echtes_mt_modell_liefert_text():
         await m.load()
         return await m.translate("Der Vortrag beginnt in fünf Minuten.", "de", "en")
     assert run(go()).strip()
+
+
+def test_mt_prompt_modus_plain_und_structured():
+    mt = RealMt(make_settings(mt_backend="real", mt_model_id="x"))
+    plain = mt.build_messages("Hallo", "de", "uk")
+    assert plain[0]["role"] == "user" and "German (de) to Ukrainian (uk) translator" in plain[0]["content"] \
+        and plain[0]["content"].endswith("Hallo")
+    mt.prompt_mode = "structured"
+    c = mt.build_messages("Hallo", "de", "uk")[0]["content"][0]
+    assert c == {"type": "text", "source_lang_code": "de", "target_lang_code": "uk", "text": "Hallo"}
+    with pytest.raises(ConfigError):
+        from app.config import Settings
+        Settings.from_env({"OPERATOR_KEY": "0123456789abcdef0123", "MT_PROMPT_MODE": "quatsch"})
