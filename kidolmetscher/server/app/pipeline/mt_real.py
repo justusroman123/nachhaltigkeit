@@ -32,6 +32,7 @@ class RealMt:
             raise ConfigError("MT_BACKEND=real braucht MT_MODEL_ID (Ordner oder Modell-ID; Wert ist unbekannt und nicht geraten)")
         try:
             import torch
+            import transformers
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError as exc:
             raise ConfigError('Pakete "torch" und "transformers" fehlen (pip install -r requirements-mt.txt)') from exc
@@ -45,7 +46,12 @@ class RealMt:
         def _load():
             tok = AutoTokenizer.from_pretrained(self._model_id)
             # device_map: Gewichte direkt aufs Geraet laden (nicht erst komplett in den Arbeitsspeicher; Team-Limit 8 GB RAM)
-            model = AutoModelForCausalLM.from_pretrained(self._model_id, dtype=dtype, device_map=self._device)
+            try:
+                model = AutoModelForCausalLM.from_pretrained(self._model_id, dtype=dtype, device_map=self._device)
+            except (ValueError, KeyError):
+                # Gemma-3-Familie ist teils als Bild-Text-Modell eingetragen (Hub-Kennzeichnung "Image-Text-to-Text")
+                model = transformers.AutoModelForImageTextToText.from_pretrained(
+                    self._model_id, dtype=dtype, device_map=self._device)
             model.eval()
             return tok, model
         self._tok, self._model = await asyncio.to_thread(_load)

@@ -186,3 +186,30 @@ def test_mt_prompt_modus_plain_und_structured():
     with pytest.raises(ConfigError):
         from app.config import Settings
         Settings.from_env({"OPERATOR_KEY": "0123456789abcdef0123", "MT_PROMPT_MODE": "quatsch"})
+
+
+def test_mt_laden_faellt_auf_bild_text_modell_zurueck(monkeypatch, tmp_path):
+    import types
+    calls = []
+
+    class Model:
+        def eval(self):
+            calls.append("eval")
+
+    def causal(*a, **k):
+        calls.append("causal")
+        raise ValueError("Unrecognized configuration class")
+
+    def image_text(*a, **k):
+        calls.append("image_text")
+        return Model()
+    fake = types.SimpleNamespace(
+        AutoTokenizer=types.SimpleNamespace(from_pretrained=lambda *a, **k: object()),
+        AutoModelForCausalLM=types.SimpleNamespace(from_pretrained=causal),
+        AutoModelForImageTextToText=types.SimpleNamespace(from_pretrained=image_text))
+    mod = types.ModuleType("transformers")
+    mod.__dict__.update(vars(fake))
+    monkeypatch.setitem(sys.modules, "transformers", mod)
+    mt = RealMt(make_settings(mt_backend="real", mt_model_id=str(tmp_path), mt_device="cpu", mt_dtype="float32"))
+    run(mt.load())
+    assert calls == ["causal", "image_text", "eval"]
