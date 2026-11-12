@@ -22,3 +22,10 @@ Hinweise:
 - Port 80 braucht Caddy für die automatische Zertifikatsausstellung (je nach Verfahren). Wenn der Plan strikt „nur SSH und 443“ vorsieht, muss ein anderes Zertifikatsverfahren gewählt werden. Entscheidung offen.
 - Docker kann veröffentlichte Ports an `ufw` vorbei freigeben. Deshalb veröffentlicht `docker-compose.yml` im Profil `gpu` nur die Caddy-Ports 80 und 443.
 - SSH nur mit Schlüssel, Passwort-Anmeldung abschalten (Serverkonfiguration, nicht Teil dieser Anwendung).
+
+## Ausgehende Verbindungen (Datenschutz)
+
+Für die Aussage „im Datenpfad läuft nichts über Fremdserver“ reicht der Code allein nicht. Zusätzlich auf dem Server:
+- Im Betrieb (Sitzung läuft) **ausgehenden Verkehr sperren**, außer was die Anwendung nachweislich braucht (voraussichtlich nichts außer Antworten auf eingehende Verbindungen und die Zertifikatserneuerung von Caddy).
+- Modelle, Pakete und Container-Images **vor** dem Termin laden (dafür kurz Zugriff auf Hugging Face, Paket- und Container-Register erlauben), danach sperren.
+- Die Compose-Datei setzt für die Modell-Bibliotheken `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1` und schaltet Telemetrie ab. Ob die später gewählten ASR-/MT-/TTS-Bibliotheken noch weitere Verbindungen aufbauen, ist **unbekannt** und mit einer Netzwerkmessung (z. B. Protokoll der gesperrten ausgehenden Verbindungen) zu prüfen.

@@ -42,3 +42,22 @@ Das ist **nicht** die Laufzeit der gemieteten Maschine. Server nach jeder Sitzun
   Dann gehen Daten auf der Instanz verloren (Modelle müssten neu geladen werden, Zeit und Datenvolumen unbekannt). Verbindliche Auskunft beim Anbieter einholen (Frage 2 unten).
 - **Startguthaben:** 200 € in den ersten 60 Tagen für neue Konten (Angabe von centron; Bedingungen nicht gelesen). Das würde die geplanten rund 24 bis 26 € für die Demo-Stunden decken. Konto anlegen macht laut Plan Jonas.
 - Mit 1,1919 € statt 1,19 € ändern sich die Planrechnungen nur geringfügig (50 € ÷ 1,1919 € ≈ 41,9 Stunden ohne Zuschläge).
+
+## Woher die Zahlen kommen und wie es günstiger wird (Stand 12.11.2026)
+
+**Der Plan nennt denselben Preis.** Plan-Zeilen (Abschnitt Kosten): „Server-Test, 2 Stunden | 2,38 €“ und „Server-Demo, 20 Stunden | 23,80 € bis ca. 26 €“. Das sind 2 × 1,19 € bzw. 20 × 1,19 €. Die „2, 3 Euro“ gelten also für **zwei Stunden**, nicht für eine. centron nennt auf der GPU-Seite 1,1919 € pro Stunde netto (Plan: 1,19 €). Alle Preise netto; Umsatzsteuer, vCPU, RAM und Speicher kommen laut centron zusätzlich (Höhe: **unbekannt**).
+
+| Budget | Stunden RTX 6000 Ada (ohne Zuschläge) |
+| --- | --- |
+| 2 € | ca. 1,7 |
+| 5 € | ca. 4,2 |
+| 50 € (Plan) | ca. 41,9 |
+
+### Hebel für niedrigere Kosten
+1. **Kleinere GPU** (centron-GPU-Seite, netto pro Stunde): RTX A4000 16 GB 0,2069 €, Quadro RTX 6000 24 GB 0,2764 €, A100 ab 0,9583 / 1,7917 € (je nach Ausführung). **Ob Whisper large-v3 und TranslateGemma 12B dort gemeinsam in den Speicher passen und schnell genug sind: unbekannt, nicht gemessen.** Messpunkt: `scripts/bench_*.py` auf der kleineren Karte (Speicher, Verzögerung pro Stufe).
+2. **Nur so lange laufen lassen wie nötig, danach Instanz löschen** (Kosten laufen laut centron auch bei gestoppter Instanz weiter).
+3. **200 € Startguthaben** für neue Konten in den ersten 60 Tagen (Bedingungen nicht gelesen): der Prototyp-Test kann dadurch laut Seite 0 € kosten, sofern die Bedingungen es erlauben.
+4. **Nur ein Termin pro Server-Stunde bündeln**: Vorbereitung (Modelle laden) außerhalb der Demo kostet ebenfalls Servermiete; „Golden Image“/Snapshot mit fertigen Modellen könnte das verkürzen (für GPU-Instanzen unbekannt).
+5. **Piper läuft auf CPU**: TTS braucht keine GPU-Zeit.
+
+Langfristig sehr günstig bei hoher Qualität ist **ein Messziel, keine belegte Aussage**: Erst mit gemessener Verzögerung und Qualität je GPU-Klasse lässt sich ein Preis pro Veranstaltungsstunde nennen.

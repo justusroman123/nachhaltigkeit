@@ -38,6 +38,11 @@ services:
       ASR_BACKEND: real
       MT_BACKEND: real
       TTS_BACKEND: real
+      # Keine Verbindungen der Modell-Bibliotheken ins Internet zur Laufzeit (Modelle liegen unter /models):
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      DO_NOT_TRACK: "1"
       PUBLIC_URL: https://${DOMAIN:-example.invalid}
     expose: ["8000"]
     volumes:
