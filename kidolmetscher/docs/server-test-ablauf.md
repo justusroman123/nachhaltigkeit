@@ -10,13 +10,14 @@ Der Server lauscht nur auf sich selbst (`127.0.0.1`). Von Ihrem Windows-Rechner 
 
 ## Kosten (netto, Schätzung, Zeiten unbekannt)
 
-Konfiguration 4 vCPU / 8 GB RAM / 300 GB Speicher mit RTX 6000 Ada: ca. 1,24 € pro Stunde (Console). Einrichtung (Pakete und Modelle laden, ca. 35 GB) plus Test: **Dauer unbekannt**, grob 2 bis 3 Stunden, also etwa 2,49 bis 3,73 € netto. Die Instanz kostet, solange sie existiert; danach **löschen**. Ein vergessener Server kostet ca. 30 € pro Tag. Kalender-Erinnerung setzen.
+Konfiguration 4 vCPU / 8 GB RAM / 300 GB Speicher mit RTX 6000 Ada: ca. 1,24 € pro Stunde (Console); mit 16 GB RAM etwas mehr (Aufschlag laut Console-Preis ca. 0,02 € pro Stunde, meine Rechnung, im Checkout prüfen).
+**Stand 12.11.2026 (Antwort des centron-Supports):** 200 € Startguthaben sind im Konto hinterlegt, gültig 60 Tage oder bis zum Aufbrauchen. Ein Kostenlimit und eine Vorauszahlung gibt es **nicht**. Das Team-Limit wurde „entsprechend erhöht“ (neue Werte: unbekannt, im Console-Bereich Team-Einstellungen > Limits nachsehen). Ob das Guthaben netto oder brutto verrechnet wird, ist unbekannt. Rechnung: Bei ca. 1,24 € pro Stunde reicht das Guthaben für rund 160 Stunden; eine **vergessene Instanz** verbraucht es in etwa 6,70 Tagen, danach wird der Rest abgebucht. Einrichtung (Pakete und Modelle laden, ca. 35 GB) plus Test: **Dauer unbekannt**, grob 2 bis 3 Stunden, also etwa 2,49 bis 3,73 € netto. Die Instanz kostet, solange sie existiert; danach **löschen**. Ein vergessener Server kostet ca. 30 € pro Tag. Kalender-Erinnerung setzen.
 
 ## Vorher erledigen (ohne Kosten)
 
 1. **Hugging-Face-Freigabe für TranslateGemma** (`google/translategemma-12b-it`): Konto, Gemma-Bedingungen akzeptieren, Freigabe abwarten (Dauer unbekannt). Prompt B unten. Das Zugriffs-Token erzeugen Sie selbst in den Konto-Einstellungen (Typ „Read“), und es kommt **nur** als Umgebungsvariable `HF_TOKEN` auf den Server, nie in Chat oder Dateien.
 2. **SSH-Schlüssel** auf dem Windows-Rechner (Eingabeaufforderung): `ssh-keygen -t ed25519` (Enter drücken), dann `type %USERPROFILE%\.ssh\id_ed25519.pub`. Der öffentliche Schlüssel (eine Zeile) ist nicht geheim und kommt in Prompt A. Die Datei ohne `.pub` ist privat: niemals weitergeben.
-3. Antworten von centron abwarten (Startguthaben, Limits, RAM-Limit 8 GB). Mit 8 GB RAM sollte es nach Planung gehen, weil die Gewichte direkt auf die GPU geladen werden (unbekannt, erster Lauf zeigt es).
+3. ~~Antworten von centron abwarten~~ Erledigt am 12.11.2026: Startguthaben da, RAM-Limit erhöht (Wert prüfen). Die Frage nach dem RAM-Preis wurde nicht beantwortet (Verweis auf den Checkout); Prompt A liest die aktuellen Preise aus.
 
 ## Schritt 1: Instanz anlegen (Prompt A, Sie bestätigen vor dem Klick)
 
@@ -95,6 +96,9 @@ Ich bin bei https://cloud.centron.de eingeloggt (ccloud³ Console).
 Aufgabe: Eine GPU-Instanz für einen Test VORBEREITEN, aber NICHT erstellen.
 Klicke NICHT auf "VM erstellen" oder Ähnliches. Gib keine Zahlungsdaten ein.
 
+0. Vorab nur lesen: Wie hoch ist das Guthaben (Billing)? Wie lange gilt es? Wie lauten jetzt die Team-Limits
+   (Avatar oben rechts -> Team Einstellungen -> Tab "Team" -> "Limits")? Nenne mir die Zahlen.
+
 1. SSH-Schlüssel: Gibt es in der Console einen Bereich für SSH-Schlüssel? Wenn ja, lege dort einen
    Schlüssel mit dem Namen "kidolmetscher-test" an und füge diesen öffentlichen Schlüssel ein:
    <HIER DIE EINE ZEILE AUS id_ed25519.pub EINFÜGEN>
@@ -102,7 +106,7 @@ Klicke NICHT auf "VM erstellen" oder Ähnliches. Gib keine Zahlungsdaten ein.
 2. Öffne ccloud³ -> "Virtuelle Maschine erstellen" -> "Cloud GPU" -> "GPU wählen" und stelle ein:
    - GPU: NVIDIA RTX 6000 ADA 48GB
    - Region: Bamberg (BBG1)
-   - vCPU 4, RAM 8 GB, Speicher 300 GB
+   - vCPU 4, RAM 16 GB (falls das erhöhte Limit es erlaubt, sonst 8 GB), Speicher 300 GB
    - Name: kidolmetscher-test
    - Betriebssystem/Image: das neueste Ubuntu LTS, am liebsten eine Variante mit NVIDIA-Treiber/CUDA,
      falls angeboten. Liste mir ALLE angebotenen Images, die du siehst.

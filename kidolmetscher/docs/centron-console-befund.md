@@ -64,3 +64,13 @@ Mit Umsatzsteuer sind es ca. 1,48 € pro Stunde; 20 € brutto reichen dann fü
 > 7. Bitte bestätigen Sie, dass eine gelöschte Instanz ab dem Löschzeitpunkt nicht weiter berechnet wird.
 >
 > Vielen Dank und freundliche Grüße
+
+## Nachtrag 12.11.2026: Antwort des centron-Supports (Ticket per E-Mail, Auszug sinngemäß)
+
+1. **Startguthaben:** 200 € wurden im Konto hinterlegt, gültig 60 Tage oder bis zum Aufbrauchen. Warum es zuerst fehlte, nannte der Support nicht.
+2. **Kostenlimit/Vorauszahlung:** Beides gibt es **nicht**. (Bestätigt: Kosten lassen sich nur durch Löschen der Instanz und Kontrolle begrenzen.)
+3. **RAM-Preis (0,97 € oder 1,90 € pro GB):** nicht beantwortet; der Support verweist auf den Checkout beim Anlegen der VM (`cloud.centron.de/ccloud/checkout`). Der gültige Preis ist die Anzeige dort.
+4. **Team-Limits:** auf unsere Bitte (16 GB RAM) „entsprechend erhöht“. Die neuen Zahlen sind **unbekannt** und in der Console zu prüfen.
+5. **Testkontingent:** Das Startguthaben gilt als Testguthaben.
+
+Folgerungen: Der Test (ca. 2 bis 4 Stunden, ca. 2,49 bis 5,00 € netto nach meiner Rechnung) wird laut Antwort aus dem Startguthaben gedeckt, sofern es für GPU-Instanzen gilt (nicht ausdrücklich bestätigt). Die Fragen zu Datenschutz/AVV und zur Region Hallstadt wurden in dieser Antwort nicht behandelt (sie gingen an eine andere Adresse bzw. sind zurückgestellt).
