@@ -43,7 +43,8 @@ class RealMt:
 
         def _load():
             tok = AutoTokenizer.from_pretrained(self._model_id)
-            model = AutoModelForCausalLM.from_pretrained(self._model_id, dtype=dtype).to(self._device)
+            # device_map: Gewichte direkt aufs Geraet laden (nicht erst komplett in den Arbeitsspeicher; Team-Limit 8 GB RAM)
+            model = AutoModelForCausalLM.from_pretrained(self._model_id, dtype=dtype, device_map=self._device)
             model.eval()
             return tok, model
         self._tok, self._model = await asyncio.to_thread(_load)

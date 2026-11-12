@@ -5,7 +5,7 @@ Persisch optional). Zuhörer sehen Untertitel und hören die Übersetzung über 
 
 **Stand: Etappe 0 und 1.** Der Server läuft mit **Attrappen** (Mocks). Alle drei echten Stufen sind umgesetzt
 (`asr_real.py` faster-whisper, `mt_real.py` Transformers, `tts_real.py` Piper; Einrichtung: `docs/betrieb.md`, Abschnitt 5 und 6).
-**Mit großen Modellen und auf dem GPU-Server wurden sie noch nicht gelaufen**; die Übersetzung ist mit TranslateGemma nicht geprüft
+Ablauf eines Servertests: `docs/server-test-ablauf.md`. **Mit großen Modellen und auf dem GPU-Server wurden sie noch nicht gelaufen**; die Übersetzung ist mit TranslateGemma nicht geprüft
 (Modell gesperrt). Getestet wurde nur mit kleinen Ersatzmodellen auf der CPU. Nichts hier sagt etwas über Übersetzungsqualität
 oder echte Verzögerung aus.
 
