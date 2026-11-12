@@ -74,3 +74,10 @@ Mit Umsatzsteuer sind es ca. 1,48 € pro Stunde; 20 € brutto reichen dann fü
 5. **Testkontingent:** Das Startguthaben gilt als Testguthaben.
 
 Folgerungen: Der Test (ca. 2 bis 4 Stunden, ca. 2,49 bis 5,00 € netto nach meiner Rechnung) wird laut Antwort aus dem Startguthaben gedeckt, sofern es für GPU-Instanzen gilt (nicht ausdrücklich bestätigt). Die Fragen zu Datenschutz/AVV und zur Region Hallstadt wurden in dieser Antwort nicht behandelt (sie gingen an eine andere Adresse bzw. sind zurückgestellt).
+
+## Nachtrag 12.11.2026 (später): Prüfung in der Console durch das Browser-Plugin (nur gelesen)
+
+- **Guthaben:** 200,00 €. Ein Ablaufdatum steht in der Console **nicht** (laut Support-Antwort gelten 60 Tage). Der Info-Text dort nennt es "dein Guthaben, das du auf dein Konto eingezahlt hast". Ob es für GPU-Instanzen gilt und netto oder brutto verrechnet wird: weiter unbekannt, im Billing nach dem Anlegen prüfen.
+- **Team-Limits jetzt:** Kerne 20, RAM 80 GB, Speicher 2000 GB, GPUs 8 (alle 0 belegt). Das ist deutlich mehr als nötig; die Limits begrenzen also nicht mehr die Kosten. **Pro Test nur eine Instanz anlegen.**
+- **SSH-Schlüssel** "kidolmetscher-test" ist gespeichert (Team Einstellungen > Tab Sicherheit > SSH Keys); Fingerprint stimmte mit dem lokalen Schlüssel überein. Ob er beim Erstellen einer VM auswählbar ist, wurde nicht geprüft.
+- **2FA:** Ab 14.12.2026 Pflicht für die Anmeldung; aktuell deaktiviert. Vor diesem Datum einrichten (Entscheidung der Kontoinhaberin/des Kontoinhabers).
