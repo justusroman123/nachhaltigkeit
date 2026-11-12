@@ -41,14 +41,15 @@ def test_fabrik_waehlt_nach_konfiguration():
     assert isinstance(p.asr, RealAsr) and isinstance(p.mt, RealMt) and isinstance(p.tts, RealTts)
 
 
-def test_echte_stufen_sind_nur_geruest():
+def test_echte_stufen_ohne_konfiguration_sind_nicht_startbar_und_nutzbar():
     p = build_pipeline(make_settings(asr_backend="real", mt_backend="real", tts_backend="real"))
-    for stage in (p.asr, p.mt):
-        with pytest.raises(NotImplementedError, match="TODO"):
-            run(stage.load())
-    with pytest.raises(ConfigError, match="TTS_VOICES"):          # TTS ist umgesetzt, aber ohne Stimmen nicht startbar
+    with pytest.raises(ConfigError, match="MT_MODEL_ID"):
+        run(p.mt.load())
+    with pytest.raises(ConfigError, match="TTS_VOICES"):
         run(p.tts.load())
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ConfigError, match="load"):                 # ohne load() kein Stream / keine Uebersetzung
+        p.asr.new_stream()
+    with pytest.raises(ConfigError, match="load"):
         run(p.mt.translate("a", "de", "uk"))
 
 

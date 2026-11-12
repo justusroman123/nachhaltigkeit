@@ -81,8 +81,18 @@ class Settings:
     mock_delay_ms: int = 0
 
     # Echte Stufen: Werte unbekannt, kommen aus der Umgebung
-    asr_model: str = "large-v3"
+    asr_model: str = "large-v3"            # Name oder lokaler Ordner (Betrieb: lokaler Ordner, HF_HUB_OFFLINE=1)
+    asr_device: str = "auto"               # auto | cuda | cpu
+    asr_compute_type: str = "default"      # z. B. float16 (GPU), int8 (CPU)
+    asr_beam_size: int = 5
+    asr_silence_ms: int = 700              # Pause, nach der ein Satzabschnitt als beendet gilt (Annahme, messen)
+    asr_max_utterance_s: float = 12.0      # laengster Abschnitt ohne Pause (Annahme, messen)
+    asr_min_speech_ms: int = 300           # kuerzere Abschnitte werden verworfen
+    asr_vad_rms: int = 400                 # Lautstaerke-Schwelle (RMS, 16-Bit-Skala) fuer "es wird gesprochen" (Annahme, messen)
     mt_model_id: str = ""
+    mt_device: str = "auto"                # auto | cuda | cpu
+    mt_dtype: str = "auto"                 # auto | bfloat16 | float16 | float32
+    mt_max_new_tokens: int = 256
     tts_voice_dir: str = ""
     tts_voices: str = ""                   # z. B. "uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium"
 
@@ -113,6 +123,13 @@ class Settings:
             raise ConfigError("SEGMENT_MAX_WORDS, LANG_QUEUE_MAX, TTS_SKIP_BACKLOG muessen >= 1 sein")
         if self.server_hourly_eur < 0 or self.budget_eur < 0:
             raise ConfigError("SERVER_HOURLY_EUR und BUDGET_EUR duerfen nicht negativ sein")
+        if (self.asr_device not in ("auto", "cuda", "cpu") or self.mt_device not in ("auto", "cuda", "cpu")
+                or self.mt_dtype not in ("auto", "bfloat16", "float16", "float32")):
+            raise ConfigError("ASR_DEVICE/MT_DEVICE: auto|cuda|cpu, MT_DTYPE: auto|bfloat16|float16|float32")
+        if (self.asr_beam_size < 1 or self.asr_silence_ms < 100 or self.asr_max_utterance_s < 2
+                or self.asr_min_speech_ms < 0 or self.asr_vad_rms < 1 or self.mt_max_new_tokens < 1):
+            raise ConfigError("ASR_BEAM_SIZE, ASR_SILENCE_MS (>=100), ASR_MAX_UTTERANCE_S (>=2), ASR_MIN_SPEECH_MS, "
+                              "ASR_VAD_RMS oder MT_MAX_NEW_TOKENS ungueltig")
         parse_tts_voices(self.tts_voices)       # wirft ConfigError bei falschem Format
         if self.mock_asr_segment_s <= 0 or self.mock_delay_ms < 0:
             raise ConfigError("MOCK_ASR_SEGMENT_S/MOCK_DELAY_MS ungueltig")
@@ -160,7 +177,17 @@ class Settings:
                 mock_asr_segment_s=float(get("MOCK_ASR_SEGMENT_S", d.mock_asr_segment_s)),
                 mock_delay_ms=int(get("MOCK_DELAY_MS", d.mock_delay_ms)),
                 asr_model=get("ASR_MODEL", d.asr_model),
+                asr_device=get("ASR_DEVICE", d.asr_device),
+                asr_compute_type=get("ASR_COMPUTE_TYPE", d.asr_compute_type),
+                asr_beam_size=int(get("ASR_BEAM_SIZE", d.asr_beam_size)),
+                asr_silence_ms=int(get("ASR_SILENCE_MS", d.asr_silence_ms)),
+                asr_max_utterance_s=float(get("ASR_MAX_UTTERANCE_S", d.asr_max_utterance_s)),
+                asr_min_speech_ms=int(get("ASR_MIN_SPEECH_MS", d.asr_min_speech_ms)),
+                asr_vad_rms=int(get("ASR_VAD_RMS", d.asr_vad_rms)),
                 mt_model_id=get("MT_MODEL_ID", d.mt_model_id),
+                mt_device=get("MT_DEVICE", d.mt_device),
+                mt_dtype=get("MT_DTYPE", d.mt_dtype),
+                mt_max_new_tokens=int(get("MT_MAX_NEW_TOKENS", d.mt_max_new_tokens)),
                 tts_voice_dir=get("TTS_VOICE_DIR", d.tts_voice_dir),
                 tts_voices=get("TTS_VOICES", d.tts_voices).strip(),
             )

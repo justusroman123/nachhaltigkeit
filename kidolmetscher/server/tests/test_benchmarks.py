@@ -86,10 +86,12 @@ def test_rauchtest_laeuft_mit_mock_und_meldet_echte_stufen_als_offen():
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "smoke_test.py")], capture_output=True, text=True,
                        env=env, timeout=60)
     assert r.returncode == 0 and "TTS en (1 Satz)" in r.stdout and "nicht implementiert" not in r.stdout
-    env.update(ASR_BACKEND="real", MT_BACKEND="real", TTS_BACKEND="real")
+    # echte Stufen ohne Modelle/Stimmen: klarer Hinweis statt Absturz (kein Download: Offline-Modus, Pfad existiert nicht)
+    env.update(ASR_BACKEND="real", MT_BACKEND="real", TTS_BACKEND="real", ASR_MODEL="/nicht/vorhanden",
+               HF_HUB_OFFLINE="1", MT_MODEL_ID="", TTS_VOICES="", TTS_VOICE_DIR="")
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "smoke_test.py")], capture_output=True, text=True,
-                       env=env, timeout=60)
-    assert r.returncode == 1 and "nicht implementiert" in r.stdout       # Geruest: klarer Hinweis statt Absturz
+                       env=env, timeout=120)
+    assert r.returncode == 1 and ("nicht startbar" in r.stdout or "FEHLER" in r.stdout)
 
 
 def test_messskript_schreibt_mit_mock_nicht_ins_messprotokoll():

@@ -99,3 +99,16 @@ Hinweise:
 - Die Stimme `ukrainian_tts` kennt nur Kleinbuchstaben; die Anwendung schreibt den Text für sie klein.
 - Audio bleibt im Arbeitsspeicher, es wird keine Datei geschrieben (Test).
 - Starten mit nur echter Sprachausgabe (ASR und MT als Attrappe) ist möglich: `ASR_BACKEND=mock MT_BACKEND=mock TTS_BACKEND=real`. Die Attrappen-Übersetzung ist aber kein Ukrainisch, dann klingt die Stimme falsch; das ist erst mit echter Übersetzung hörbar sinnvoll.
+
+## 6. Echte Spracherkennung und Übersetzung einrichten (Stand 12.11.2026)
+
+Umgesetzt und mit **kleinen Ersatzmodellen auf der CPU** getestet (Whisper tiny, Qwen2.5-0.5B-Instruct als Übersetzer). **Nicht** getestet: Whisper large-v3, TranslateGemma, GPU.
+
+**Spracherkennung** (`ASR_BACKEND=real`): faster-whisper (MIT). Weg „pausenbasiert“: Die Anwendung erkennt Sprechpausen an der Lautstärke, sammelt den Abschnitt im Arbeitsspeicher und lässt Whisper ihn erkennen. Die Verzögerung ist Abschnittslänge plus Erkennungszeit; das ist höher als bei echtem Streaming (SimulStreaming/WhisperLiveKit, Entscheidung E9 offen). Schwellen sind Annahmen und an echten Aufnahmen zu messen: `ASR_SILENCE_MS` (700), `ASR_MAX_UTTERANCE_S` (12), `ASR_VAD_RMS` (400), `ASR_MIN_SPEECH_MS` (300).
+1. `pip install -r server/requirements-asr.txt`
+2. Modell vor dem Termin laden: `python3 scripts/fetch_models.py Systran/faster-whisper-large-v3 models/whisper-large-v3` (Repo-ID vor Einsatz prüfen)
+3. `ASR_MODEL=models/whisper-large-v3`, auf dem GPU-Server `ASR_DEVICE=cuda`, `ASR_COMPUTE_TYPE=float16`
+
+**Übersetzung** (`MT_BACKEND=real`): Transformers. `pip install -r server/requirements-mt.txt` (PyTorch-Version muss zum CUDA-Treiber des Servers passen: unbekannt). `MT_MODEL_ID` ist der Ordner oder die ID des Modells. Die TranslateGemma-Modell-ID ist **unbekannt** (Modell freigabepflichtig, Modellkarte nicht gelesen), und ob das hier verwendete Prompt-Format (Plan-Prompt in einer Nutzer-Nachricht) dem offiziellen Format entspricht, ist **unbekannt**. Mit `HF_TOKEN` nach Freigabe laden: `python3 scripts/fetch_models.py <repo-id> models/translategemma`.
+
+**Gesamtlauf auf der CPU (Ersatzmodelle, Deutsch zu Englisch, Ton):** erkannt „Guten Tag und herzlich Willkommen zur Veranstaltung.“, übersetzt „Good morning and welcome to the event.“, mit englischem Ton. Die Zeiten dort (ASR 530 bis 1065 ms, MT 1262 bis 1424 ms, TTS 86 bis 134 ms) sagen nichts über den GPU-Server oder die großen Modelle aus; das Audio wurde schneller als in Echtzeit eingespeist.

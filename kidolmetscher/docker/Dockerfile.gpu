@@ -17,6 +17,10 @@ RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install -r /app/requirements.
 # Piper (Sprachausgabe, GPL-3.0; Entscheidung E10 offen). Entfernen, falls die Lizenzpruefung dagegen ausfaellt.
 COPY server/requirements-tts.txt /app/requirements-tts.txt
 RUN /opt/venv/bin/pip install -r /app/requirements-tts.txt
+# Spracherkennung (faster-whisper, MIT) und Uebersetzung (Transformers/PyTorch). CUDA-Version von PyTorch muss zum
+# Treiber des gemieteten Servers passen (unbekannt): vor dem Bauen pruefen, sonst requirements-mt.txt anpassen.
+COPY server/requirements-asr.txt server/requirements-mt.txt /app/
+RUN /opt/venv/bin/pip install -r /app/requirements-asr.txt -r /app/requirements-mt.txt
 # TODO: weitere Modell-Abhaengigkeiten (Whisper/SimulStreaming, TranslateGemma, Piper) erst nach Entscheidung
 #       und Lizenzpruefung (docs/entscheidungen.md) in eine eigene requirements-gpu.txt aufnehmen.
 #       Modellgewichte NICHT ins Image backen und nicht im Repo ablegen; Volume nur lesend einbinden.

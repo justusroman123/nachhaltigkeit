@@ -1,0 +1,2 @@
+# Spracherkennung (optional, MIT): faster-whisper mit Whisper-Modell
+faster-whisper>=1.2

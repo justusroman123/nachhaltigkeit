@@ -6,6 +6,7 @@ import sys
 import time
 
 from _common import backend_label, build_pipeline, load_settings
+from app.config import ConfigError
 from app.benchmarks import fmt_ms, fmt_vram, md_table, vram_used_mib
 from app.pipeline.base import AudioChunk
 
@@ -27,6 +28,9 @@ async def main() -> int:
         except NotImplementedError as exc:
             ok = False
             rows.append([name, f"nicht implementiert: {exc}", "-", fmt_vram(vram_used_mib())])
+        except ConfigError as exc:                            # fehlende Einstellung/Paket/Datei: Hinweistext ist unkritisch
+            ok = False
+            rows.append([name, f"nicht startbar: {exc}", "-", fmt_vram(vram_used_mib())])
         except Exception as exc:
             ok = False
             rows.append([name, f"FEHLER {type(exc).__name__}", "-", fmt_vram(vram_used_mib())])

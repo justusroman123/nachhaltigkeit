@@ -1,0 +1,4 @@
+# Uebersetzung (optional): Transformers + PyTorch. Version fuer die GPU-Maschine (CUDA) vor Einsatz festlegen.
+torch
+transformers>=4.56
+accelerate
