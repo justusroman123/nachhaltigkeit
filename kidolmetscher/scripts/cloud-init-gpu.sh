@@ -10,16 +10,39 @@ HF_TOKEN=""                                   # Hugging-Face-Lesetoken fuer Tran
                                               # Das Token liegt danach noch in den Cloud-Init-Daten der VM: nach dem Test widerrufen.
 MT_REPO="google/translategemma-12b-it"        # oder google/translategemma-4b-it (kleiner, fuer eine 16-GB-GPU)
 QUALITAETSLAUF="1"                            # 1 = vor dem ersten Start einmal alle Sprachen durchrechnen (Bewertungsbogen)
+OPERATOR_KEY=""                               # Ihr Bedienschluessel (nur Buchstaben und Ziffern, mind. 24 Zeichen, z. B. aus dem Passwort-Manager).
+                                              # Leer = wird zufaellig erzeugt (steht dann nur in ~/kidolmetscher/server.env auf der VM).
+DOMAIN=""                                     # Adresse fuer Chromebook und Tablets, z. B. dolmetscher.beispiel.de. Der DNS-Eintrag (A) muss VOR
+                                              # dem Start auf die IP der VM zeigen. Leer = Ersatzadresse <ip>.sslip.io (fremder DNS-Dienst, Zertifikat-
+                                              # Limits moeglich, ungeprueft). Ohne HTTPS gibt der Browser das Mikrofon nicht frei.
 # ------------------------------------------------------------------------------------------------
 exec > /var/log/kidolmetscher-init.log 2>&1
 set -u
 export HOME=/root DEBIAN_FRONTEND=noninteractive HF_TOKEN MT_REPO
 echo "== Start $(date -Is)"
 apt-get update -y
-apt-get install -y git python3-venv python3-pip curl ubuntu-drivers-common
+apt-get install -y git python3-venv python3-pip curl ubuntu-drivers-common caddy
 git clone --branch ccr-4bf88cb4-flgtez https://github.com/justusroman123/nachhaltigkeit.git /root/kidolmetscher/src
 SKIP_APT=1 bash /root/kidolmetscher/src/kidolmetscher/scripts/server_setup.sh
 unset HF_TOKEN
+
+# Bedienschluessel, Adresse (HTTPS) und Reverse Proxy
+IP=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+[ -n "$DOMAIN" ] || DOMAIN="$(echo "$IP" | tr . -).sslip.io"
+if echo "$OPERATOR_KEY" | grep -Eq '^[A-Za-z0-9]{24,}$'; then
+  sed -i "s/^OPERATOR_KEY=.*/OPERATOR_KEY=$OPERATOR_KEY/" /root/kidolmetscher/server.env
+else
+  echo "HINWEIS: OPERATOR_KEY leer oder ungueltig (nur Buchstaben/Ziffern, mind. 24): zufaelliger Schluessel in server.env bleibt"
+fi
+echo "PUBLIC_URL=https://$DOMAIN" >> /root/kidolmetscher/server.env
+cat > /etc/caddy/Caddyfile <<CEOF
+$DOMAIN {
+	reverse_proxy 127.0.0.1:8000
+}
+CEOF
+systemctl enable caddy
+systemctl restart caddy
+command -v ufw >/dev/null && ufw status | grep -q "Status: active" && { ufw allow 22/tcp; ufw allow 80/tcp; ufw allow 443/tcp; }
 
 # Dienst: startet die Anwendung beim Hochfahren (nur auf 127.0.0.1, Zugriff per SSH-Tunnel)
 cat > /root/kidolmetscher/qualitaetslauf.sh <<'QEOF'

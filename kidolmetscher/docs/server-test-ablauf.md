@@ -74,20 +74,37 @@ Auf dem Server `server_ctl.sh stop`, dann in der Console die **Instanz löschen*
 
 ## Einfachster Weg: alles automatisch beim Anlegen (Cloud-Init, NICHT GETESTET)
 
-Ziel: Nach dem Anlegen der VM muss nichts am Terminal getippt werden.
+Ziel: Nach dem Anlegen der VM muss nichts am Terminal getippt werden, und **Chromebook und Tablets** erreichen die Anwendung über eine HTTPS-Adresse im Browser (ein SSH-Tunnel geht nur am Windows-PC und für Tablets gar nicht).
 
-**Einmal vorbereiten:** `scripts/cloud-init-gpu.sh` öffnen. Oben im Block „EINSTELLUNGEN“: `HF_TOKEN` (Lesetoken, nur in Ihrer lokalen Kopie eintragen, **nie ins Repository oder in den Chat**), `MT_REPO` (12B oder `google/translategemma-4b-it`), `QUALITAETSLAUF` (1 = einmal alle Sprachen durchrechnen).
+**Einmal vorbereiten:** `scripts/cloud-init-gpu.sh` öffnen. Oben im Block „EINSTELLUNGEN“ eintragen (nur in Ihrer lokalen Kopie, **nie ins Repository oder in den Chat**):
+- `HF_TOKEN`: Hugging-Face-Lesetoken für TranslateGemma.
+- `MT_REPO`: 12B oder `google/translategemma-4b-it`.
+- `OPERATOR_KEY`: Ihr Bedienschlüssel (nur Buchstaben und Ziffern, mindestens 24 Zeichen, z. B. aus einem Passwort-Manager). So kennen Sie ihn schon und brauchen die VM dafür nicht.
+- `DOMAIN`: Adresse, z. B. `dolmetscher.beispiel.de`. Der DNS-Eintrag (A) muss vor dem Start auf die IP der VM zeigen. Leer = Ersatzadresse `<ip>.sslip.io` (fremder DNS-Dienst, Zertifikat-Limits möglich, ungeprüft).
+- `QUALITAETSLAUF`: 1 = einmal alle Sprachen durchrechnen.
 
 **Ablauf pro Termin:**
-1. Prompt A2 ans Plugin; in „Erweiterte Optionen“ den Inhalt des Skripts bei „Cloud-Init Initialisierungsskripte“ einfügen; „VM erstellen“.
-2. Warten (Dauer unbekannt, geschätzt 15 bis 60 Minuten: Downloads, Treiber, Neustart). Die VM kostet währenddessen.
-3. Windows-PC: Doppelklick auf `windows/start-tunnel.bat`, IP-Adresse eingeben. Der Browser öffnet `http://localhost:8000`. Der Bedienschlüssel steht auf der VM in `~/kidolmetscher/server.env` (einmal `ssh root@<IP> grep OPERATOR_KEY ~/kidolmetscher/server.env`).
-4. Bewertungsbogen: Doppelklick auf `windows/hole-bewertungsbogen.bat`, danach `Downloads\qualitaetslauf\bewertungsbogen.html` öffnen.
-5. Danach Prompt C (VM zerstören) und Token auf Hugging Face widerrufen.
+1. Prompt A2 ans Plugin (jetzt mit den Ports 22, 80, 443). In „Erweiterte Optionen“ den Inhalt des Skripts bei „Cloud-Init Initialisierungsskripte“ einfügen; „VM erstellen“.
+2. IP-Adresse notieren und, falls eine eigene `DOMAIN` verwendet wird, den DNS-Eintrag setzen (bei jeder neuen VM ändert sich die IP; eine **reservierte IP** könnte das lösen: Prompt D unten, Kosten und Zuordnung unbekannt).
+3. Warten (Dauer unbekannt, geschätzt 15 bis 60 Minuten: Downloads, Treiber, Neustart). Die VM kostet währenddessen.
+4. **Chromebook:** Chrome, `https://<ihre-adresse>/` öffnen, Bedienschlüssel eingeben, Mikrofon erlauben. **Tablets:** Links/QR-Codes aus dem Bedienplatz.
+5. Bewertungsbogen (nur am Windows-PC): Doppelklick `windows/hole-bewertungsbogen.bat`. Am Chromebook ist das nicht vorbereitet.
+6. Danach Prompt C (VM zerstören) und Token auf Hugging Face widerrufen.
 
-**Was das Skript macht:** Pakete und Code laden, Whisper, Stimmen und TranslateGemma laden, den Dienst `kidolmetscher` einrichten (startet beim Hochfahren, hört nur auf `127.0.0.1`), GPU-Treiber installieren, Token-Reste aus den Cloud-Init-Daten löschen, neu starten. Nach dem Neustart läuft vor dem ersten Start einmal der Qualitätslauf (Ergebnis nur auf der VM), dann startet die Anwendung.
+**Was das Skript macht:** Pakete und Code laden, Whisper, Stimmen und TranslateGemma laden, Caddy als HTTPS-Proxy mit automatischem Zertifikat einrichten, den Dienst `kidolmetscher` einrichten (startet beim Hochfahren, hört nur auf `127.0.0.1`, von außen nur über Caddy), GPU-Treiber installieren, Token- und Schlüssel-Reste aus den Cloud-Init-Daten löschen, neu starten. Nach dem Neustart läuft vor dem ersten Start einmal der Qualitätslauf (Ergebnis nur auf der VM), dann startet die Anwendung.
 
-**Kontrolle bei Problemen:** per SSH `tail /var/log/kidolmetscher-init.log`, `/root/kidolmetscher/INIT_FERTIG` vorhanden?, `systemctl status kidolmetscher`, `nvidia-smi`. Ungeprüft: ob das Feld dieses Format annimmt, ob der Treiber-Install im Skript durchläuft, die beiden `.bat`-Dateien unter Windows. Das Skript steht öffentlich im Repository und enthält dort **kein** Token.
+**Sicherheit (wichtig):** Die Adresse ist öffentlich erreichbar. Geschützt ist der Bedienplatz nur durch den Schlüssel (**kein Schutz gegen automatisches Raten**, siehe `docs/datenschutz-nachweis.md`), Zuhörer nur durch zufällige Links mit Ablauf. Deshalb: langer Schlüssel (mind. 24 Zeichen), VM nur für die Dauer des Termins, danach zerstören. Das Zertifikat macht den Hostnamen in öffentlichen Zertifikatsprotokollen sichtbar (keine Gesprächsdaten).
+
+**Kontrolle bei Problemen:** per SSH (nur am Windows-PC) `tail /var/log/kidolmetscher-init.log`, `/root/kidolmetscher/INIT_FERTIG` vorhanden?, `systemctl status kidolmetscher caddy`, `nvidia-smi`. Ungeprüft: ob das Feld dieses Format annimmt, ob `caddy` und der Treiber im Skript durchlaufen, ob Let's Encrypt für die Adresse klappt, die `.bat`-Dateien. Das Skript steht öffentlich im Repository und enthält dort **kein** Token und keinen Schlüssel.
+
+**Prompt D (reservierte IP prüfen, nur lesen):**
+```
+Ich bin bei https://cloud.centron.de eingeloggt. Nur lesen, nichts anlegen oder ändern.
+Menü Network -> Reservierte IPs (und die Doku dazu): Kann ich eine feste öffentliche IPv4-Adresse reservieren und sie
+nach dem Zerstören einer VM an eine neue VM zuweisen? Was kostet sie pro Monat (zwei Nachkommastellen, netto/brutto),
+auch solange sie keiner VM zugewiesen ist? Wie viele sind in meinem Konto erlaubt? Nenne die Fundstelle.
+Was du nicht findest: "nicht gefunden".
+```
 
 ## Fehlersuche
 
@@ -129,7 +146,7 @@ Klicke NICHT auf "VM erstellen" oder Ähnliches. Gib keine Zahlungsdaten ein.
    - Betriebssystem/Image: das neueste Ubuntu LTS, am liebsten eine Variante mit NVIDIA-Treiber/CUDA,
      falls angeboten. Liste mir ALLE angebotenen Images, die du siehst.
    - SSH-Schlüssel: "kidolmetscher-test" auswählen (kein Passwort-Login, falls wählbar)
-   - Firewall/Netzwerk: nur Port 22 (SSH) von außen erlaubt, falls einstellbar; keine weiteren Ports freigeben.
+   - Firewall/Netzwerk: nur Port 22 (SSH), 80 und 443 (HTTPS) von außen erlaubt, falls einstellbar; keine weiteren Ports freigeben.
 3. Berichte mir, was die Console jetzt anzeigt: Gesamtpreis pro Stunde und pro Monat, Preis je Posten,
    ob netto oder brutto, gewähltes Image, Region, Firewall-Einstellung, und ob irgendeine Kostenwarnung oder
    ein Limit angezeigt wird. Rate nichts: Was du nicht siehst, schreibst du als "nicht gefunden".
