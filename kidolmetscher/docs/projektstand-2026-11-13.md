@@ -8,6 +8,28 @@ Den folgenden Text zu Beginn eines neuen Chats einfügen:
 
 > Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository `justusroman123/nachhaltigkeit` (Zweig `ccr-4bf88cb4-flgtez`) die Dateien `kidolmetscher/CLAUDE.md` und `kidolmetscher/docs/projektstand-2026-11-13.md`. Mach dann beim Abschnitt „Nächste Schritte“ weiter. Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.
 
+## 0a. Wiederaufnahme nach einer Pause (so startet man neu)
+
+Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu angelegten VM. Sie brauchen nur Browser, Console-Zugang und (für Tests) den Windows-PC mit dem SSH-Schlüssel.
+
+1. **Neuen Chat öffnen**, den Einstiegstext aus Abschnitt 0 einfügen und schreiben: „VM neu anlegen“. Claude führt dann Schritt für Schritt.
+2. **Vorbereitung (kostenlos, ca. 5 Minuten):** Hugging-Face-Token neu erstellen (Typ „Read“); einen Bedienschlüssel ausdenken (nur Buchstaben und Ziffern, mindestens 24 Zeichen); optional eine Adresse (Domain) festlegen. Diese Werte **nur in einer lokalen Kopie** von `scripts/cloud-init-gpu.sh` oben im Block „EINSTELLUNGEN“ eintragen, nie ins Repository oder in den Chat.
+3. **VM anlegen:** Prompt A2 (steht im Dokument „Server-Test Ablauf mit centron-Antwort“) ans Browser-Plugin geben; in den „Erweiterten Optionen“ den Inhalt der lokalen Skript-Kopie bei „Cloud-Init Initialisierungsskripte“ einfügen; **„VM erstellen“ klicken Sie selbst** (ab dann laufen die Kosten, ca. 1,26 € pro Stunde).
+4. **Warten:** Das Skript lädt Pakete und Modelle (ca. 35 GB), installiert den GPU-Treiber und startet neu. **Dauer unbekannt**, geschätzt 15 bis 60 Minuten. IP-Adresse aus der Console notieren; bei eigener Adresse den DNS-Eintrag auf diese IP setzen.
+5. **Benutzen:** Am Chromebook `https://<Adresse>/` öffnen, Bedienschlüssel eingeben. (Beim ersten Test am Windows-PC stattdessen `windows/start-tunnel.bat`.)
+6. **Ende:** Prompt C (VM zerstören, Kosten prüfen) und Token auf Hugging Face widerrufen.
+
+**Ehrlich zum Stand:** Das Cloud-Init-Skript, die HTTPS-Adresse für das Chromebook und die `.bat`-Dateien sind **noch nicht auf einer echten VM durchgelaufen**. Beim ersten Mal ist mit Nacharbeit zu rechnen; die Datei `/var/log/kidolmetscher-init.log` auf der VM zeigt, wo es hängt. Ein echtes „Ein-Klick“ (VM automatisch anlegen und löschen) wäre nur über die centron-API möglich; ob sie dafür taugt und was sie kostet, ist **unbekannt**.
+
+## 0b. Vor dem Zerstören der VM (Checkliste, die VM löscht alles darauf)
+
+1. Letzte Zeilen von `~/setup.log` (Gesamtzeit `real`, GPU-Prüfung) und `tail -n 30 ~/kidolmetscher/server.log` kopieren und im Chat festhalten oder in dieses Protokoll übernehmen.
+2. Falls ein Qualitätslauf gemacht wurde: den Ordner `~/kidolmetscher/qualitaetslauf` mit `scp -r` auf den Windows-PC holen (`windows/hole-bewertungsbogen.bat`) und bewerten lassen.
+3. Messwerte aus dem Server-Log (`asr_ms`, `mt_ms`, `tts_ms`, `gesamt_ms`) notieren.
+4. **VM zerstören** (VM-Seite, „Zerstören“, Server-ID bestätigen), danach im Billing prüfen, dass keine VM mehr läuft (GPUs 0 / 8).
+5. **Hugging-Face-Token widerrufen** (Einstellungen, Tokens).
+6. Ergebnisse dieses Durchlaufs in einem neuen Chat nennen, damit Skripte und Protokoll angepasst werden.
+
 Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft möglicherweise noch und kostet etwa 1,26 € pro Stunde, bis sie in der Console **zerstört** wird (siehe Abschnitt 9).
 
 ## 1. Ziel und Rahmen

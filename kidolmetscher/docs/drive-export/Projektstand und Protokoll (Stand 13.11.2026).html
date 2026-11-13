@@ -5,6 +5,26 @@
 <blockquote>
 <p>Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository <code>justusroman123/nachhaltigkeit</code> (Zweig <code>ccr-4bf88cb4-flgtez</code>) die Dateien <code>kidolmetscher/CLAUDE.md</code> und <code>kidolmetscher/docs/projektstand-2026-11-13.md</code>. Mach dann beim Abschnitt „Nächste Schritte“ weiter. Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.</p>
 </blockquote>
+<h2>0a. Wiederaufnahme nach einer Pause (so startet man neu)</h2>
+<p>Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu angelegten VM. Sie brauchen nur Browser, Console-Zugang und (für Tests) den Windows-PC mit dem SSH-Schlüssel.</p>
+<ol>
+<li><strong>Neuen Chat öffnen</strong>, den Einstiegstext aus Abschnitt 0 einfügen und schreiben: „VM neu anlegen“. Claude führt dann Schritt für Schritt.</li>
+<li><strong>Vorbereitung (kostenlos, ca. 5 Minuten):</strong> Hugging-Face-Token neu erstellen (Typ „Read“); einen Bedienschlüssel ausdenken (nur Buchstaben und Ziffern, mindestens 24 Zeichen); optional eine Adresse (Domain) festlegen. Diese Werte <strong>nur in einer lokalen Kopie</strong> von <code>scripts/cloud-init-gpu.sh</code> oben im Block „EINSTELLUNGEN“ eintragen, nie ins Repository oder in den Chat.</li>
+<li><strong>VM anlegen:</strong> Prompt A2 (steht im Dokument „Server-Test Ablauf mit centron-Antwort“) ans Browser-Plugin geben; in den „Erweiterten Optionen“ den Inhalt der lokalen Skript-Kopie bei „Cloud-Init Initialisierungsskripte“ einfügen; <strong>„VM erstellen“ klicken Sie selbst</strong> (ab dann laufen die Kosten, ca. 1,26 € pro Stunde).</li>
+<li><strong>Warten:</strong> Das Skript lädt Pakete und Modelle (ca. 35 GB), installiert den GPU-Treiber und startet neu. <strong>Dauer unbekannt</strong>, geschätzt 15 bis 60 Minuten. IP-Adresse aus der Console notieren; bei eigener Adresse den DNS-Eintrag auf diese IP setzen.</li>
+<li><strong>Benutzen:</strong> Am Chromebook <code>https://&lt;Adresse&gt;/</code> öffnen, Bedienschlüssel eingeben. (Beim ersten Test am Windows-PC stattdessen <code>windows/start-tunnel.bat</code>.)</li>
+<li><strong>Ende:</strong> Prompt C (VM zerstören, Kosten prüfen) und Token auf Hugging Face widerrufen.</li>
+</ol>
+<p><strong>Ehrlich zum Stand:</strong> Das Cloud-Init-Skript, die HTTPS-Adresse für das Chromebook und die <code>.bat</code>-Dateien sind <strong>noch nicht auf einer echten VM durchgelaufen</strong>. Beim ersten Mal ist mit Nacharbeit zu rechnen; die Datei <code>/var/log/kidolmetscher-init.log</code> auf der VM zeigt, wo es hängt. Ein echtes „Ein-Klick“ (VM automatisch anlegen und löschen) wäre nur über die centron-API möglich; ob sie dafür taugt und was sie kostet, ist <strong>unbekannt</strong>.</p>
+<h2>0b. Vor dem Zerstören der VM (Checkliste, die VM löscht alles darauf)</h2>
+<ol>
+<li>Letzte Zeilen von <code>~/setup.log</code> (Gesamtzeit <code>real</code>, GPU-Prüfung) und <code>tail -n 30 ~/kidolmetscher/server.log</code> kopieren und im Chat festhalten oder in dieses Protokoll übernehmen.</li>
+<li>Falls ein Qualitätslauf gemacht wurde: den Ordner <code>~/kidolmetscher/qualitaetslauf</code> mit <code>scp -r</code> auf den Windows-PC holen (<code>windows/hole-bewertungsbogen.bat</code>) und bewerten lassen.</li>
+<li>Messwerte aus dem Server-Log (<code>asr_ms</code>, <code>mt_ms</code>, <code>tts_ms</code>, <code>gesamt_ms</code>) notieren.</li>
+<li><strong>VM zerstören</strong> (VM-Seite, „Zerstören“, Server-ID bestätigen), danach im Billing prüfen, dass keine VM mehr läuft (GPUs 0 / 8).</li>
+<li><strong>Hugging-Face-Token widerrufen</strong> (Einstellungen, Tokens).</li>
+<li>Ergebnisse dieses Durchlaufs in einem neuen Chat nennen, damit Skripte und Protokoll angepasst werden.</li>
+</ol>
 <p>Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft möglicherweise noch und kostet etwa 1,26 € pro Stunde, bis sie in der Console <strong>zerstört</strong> wird (siehe Abschnitt 9).</p>
 <h2>1. Ziel und Rahmen</h2>
 <ul>
