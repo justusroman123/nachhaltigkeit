@@ -72,9 +72,22 @@ Im Browser `http://localhost:8000` öffnen, Bedienschlüssel eingeben, Sitzung s
 
 Auf dem Server `server_ctl.sh stop`, dann in der Console die **Instanz löschen** (Prompt C), Kosten im Bereich Billing prüfen.
 
-## Abkürzung: Einrichtung beim Anlegen automatisch (Cloud-Init, NICHT GETESTET)
+## Einfachster Weg: alles automatisch beim Anlegen (Cloud-Init, NICHT GETESTET)
 
-Beim Anlegen der VM gibt es unter „Erweiterte Optionen“ das Feld **Cloud-Init Initialisierungsskripte** (kostenlos). Den Inhalt von `scripts/cloud-init-gpu.sh` dort einfügen (Format, das das Feld erwartet: unbekannt; das Skript beginnt mit `#!/bin/bash`). Es installiert die Pakete, lädt Code, Whisper und die Stimmen, installiert den GPU-Treiber und startet neu. Danach: per SSH anmelden, `tail /var/log/kidolmetscher-init.log` und prüfen, ob `/root/kidolmetscher/INIT_FERTIG` existiert, dann `nvidia-smi`, dann TranslateGemma mit dem Token laden (`HF_TOKEN=... bash ~/kidolmetscher/src/kidolmetscher/scripts/server_setup.sh`, überspringt Fertiges) und weiter wie oben. Dauer: unbekannt (die Instanz kostet in dieser Zeit schon). Das Skript steht öffentlich im Repository; es enthält keine Geheimnisse und darf keine enthalten.
+Ziel: Nach dem Anlegen der VM muss nichts am Terminal getippt werden.
+
+**Einmal vorbereiten:** `scripts/cloud-init-gpu.sh` öffnen. Oben im Block „EINSTELLUNGEN“: `HF_TOKEN` (Lesetoken, nur in Ihrer lokalen Kopie eintragen, **nie ins Repository oder in den Chat**), `MT_REPO` (12B oder `google/translategemma-4b-it`), `QUALITAETSLAUF` (1 = einmal alle Sprachen durchrechnen).
+
+**Ablauf pro Termin:**
+1. Prompt A2 ans Plugin; in „Erweiterte Optionen“ den Inhalt des Skripts bei „Cloud-Init Initialisierungsskripte“ einfügen; „VM erstellen“.
+2. Warten (Dauer unbekannt, geschätzt 15 bis 60 Minuten: Downloads, Treiber, Neustart). Die VM kostet währenddessen.
+3. Windows-PC: Doppelklick auf `windows/start-tunnel.bat`, IP-Adresse eingeben. Der Browser öffnet `http://localhost:8000`. Der Bedienschlüssel steht auf der VM in `~/kidolmetscher/server.env` (einmal `ssh root@<IP> grep OPERATOR_KEY ~/kidolmetscher/server.env`).
+4. Bewertungsbogen: Doppelklick auf `windows/hole-bewertungsbogen.bat`, danach `Downloads\qualitaetslauf\bewertungsbogen.html` öffnen.
+5. Danach Prompt C (VM zerstören) und Token auf Hugging Face widerrufen.
+
+**Was das Skript macht:** Pakete und Code laden, Whisper, Stimmen und TranslateGemma laden, den Dienst `kidolmetscher` einrichten (startet beim Hochfahren, hört nur auf `127.0.0.1`), GPU-Treiber installieren, Token-Reste aus den Cloud-Init-Daten löschen, neu starten. Nach dem Neustart läuft vor dem ersten Start einmal der Qualitätslauf (Ergebnis nur auf der VM), dann startet die Anwendung.
+
+**Kontrolle bei Problemen:** per SSH `tail /var/log/kidolmetscher-init.log`, `/root/kidolmetscher/INIT_FERTIG` vorhanden?, `systemctl status kidolmetscher`, `nvidia-smi`. Ungeprüft: ob das Feld dieses Format annimmt, ob der Treiber-Install im Skript durchläuft, die beiden `.bat`-Dateien unter Windows. Das Skript steht öffentlich im Repository und enthält dort **kein** Token.
 
 ## Fehlersuche
 

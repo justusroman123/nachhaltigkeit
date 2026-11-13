@@ -6,6 +6,7 @@
 #   REPO_URL, BRANCH   Quelle des Codes (Standard: dieses Repository, Entwicklungszweig)
 #   DIR                Zielordner (Standard: $HOME/kidolmetscher)
 #   HF_TOKEN           Zugriffstoken fuer TranslateGemma (nur als Umgebungsvariable, nie in Dateien/Chat)
+#   MT_REPO            Modell auf Hugging Face (Standard google/translategemma-12b-it; z. B. google/translategemma-4b-it)
 #   SKIP_APT=1  SKIP_PIP=1  SKIP_MODELS=1   Teilschritte ueberspringen
 # Vor dem Termin ausfuehren; waehrend des Termins soll der Server keine Downloads mehr brauchen (docs/firewall-vorschlag.md).
 set -euo pipefail
@@ -54,7 +55,7 @@ if [ "${SKIP_MODELS:-0}" != "1" ]; then
   "$PY" "$APP/scripts/fetch_models.py" Systran/faster-whisper-large-v3 "$DIR/models/whisper-large-v3"
   "$PY" "$APP/scripts/fetch_voices.py" "$DIR/models/voices" uk_UA-ukrainian_tts-medium en_GB-alba-medium
   if [ -n "${HF_TOKEN:-}" ]; then
-    "$PY" "$APP/scripts/fetch_models.py" google/translategemma-12b-it "$DIR/models/translategemma" \
+    "$PY" "$APP/scripts/fetch_models.py" "${MT_REPO:-google/translategemma-12b-it}" "$DIR/models/translategemma" \
       || echo "HINWEIS: TranslateGemma nicht geladen. Freigabe auf Hugging Face (Gemma-Bedingungen) und Token pruefen."
   else
     echo "HINWEIS: HF_TOKEN nicht gesetzt: TranslateGemma wird NICHT geladen. Nach der Freigabe erneut ausfuehren:"
