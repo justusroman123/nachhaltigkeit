@@ -86,3 +86,14 @@ Piper 1.8.0, `uk_UA-ukrainian_tts-medium` (Sprecher 0) und `en_GB-alba-medium`, 
 | en | 75 ms, 168 ms, 121 ms | 1,9 s, 4,9 s, 3,5 s |
 
 Qualität (Klang) habe ich nicht beurteilt; das ist eine Hörprobe (`docs/bewertungsbogen.md`).
+
+
+## 13.11.2026: Einrichtung auf der GPU-VM (centron, RTX 6000 Ada, Ubuntu 26.04)
+
+| Schritt | Messung |
+| --- | --- |
+| `server_setup.sh` gesamt (Pakete, Whisper large-v3, 2 Stimmen, ohne TranslateGemma) | **2 min 10 s** (real), user 50,6 s, sys 19,7 s |
+| Whisper large-v3 laden (Hugging Face, 7 Dateien) | ca. 15 s |
+| GPU-Prüfung | PyTorch 2.15.0+cu132 CUDA True; CTranslate2 4.9.0, 1 Gerät, float16 möglich; Whisper auf der GPU geladen, 436 MiB von 49.140 MiB belegt (Wert wirkt niedrig, nicht weiter geprüft) |
+| Treiber `nvidia-driver-595-open` (apt, DKMS) mit Neustart | Dauer nicht gemessen |
+| TranslateGemma 12B laden | noch nicht gemessen |
