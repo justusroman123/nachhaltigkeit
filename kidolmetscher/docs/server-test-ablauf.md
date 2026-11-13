@@ -72,6 +72,10 @@ Im Browser `http://localhost:8000` öffnen, Bedienschlüssel eingeben, Sitzung s
 
 Auf dem Server `server_ctl.sh stop`, dann in der Console die **Instanz löschen** (Prompt C), Kosten im Bereich Billing prüfen.
 
+## Abkürzung: Einrichtung beim Anlegen automatisch (Cloud-Init, NICHT GETESTET)
+
+Beim Anlegen der VM gibt es unter „Erweiterte Optionen“ das Feld **Cloud-Init Initialisierungsskripte** (kostenlos). Den Inhalt von `scripts/cloud-init-gpu.sh` dort einfügen (Format, das das Feld erwartet: unbekannt; das Skript beginnt mit `#!/bin/bash`). Es installiert die Pakete, lädt Code, Whisper und die Stimmen, installiert den GPU-Treiber und startet neu. Danach: per SSH anmelden, `tail /var/log/kidolmetscher-init.log` und prüfen, ob `/root/kidolmetscher/INIT_FERTIG` existiert, dann `nvidia-smi`, dann TranslateGemma mit dem Token laden (`HF_TOKEN=... bash ~/kidolmetscher/src/kidolmetscher/scripts/server_setup.sh`, überspringt Fertiges) und weiter wie oben. Dauer: unbekannt (die Instanz kostet in dieser Zeit schon). Das Skript steht öffentlich im Repository; es enthält keine Geheimnisse und darf keine enthalten.
+
 ## Fehlersuche
 
 | Meldung / Problem | Wahrscheinliche Ursache | Was tun |
