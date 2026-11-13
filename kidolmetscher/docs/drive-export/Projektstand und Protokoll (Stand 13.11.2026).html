@@ -177,6 +177,19 @@
 <li><strong>TranslateGemma 12B (24,4 GB) geladen in 1 min 43 s</strong> (Lauf gesamt 1 min 53 s). Damit ist die frühere Schätzung „15 bis 60 Minuten“ für das ganze Neuanlegen vermutlich zu hoch: VM anlegen (laut centron ca. 2 min), Treiber mit Neustart (einige Minuten), Einrichtung 2 min 10 s, TranslateGemma (Schätzung 2 bis 3 min). Zusammen vermutlich etwa 10 bis 15 Minuten, <strong>im Ganzen ungemessen</strong>.</li>
 <li>Zugang vom Windows-PC: <code>ssh root@&lt;IP aus der Console&gt;</code> (die IP ändert sich bei jeder neuen VM). Das <strong>Chromebook hat keinen SSH-Schlüssel</strong> und kann den Tunnel nicht nutzen; dafür ist die HTTPS-Adresse vorgesehen (ungetestet).</li>
 </ul>
+<h3>Ergebnis des ersten Tests mit den echten Modellen (13.11.2026, ca. 15:45 Uhr)</h3>
+<ul>
+<li><strong>Server startete mit allen drei echten Stufen</strong> (Log: „Application startup complete“; TranslateGemma-Gewichte in 13 s geladen; Whisper und Piper ohne Fehlermeldung). Tunnel zum Windows-PC und Bedienplatz im Browser funktionierten; Anmeldung mit dem Bedienschlüssel klappte nach einem Kopierfehler (nur den Teil nach <code>OPERATOR_KEY=</code> verwenden).</li>
+<li>Sitzung mit Englisch, ein Zuhörer im zweiten Browserfenster verbunden („English: 1“), Bedienplatz meldete „Sendet. Bitte sprechen“, Mikrofon Sennheiser Profile, Netz zum Server 35 ms.</li>
+<li><strong>Problem: Es kam keine Übersetzung an</strong> (kein Ton, keine Untertitel). Die Anzeige „Verzögerung“ und „Stufen“ blieb „unbekannt“, das heißt, es wurde kein Segment ausgeliefert. Die Ursache ist <strong>unbekannt</strong>; der Server-Log wurde noch nicht ausgewertet.</li>
+<li><strong>Wahrscheinliche Ursachen (ungeprüft), in dieser Reihenfolge prüfen:</strong></li>
+<li><strong>Pegel zu leise für die Erkennungsschwelle</strong> (<code>ASR_VAD_RMS=400</code>, 16-Bit-Skala). Prüfen mit der neuen Logzeile <code>asr_pegel rms_max=… schwelle=… laut_prozent=…</code>: liegt <code>rms_max</code> unter der Schwelle, <code>ASR_VAD_RMS</code> senken (z. B. 150) oder Mikrofon lauter.</li>
+<li><strong>Fehler in der Übersetzung</strong> (z. B. Sprachcode oder Format von TranslateGemma): zeigt sich als Zeile <code>pipeline_fehler lang=en typ=…</code> (mit <code>DEBUG_FEHLER=1</code> samt gekürzter Meldung). Abhilfe: <code>MT_LANG_CODES</code> setzen (z. B. <code>en=en-US</code>) oder <code>MT_PROMPT_MODE=plain</code> probieren.</li>
+<li><strong>Fehler in der Spracherkennung</strong> (zeigt sich ebenfalls als <code>pipeline_fehler</code>).</li>
+<li><strong>Ton im Zuhörer-Fenster</strong> erst nach Klick freigegeben (Browser-Regel); Untertitel erscheinen auch ohne Ton.</li>
+<li><strong>Neu eingebaut (Stand 13.11. abends, auf GitHub):</strong> Diagnose-Logzeilen: <code>asr_pegel</code> (alle ca. 5 s: höchster Pegel, Schwelle, Anteil lauter Blöcke), <code>asr_abschnitt</code> (Länge des erkannten Sprachabschnitts, ob Text erkannt wurde; ohne Inhalt) und bei <code>DEBUG_FEHLER=1</code> die gekürzte Fehlermeldung bei <code>pipeline_fehler</code>. <code>server_setup.sh</code> setzt <code>DEBUG_FEHLER=1</code> für die Testphase (im Betrieb auf 0, weil Meldungen Textteile enthalten können).</li>
+<li><strong>So wird nächstes Mal diagnostiziert:</strong> Nach dem Sprechen im Server-Fenster <code>grep -E "asr_pegel|asr_abschnitt|pipeline_fehler" ~/kidolmetscher/server.log | tail -n 30</code> und das Ergebnis (ohne Schlüssel) im Chat nennen.</li>
+</ul>
 <h2>10. Erkenntnisse und Stolpersteine</h2>
 <ul>
 <li>Beim Einfügen von Befehlen verklebten zwei Zeilen; Befehle einzeln und von Hand tippen.</li>
@@ -189,6 +202,7 @@
 </ul>
 <h2>11. Nächste Schritte (Reihenfolge)</h2>
 <ol>
+<li><strong>Zuerst den Fehler im Test mit den echten Modellen finden</strong> (Abschnitt 9, „Ergebnis des ersten Tests“): Log auswerten, Ursache beheben, Test wiederholen.</li>
 <li><strong>Entscheiden:</strong> Wenn heute nicht weitergetestet werden kann, VM <strong>sofort zerstören</strong> (Prompt C), sonst Einrichtung abschließen.</li>
 <li>Einrichtung auf der VM abschließen: <code>git pull</code>, <code>server_setup.sh</code> (mit Hugging-Face-Token, unsichtbar eingegeben), Zeit (<code>real</code>) notieren, GPU-Prüfung lesen.</li>
 <li>Server starten (<code>server_ctl.sh start</code>), Tunnel vom Windows-PC (<code>ssh -L 8000:127.0.0.1:8000 root@&lt;IP&gt;</code>), <code>http://localhost:8000</code>, Bedienschlüssel aus <code>~/kidolmetscher/server.env</code>.</li>

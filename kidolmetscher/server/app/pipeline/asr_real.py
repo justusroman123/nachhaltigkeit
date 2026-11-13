@@ -12,6 +12,7 @@ t_asr - t_audio_in). Abschnitte werden nach ASR_MAX_UTTERANCE_S auch ohne Pause 
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 from collections import deque
 from typing import Any, Callable, Optional
@@ -20,6 +21,8 @@ from ..config import ConfigError, Settings
 from ..messages import now_ms
 from .base import AsrSegment, AsrStream, AudioChunk
 
+log = logging.getLogger("kidolmetscher.pipeline")
+PEGEL_ALLE_BLOECKE = 100     # Pegel-Logzeile etwa alle 5 s (nur Zahlen, keine Inhalte)
 PREROLL_MS = 200          # Audio vor dem ersten lauten Block, damit der Wortanfang nicht fehlt
 
 
@@ -40,6 +43,7 @@ class RealAsrStream:
         self._clock = clock
         self._pre: deque[AudioChunk] = deque()
         self._pre_ms = 0.0
+        self._n = self._laut_n = self._rms_max = 0
         self._reset()
 
     def _reset(self) -> None:
@@ -57,6 +61,7 @@ class RealAsrStream:
         if not pcm or speech_ms < self._o.settings.asr_min_speech_ms:
             return []
         text = await self._o.transcribe(pcm, rate)
+        log.info("asr_abschnitt sprach_ms=%d erkannt=%s", speech_ms, bool(text))
         if not text:
             return []
         return [AsrSegment(text=text, final=True, t_audio_in=first_in if first_in is not None else self._clock(),
@@ -66,7 +71,15 @@ class RealAsrStream:
         s = self._o.settings
         ms = chunk.duration_s * 1000
         self._rate = chunk.sample_rate
-        loud = pcm16_rms(chunk.pcm) >= s.asr_vad_rms
+        rms = pcm16_rms(chunk.pcm)
+        loud = rms >= s.asr_vad_rms
+        self._n += 1
+        self._laut_n += loud
+        self._rms_max = max(self._rms_max, int(rms))
+        if self._n >= PEGEL_ALLE_BLOECKE:        # Diagnose: kommt Sprache an, und ueberschreitet sie die Schwelle?
+            log.info("asr_pegel rms_max=%d schwelle=%d laut_prozent=%d", self._rms_max, s.asr_vad_rms,
+                     100 * self._laut_n // self._n)
+            self._n = self._laut_n = self._rms_max = 0
         if not self._active:
             if not loud:                                   # Stille: nur kurzen Vorlauf merken
                 self._pre.append(chunk)

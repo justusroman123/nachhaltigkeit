@@ -264,7 +264,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     await orch.on_audio(pcm)
                 except Exception as exc:       # nie Inhalte loggen, nur den Typ
                     room.counters["pipeline_errors"] += 1
-                    log.error("pipeline_fehler typ=%s", type(exc).__name__)
+                    log.error("pipeline_fehler typ=%s", settings.fehler(exc))
 
         worker_task = asyncio.create_task(worker())
         try:

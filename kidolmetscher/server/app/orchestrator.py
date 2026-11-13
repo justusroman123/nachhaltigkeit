@@ -128,7 +128,7 @@ class Orchestrator:
                 raise
             except Exception as exc:               # nie Inhalte loggen, nur den Typ
                 self.room.counters["pipeline_errors"] += 1
-                log.error("pipeline_fehler lang=%s typ=%s", lang, type(exc).__name__)
+                log.error("pipeline_fehler lang=%s typ=%s", lang, self.settings.fehler(exc))
             finally:
                 q.task_done()
 

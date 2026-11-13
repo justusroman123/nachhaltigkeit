@@ -104,10 +104,15 @@ class Settings:
     mt_device: str = "auto"                # auto | cuda | cpu
     mt_dtype: str = "auto"                 # auto | bfloat16 | float16 | float32
     mt_max_new_tokens: int = 256
+    debug_fehler: bool = False             # Testphase: Fehlermeldung (gekuerzt) mitloggen; kann Textteile enthalten, im Betrieb AUS
     mt_prompt_mode: str = "structured"     # structured = Format laut TranslateGemma-Modellkarte | plain = Plan-Prompt als Text
     mt_lang_codes: str = ""                # Sprachcode-Ueberschreibungen, z. B. "ar=ar-SA,uk=uk-UA" (Standard: eigener Code, ISO 639-1)
     tts_voice_dir: str = ""
     tts_voices: str = ""                   # z. B. "uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium"
+
+    def fehler(self, exc: BaseException) -> str:
+        """Text fuer Fehler-Logzeilen: nur der Typ; mit DEBUG_FEHLER zusaetzlich die gekuerzte Meldung (Testphase)."""
+        return f"{type(exc).__name__}: {str(exc)[:200]}" if self.debug_fehler else type(exc).__name__
 
     def validate(self, require_operator_key: bool = True) -> "Settings":
         if self.allow_no_key and not self.operator_key:
@@ -203,6 +208,7 @@ class Settings:
                 mt_device=get("MT_DEVICE", d.mt_device),
                 mt_dtype=get("MT_DTYPE", d.mt_dtype),
                 mt_max_new_tokens=int(get("MT_MAX_NEW_TOKENS", d.mt_max_new_tokens)),
+                debug_fehler=_bool(get("DEBUG_FEHLER", "false")),
                 mt_prompt_mode=get("MT_PROMPT_MODE", d.mt_prompt_mode),
                 mt_lang_codes=get("MT_LANG_CODES", d.mt_lang_codes).strip(),
                 tts_voice_dir=get("TTS_VOICE_DIR", d.tts_voice_dir),

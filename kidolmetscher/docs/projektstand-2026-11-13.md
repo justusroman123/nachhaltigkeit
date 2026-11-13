@@ -129,6 +129,19 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 - **TranslateGemma 12B (24,4 GB) geladen in 1 min 43 s** (Lauf gesamt 1 min 53 s). Damit ist die frühere Schätzung „15 bis 60 Minuten“ für das ganze Neuanlegen vermutlich zu hoch: VM anlegen (laut centron ca. 2 min), Treiber mit Neustart (einige Minuten), Einrichtung 2 min 10 s, TranslateGemma (Schätzung 2 bis 3 min). Zusammen vermutlich etwa 10 bis 15 Minuten, **im Ganzen ungemessen**.
 - Zugang vom Windows-PC: `ssh root@<IP aus der Console>` (die IP ändert sich bei jeder neuen VM). Das **Chromebook hat keinen SSH-Schlüssel** und kann den Tunnel nicht nutzen; dafür ist die HTTPS-Adresse vorgesehen (ungetestet).
 
+### Ergebnis des ersten Tests mit den echten Modellen (13.11.2026, ca. 15:45 Uhr)
+
+- **Server startete mit allen drei echten Stufen** (Log: „Application startup complete“; TranslateGemma-Gewichte in 13 s geladen; Whisper und Piper ohne Fehlermeldung). Tunnel zum Windows-PC und Bedienplatz im Browser funktionierten; Anmeldung mit dem Bedienschlüssel klappte nach einem Kopierfehler (nur den Teil nach `OPERATOR_KEY=` verwenden).
+- Sitzung mit Englisch, ein Zuhörer im zweiten Browserfenster verbunden („English: 1“), Bedienplatz meldete „Sendet. Bitte sprechen“, Mikrofon Sennheiser Profile, Netz zum Server 35 ms.
+- **Problem: Es kam keine Übersetzung an** (kein Ton, keine Untertitel). Die Anzeige „Verzögerung“ und „Stufen“ blieb „unbekannt“, das heißt, es wurde kein Segment ausgeliefert. Die Ursache ist **unbekannt**; der Server-Log wurde noch nicht ausgewertet.
+- **Wahrscheinliche Ursachen (ungeprüft), in dieser Reihenfolge prüfen:**
+  1. **Pegel zu leise für die Erkennungsschwelle** (`ASR_VAD_RMS=400`, 16-Bit-Skala). Prüfen mit der neuen Logzeile `asr_pegel rms_max=… schwelle=… laut_prozent=…`: liegt `rms_max` unter der Schwelle, `ASR_VAD_RMS` senken (z. B. 150) oder Mikrofon lauter.
+  2. **Fehler in der Übersetzung** (z. B. Sprachcode oder Format von TranslateGemma): zeigt sich als Zeile `pipeline_fehler lang=en typ=…` (mit `DEBUG_FEHLER=1` samt gekürzter Meldung). Abhilfe: `MT_LANG_CODES` setzen (z. B. `en=en-US`) oder `MT_PROMPT_MODE=plain` probieren.
+  3. **Fehler in der Spracherkennung** (zeigt sich ebenfalls als `pipeline_fehler`).
+  4. **Ton im Zuhörer-Fenster** erst nach Klick freigegeben (Browser-Regel); Untertitel erscheinen auch ohne Ton.
+- **Neu eingebaut (Stand 13.11. abends, auf GitHub):** Diagnose-Logzeilen: `asr_pegel` (alle ca. 5 s: höchster Pegel, Schwelle, Anteil lauter Blöcke), `asr_abschnitt` (Länge des erkannten Sprachabschnitts, ob Text erkannt wurde; ohne Inhalt) und bei `DEBUG_FEHLER=1` die gekürzte Fehlermeldung bei `pipeline_fehler`. `server_setup.sh` setzt `DEBUG_FEHLER=1` für die Testphase (im Betrieb auf 0, weil Meldungen Textteile enthalten können).
+- **So wird nächstes Mal diagnostiziert:** Nach dem Sprechen im Server-Fenster `grep -E "asr_pegel|asr_abschnitt|pipeline_fehler" ~/kidolmetscher/server.log | tail -n 30` und das Ergebnis (ohne Schlüssel) im Chat nennen.
+
 ## 10. Erkenntnisse und Stolpersteine
 
 - Beim Einfügen von Befehlen verklebten zwei Zeilen; Befehle einzeln und von Hand tippen.
@@ -141,6 +154,7 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 
 ## 11. Nächste Schritte (Reihenfolge)
 
+0. **Zuerst den Fehler im Test mit den echten Modellen finden** (Abschnitt 9, „Ergebnis des ersten Tests“): Log auswerten, Ursache beheben, Test wiederholen.
 1. **Entscheiden:** Wenn heute nicht weitergetestet werden kann, VM **sofort zerstören** (Prompt C), sonst Einrichtung abschließen.
 2. Einrichtung auf der VM abschließen: `git pull`, `server_setup.sh` (mit Hugging-Face-Token, unsichtbar eingegeben), Zeit (`real`) notieren, GPU-Prüfung lesen.
 3. Server starten (`server_ctl.sh start`), Tunnel vom Windows-PC (`ssh -L 8000:127.0.0.1:8000 root@<IP>`), `http://localhost:8000`, Bedienschlüssel aus `~/kidolmetscher/server.env`.

@@ -228,3 +228,24 @@ def test_mt_laden_faellt_auf_bild_text_modell_zurueck(monkeypatch, tmp_path):
     mt = RealMt(make_settings(mt_backend="real", mt_model_id=str(tmp_path), mt_device="cpu", mt_dtype="float32"))
     run(mt.load())
     assert calls == ["image_text", "causal", "eval"]
+
+
+def test_pegel_logzeile_und_abschnittszeile(caplog):
+    import logging
+    caplog.set_level(logging.INFO, logger="kidolmetscher.pipeline")
+
+    async def go():
+        a = asr_with_fake_model()
+        st = a.new_stream()
+        await feed_all(st, [block(amp=3000) for _ in range(100)])
+        await st.flush()
+    run(go())
+    texte = " ".join(r.getMessage() for r in caplog.records)
+    assert "asr_pegel rms_max=3000 schwelle=400 laut_prozent=100" in texte
+    assert "asr_abschnitt" in texte and "Hallo" not in texte         # keine Inhalte im Log
+
+
+def test_fehlertext_mit_und_ohne_debug():
+    ohne, mit = make_settings(), make_settings(debug_fehler=True)
+    assert ohne.fehler(ValueError("geheim")) == "ValueError"
+    assert mit.fehler(ValueError("x" * 500)).startswith("ValueError: xxx") and len(mit.fehler(ValueError("x" * 500))) < 230
