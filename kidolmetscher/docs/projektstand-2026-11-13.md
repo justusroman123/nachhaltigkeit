@@ -140,6 +140,8 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
   3. **Fehler in der Spracherkennung** (zeigt sich ebenfalls als `pipeline_fehler`).
   4. **Ton im Zuhörer-Fenster** erst nach Klick freigegeben (Browser-Regel); Untertitel erscheinen auch ohne Ton.
 - **Neu eingebaut (Stand 13.11. abends, auf GitHub):** Diagnose-Logzeilen: `asr_pegel` (alle ca. 5 s: höchster Pegel, Schwelle, Anteil lauter Blöcke), `asr_abschnitt` (Länge des erkannten Sprachabschnitts, ob Text erkannt wurde; ohne Inhalt) und bei `DEBUG_FEHLER=1` die gekürzte Fehlermeldung bei `pipeline_fehler`. `server_setup.sh` setzt `DEBUG_FEHLER=1` für die Testphase (im Betrieb auf 0, weil Meldungen Textteile enthalten können).
+- **URSACHE GEFUNDEN (13.11.2026, 21:32 Uhr, Log der VM mit `DEBUG_FEHLER=1`):** `pipeline_fehler typ=RuntimeError: Library libcublas.so.12 is not found or cannot be loaded`. Die **Spracherkennung (Whisper über CTranslate2) fand die CUDA-12-Bibliothek nicht**; PyTorch bringt nur CUDA 13 mit. Das Modell lud (GPU-Check war „grün“), der Fehler tritt erst beim ersten Rechenlauf auf. **Mikrofonpegel war in Ordnung** (`asr_pegel rms_max` ca. 1300 bis 1500 bei Schwelle 400), Hypothese 1 ist damit widerlegt; Hypothese 2 (Übersetzung) bleibt ungeprüft, weil die Kette vorher abbrach.
+- **Fix (im Repository, ungetestet auf der GPU):** `requirements-asr.txt` enthält jetzt `nvidia-cublas-cu12` und `nvidia-cudnn-cu12`; `scripts/cuda12_libpfad.py` liefert den Suchpfad, `server_setup.sh` schreibt `LD_LIBRARY_PATH=...` in `server.env` (gilt für `server_ctl.sh` und den systemd-Dienst); `gpu_check.py` macht jetzt einen echten Rechenlauf (1 s Stille), damit der Fehler schon beim Setup auffällt. **Ob damit die Übersetzung durchläuft: unbekannt, nächster Test.**
 - **So wird nächstes Mal diagnostiziert:** Nach dem Sprechen im Server-Fenster `grep -E "asr_pegel|asr_abschnitt|pipeline_fehler" ~/kidolmetscher/server.log | tail -n 30` und das Ergebnis (ohne Schlüssel) im Chat nennen.
 
 ## 10. Erkenntnisse und Stolpersteine
@@ -154,7 +156,7 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 
 ## 11. Nächste Schritte (Reihenfolge)
 
-0. **Zuerst den Fehler im Test mit den echten Modellen finden** (Abschnitt 9, „Ergebnis des ersten Tests“): Log auswerten, Ursache beheben, Test wiederholen.
+0. **Whisper-GPU-Fix prüfen** (Ursache: fehlende CUDA-12-Bibliothek, Abschnitt 9): auf der VM `git pull`, `SKIP_APT=1 SKIP_MODELS=1 bash scripts/server_setup.sh`, Server neu starten, sprechen, Log prüfen (`asr_abschnitt`, `pipeline_fehler lang=…`). Danach erst Übersetzung/Ton bewerten.
 1. **Entscheiden:** Wenn heute nicht weitergetestet werden kann, VM **sofort zerstören** (Prompt C), sonst Einrichtung abschließen.
 2. Einrichtung auf der VM abschließen: `git pull`, `server_setup.sh` (mit Hugging-Face-Token, unsichtbar eingegeben), Zeit (`real`) notieren, GPU-Prüfung lesen.
 3. Server starten (`server_ctl.sh start`), Tunnel vom Windows-PC (`ssh -L 8000:127.0.0.1:8000 root@<IP>`), `http://localhost:8000`, Bedienschlüssel aus `~/kidolmetscher/server.env`.

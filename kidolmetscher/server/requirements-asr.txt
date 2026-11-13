@@ -1,2 +1,6 @@
 # Spracherkennung (optional, MIT): faster-whisper mit Whisper-Modell
 faster-whisper>=1.2
+# CTranslate2 laedt auf der GPU CUDA-12-Bibliotheken (libcublas.so.12, cuDNN 9). PyTorch bringt nur CUDA 13 mit,
+# deshalb hier zusaetzlich (nur Linux). Der Suchpfad wird von scripts/cuda12_libpfad.py geliefert.
+nvidia-cublas-cu12; sys_platform == "linux"
+nvidia-cudnn-cu12; sys_platform == "linux"

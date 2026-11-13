@@ -96,10 +96,20 @@ ENVEOF
 else
   echo "Konfiguration vorhanden, nicht ueberschrieben: $ENVF"
 fi
+# CUDA-12-Bibliotheken fuer Whisper (CTranslate2): Suchpfad immer aktuell eintragen
+CUL="$("$DIR/.venv/bin/python" "$APP/scripts/cuda12_libpfad.py" 2>/dev/null || true)"
+if [ -n "$CUL" ]; then
+  grep -v '^LD_LIBRARY_PATH=' "$ENVF" > "$ENVF.neu" || true
+  echo "LD_LIBRARY_PATH=$CUL" >> "$ENVF.neu"
+  chmod 600 "$ENVF.neu"; mv "$ENVF.neu" "$ENVF"
+  echo "LD_LIBRARY_PATH fuer CUDA 12 gesetzt"
+else
+  echo "HINWEIS: CUDA-12-Bibliotheken (nvidia-cublas-cu12) nicht gefunden; Whisper auf der GPU wird fehlschlagen."
+fi
 
 say "7. GPU-Pruefung"
 if [ "${SKIP_PIP:-0}" != "1" ]; then
-  "$DIR/.venv/bin/python" "$APP/scripts/gpu_check.py" "$DIR/models/whisper-large-v3" || true
+  LD_LIBRARY_PATH="${CUL:+$CUL:}${LD_LIBRARY_PATH:-}" "$DIR/.venv/bin/python" "$APP/scripts/gpu_check.py" "$DIR/models/whisper-large-v3" || true
 fi
 
 cat <<MSG

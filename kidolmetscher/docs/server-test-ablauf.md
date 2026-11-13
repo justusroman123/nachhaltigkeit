@@ -112,7 +112,7 @@ Was du nicht findest: "nicht gefunden".
 | --- | --- | --- |
 | `nvidia-smi nicht gefunden` | Image ohne GPU-Treiber | Anderes Image mit NVIDIA-Treiber wählen oder Treiber installieren (Anbieter-Doku; ob vorhanden: unbekannt) |
 | PyTorch: „CUDA verfügbar: False“ trotz `nvidia-smi` | PyTorch-Build passt nicht zum Treiber | Passenden PyTorch-Build für die Treiberversion installieren (`pip install torch --index-url <passender-index>`), Version laut `nvidia-smi` |
-| CTranslate2: `libcublas.so.12` / `libcudnn` nicht gefunden | Bibliotheken fehlen für die Spracherkennung | `pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"` und `LD_LIBRARY_PATH` auf die Ordner setzen (Anleitung der faster-whisper-Projektseite); ob das mit der installierten PyTorch-Version verträglich ist: unbekannt |
+| CTranslate2: `libcublas.so.12` / `libcudnn` nicht gefunden | Bibliotheken fehlen für die Spracherkennung | `pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"` und `LD_LIBRARY_PATH` auf die Ordner setzen (Anleitung der faster-whisper-Projektseite); seit 13.11. in `requirements-asr.txt` und `server_setup.sh` (Suchpfad in `server.env`); trat im ersten Test auf, Wirkung des Fixes: noch ungetestet |
 | `Out of memory` beim Laden | VRAM oder RAM zu klein | `nvidia-smi` prüfen; RAM-Limit beim Support erhöhen lassen |
 | TranslateGemma: 401 / 403 | Freigabe fehlt oder Token falsch | Freigabe auf Hugging Face prüfen, `HF_TOKEN` neu setzen |
 | Übersetzung bricht mit Fehler beim Template ab | Sprachcode wird vom Modell nicht unterstützt oder anders geschrieben | In `server.env` `MT_LANG_CODES=ar=ar-SA,uk=uk-UA` setzen (Schreibweise mit Land, siehe `docs/translategemma-modellkarte.md`), danach `stop` und `start` |

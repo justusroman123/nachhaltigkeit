@@ -36,8 +36,11 @@ def main() -> int:
     if len(sys.argv) > 1 and ok:
         try:
             from faster_whisper import WhisperModel
-            WhisperModel(sys.argv[1], device="cuda", compute_type="float16")
+            model = WhisperModel(sys.argv[1], device="cuda", compute_type="float16")
             print("Whisper-Modell auf der GPU geladen:", sys.argv[1])
+            import numpy as np                    # echter Rechenlauf: erst dabei werden cuBLAS/cuDNN geladen
+            list(model.transcribe(np.zeros(16000, dtype=np.float32), language="de")[0])
+            print("Whisper-Rechenlauf auf der GPU erfolgreich")
             print(subprocess.run(["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader"],
                                  capture_output=True, text=True).stdout.strip(), "(VRAM nach dem Laden)")
         except Exception as exc:
