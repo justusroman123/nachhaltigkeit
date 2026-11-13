@@ -1,0 +1,190 @@
+<html><head><meta charset='utf-8'><title>Projektstand und Protokoll (Stand 13.11.2026)</title></head><body><h1>KI-Dolmetscher (KI-SCHUB): Projektstand und Protokoll (Stand 13.11.2026)</h1>
+<p>Dieses Dokument fasst alles zusammen, was bis jetzt besprochen, gebaut, getestet und entschieden wurde. Es enthält <strong>keine Geheimnisse</strong> (kein Token, kein Bedienschlüssel, keine Passwörter, keinen privaten SSH-Schlüssel).</p>
+<h2>0. So machen Sie in einem neuen Chat weiter</h2>
+<p>Den folgenden Text zu Beginn eines neuen Chats einfügen:</p>
+<blockquote>
+<p>Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository <code>justusroman123/nachhaltigkeit</code> (Zweig <code>ccr-4bf88cb4-flgtez</code>) die Dateien <code>kidolmetscher/CLAUDE.md</code> und <code>kidolmetscher/docs/projektstand-2026-11-13.md</code>. Mach dann beim Abschnitt „Nächste Schritte“ weiter. Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.</p>
+</blockquote>
+<p>Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft möglicherweise noch und kostet etwa 1,26 € pro Stunde, bis sie in der Console <strong>zerstört</strong> wird (siehe Abschnitt 9).</p>
+<h2>1. Ziel und Rahmen</h2>
+<ul>
+<li>Ein deutscher Sprecher wird live in bis zu vier Zielsprachen übersetzt: Ukrainisch (uk), Arabisch (ar), Englisch (en), Türkisch (tr); Persisch (fa) optional.</li>
+<li>Ausgabe im Browser der Zuhörer (Tablets): Untertitel und Ton über Kopfhörer, je Gerät eine Sprache. 3 bis 5 Sekunden Verzögerung sind akzeptabel.</li>
+<li>Bedienplatz: Google Chromebook (nur Browser sicher verfügbar), Mikrofon DJI Mic Mini. Getestet wird derzeit an einem Windows-PC mit Sennheiser-Mikrofon.</li>
+<li>Verwendung: Vorführungen bei Unternehmen und Behörden. Der Server wird nur zu Terminen gemietet. Prototyp, kein Produkt.</li>
+<li><strong>Wichtigstes Ziel: gute Qualität</strong> (Übersetzung und Stimme), dazu Datenschutz: kein Speichern von Audio und Text, nichts über US-Dienste im Datenpfad der Übersetzung.</li>
+<li>Server: GPU-VM bei centron (Deutschland, Hallstadt/Bamberg), RTX 6000 Ada 48 GB.</li>
+<li>Pipeline: Spracherkennung (Whisper large-v3) → Übersetzung (TranslateGemma 12B) → Sprachausgabe (Piper).</li>
+</ul>
+<h2>2. Verbindliche Arbeitsregeln</h2>
+<ol>
+<li><strong>Datenschutz:</strong> kein Speichern von Audio und Text, keine Inhalte in Protokollen (nur Zeiten und Zähler), keine Cookies oder Tracking, keine externen Skripte, Schriften oder CDNs, strenge Header (CSP), Zuhörer-Links mit Zufalls-Token und Ablauf, Puffer bei Sitzungsende löschen.</li>
+<li><strong>Keine Geheimnisse</strong> im Code oder Repository. Tokens und Schlüssel nur aus Umgebungsvariablen. <code>.env.example</code> ja, <code>.env</code> nie.</li>
+<li>Jede Pipeline-Stufe (ASR, MT, TTS) hinter einer Schnittstelle (Protocol), mit Attrappe (Mock) und echter Umsetzung, Konfiguration per Umgebung.</li>
+<li>Jede Nachricht trägt die Zeitstempel <code>t_audio_in</code>, <code>t_asr</code>, <code>t_mt</code>, <code>t_tts</code>, <code>t_out</code> (ms).</li>
+<li><strong>Vor Installation, Kosten, Konten und Systemeinstellungen fragen.</strong> Keine Zahlen raten: „unbekannt“ schreiben und eine Messung vorsehen.</li>
+<li>Kommentare kurz und sachlich, README auf Deutsch.</li>
+<li><strong>Google Drive:</strong> Ordner „KI Dolmetscher“ (ID <code>1EhUmj8XWyS4iUmtFThDuBZ-vQu4s0xec</code>) mit Unterordnern „01 Projektstand“, „02 Messprotokolle“, „03 Entscheidungen und Lizenzen“, „04 Testberichte“. Dokumente als „<Thema> (Stand TT.MM.JJJJ)“ ablegen, nie überschreiben oder löschen, nie Code, Tokens, <code>.env</code> oder echte Testinhalte. Nach dem Speichern prüfen und den Link nennen. Ohne Drive-Zugriff: Ablage in <code>docs/drive-export/</code>.</li>
+<li>Git: nur auf dem Zweig <code>ccr-4bf88cb4-flgtez</code> entwickeln, kein Pull Request ohne Auftrag. Alles committen und pushen.</li>
+<li><strong>Nutzerwünsche:</strong> Deutsch, kurz, sachlich, Kernaussagen fett, nicht raten, <strong>Preise mit zwei Nachkommastellen</strong> schreiben (es gab ein Missverständnis bei „1,1919 €“).</li>
+</ol>
+<h2>3. Wo was liegt</h2>
+<ul>
+<li><strong>Repository:</strong> <code>github.com/justusroman123/nachhaltigkeit</code>, Zweig <code>ccr-4bf88cb4-flgtez</code>, Projektordner <code>kidolmetscher/</code> (das Repository ist öffentlich; dort dürfen nie Geheimnisse liegen).</li>
+<li><code>server/app/</code>: FastAPI-Server (<code>main.py</code>, <code>config.py</code>, <code>rooms.py</code>, <code>orchestrator.py</code>, <code>messages.py</code>, <code>security.py</code>), <code>pipeline/</code> mit <code>*_mock.py</code> und <code>*_real.py</code>.</li>
+<li><code>web/</code>: Bedienplatz (<code>operator.html</code>), Zuhörer (<code>listener.html</code>), <code>mic-test.html</code>, <code>datenschutz.html</code> (Entwurf).</li>
+<li><code>scripts/</code>: Messskripte (<code>bench_*.py</code>, <code>smoke_test.py</code>), <code>quality_run.py</code> (Bewertungsbogen), <code>fetch_voices.py</code>, <code>fetch_models.py</code>, <code>gpu_check.py</code>, <code>server_setup.sh</code>, <code>server_ctl.sh</code>, <code>cloud-init-gpu.sh</code>, <code>tts_candidate_try.py</code>.</li>
+<li><code>windows/</code>: <code>start-tunnel.bat</code>, <code>hole-bewertungsbogen.bat</code> (ungetestet).</li>
+<li><code>docker/</code>: Compose mit Profilen <code>mock</code> und <code>gpu</code>, Caddy, <code>Dockerfile.gpu</code> (nicht gebaut).</li>
+<li><code>docs/</code>: Architektur, Entscheidungen, Messprotokoll, Betrieb, Lizenzen-Recherche, Kosten, Datenschutz-Nachweis, Server-Test-Ablauf, centron-Console-Befund, TranslateGemma-Modellkarte, TTS-Kandidaten, dieses Protokoll.</li>
+<li><strong>Tests:</strong> <code>cd kidolmetscher/server &amp;&amp; pytest</code> (187 bestanden, 3 übersprungen, weil sie echte Modelle brauchen).</li>
+<li><strong>Google Drive</strong> (Ordner „KI Dolmetscher“): u. a. die Dokumente „Kosten und Sparhebel“, „Server-Test einer Stunde bei centron – Anleitung“, „centron-Console Befund“, „Sprachausgabe Piper – Einrichtung und CPU-Messung“, „Spracherkennung und Übersetzung – Einrichtung und erster Gesamtlauf“, „Server-Test Ablauf …“ (mehrere Fassungen, die neueste mit „centron-Antwort“), „Datenschutz-Nachweis“, „Sprachausgabe Arabisch und Türkisch – Kandidaten“, „TranslateGemma 12B – Angaben aus der Modellkarte“ (alle Stand 12.11.2026) sowie frühere Etappen-Dokumente. Das Plan-Dokument heißt „Plan Prototyp KI-Dolmetscher: Aufgaben, Prüfungen und Prompts (Stand 09.11.2026)“.</li>
+</ul>
+<h2>4. Stand der Umsetzung</h2>
+<table>
+<thead>
+<tr>
+<th>Baustein</th>
+<th>Stand</th>
+<th>Wie geprüft</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server (FastAPI, WebSockets, Räume, Zuhörer-Links mit Token und Ablauf, QR, Sprachwahl, Rückstau-Schutz, Satz-Segmentierer)</td>
+<td>fertig, mit Attrappen</td>
+<td>187 automatische Tests, Browser-Tests (Playwright)</td>
+</tr>
+<tr>
+<td>Bedienplatz und Zuhörer-Seiten (einfache Bedienung, 6 Sprachen der Oberfläche, nicht von Muttersprachlern geprüft)</td>
+<td>fertig</td>
+<td>Browser-Tests</td>
+</tr>
+<tr>
+<td>Datenschutz-Prüfungen (keine Speicherung, keine Inhalte in Protokollen, keine Fremdressourcen, keine ausgehenden Verbindungen im Anwendungscode)</td>
+<td>durch Tests belegt, nur für den Anwendungscode</td>
+<td>siehe <code>docs/datenschutz-nachweis.md</code></td>
+</tr>
+<tr>
+<td><strong>Sprachausgabe (Piper)</strong> <code>tts_real.py</code>, Stimmen je Sprache über <code>TTS_VOICES</code></td>
+<td>umgesetzt</td>
+<td>mit Attrappen-Modul und echten Stimmen (uk, en) auf der CPU</td>
+</tr>
+<tr>
+<td><strong>Spracherkennung</strong> <code>asr_real.py</code> (faster-whisper, pausenbasiert, nicht SimulStreaming)</td>
+<td>umgesetzt</td>
+<td>mit Whisper tiny auf der CPU (Deutsch erkannt); großes Modell und GPU ungeprüft</td>
+</tr>
+<tr>
+<td><strong>Übersetzung</strong> <code>mt_real.py</code> (Transformers, Format laut Modellkarte <code>structured</code>, <code>AutoProcessor</code>/<code>AutoModelForImageTextToText</code>, <code>device_map</code>)</td>
+<td>umgesetzt</td>
+<td>mit Qwen2.5-0.5B im Textmodus auf der CPU; <code>structured</code> nur mit Attrappen; TranslateGemma ungeprüft</td>
+</tr>
+<tr>
+<td>Gesamtlauf Deutsch zu Englisch mit Ton (alle drei echten Stufen, kleine Ersatzmodelle, CPU)</td>
+<td>lief</td>
+<td>Beispiel: „Guten Tag und herzlich willkommen zur Veranstaltung“ wurde zu „Good morning and welcome to the event“</td>
+</tr>
+<tr>
+<td>Qualitätslauf <code>quality_run.py</code> (12 erfundene Sätze, alle Sprachen, Bewertungsbogen als HTML)</td>
+<td>umgesetzt</td>
+<td>mit Mock und Kleinmodellen</td>
+</tr>
+<tr>
+<td>Einrichtungsskripte für die VM (<code>server_setup.sh</code>, <code>server_ctl.sh</code>, <code>gpu_check.py</code>)</td>
+<td>umgesetzt, <strong>auf echter VM erst teilweise erprobt</strong> (Fehler beim Ausführen als root behoben)</td>
+<td>GPU-Prüfung lief, siehe Abschnitt 9</td>
+</tr>
+<tr>
+<td><code>cloud-init-gpu.sh</code> (alles automatisch beim Anlegen, Caddy/HTTPS, Dienst, Qualitätslauf)</td>
+<td>geschrieben</td>
+<td><strong>nicht getestet</strong></td>
+</tr>
+<tr>
+<td>HTTPS für Chromebook und Tablets (Caddy, eigene Adresse)</td>
+<td>im Cloud-Init-Skript vorbereitet</td>
+<td><strong>nicht getestet</strong></td>
+</tr>
+<tr>
+<td>Windows-Startdateien für den SSH-Tunnel</td>
+<td>geschrieben</td>
+<td><strong>nicht getestet</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Gemessene CPU-Werte (Entwicklungsumgebung, <strong>keine Servermessung</strong>): Piper je Satz 71 bis 168 ms (uk, en); Laden der Stimmen 3,6 s. Gesamtlauf mit Ersatzmodellen: ASR 530 bis 1065 ms, Übersetzung 1262 bis 1424 ms, Sprachausgabe 86 bis 134 ms (das Audio wurde schneller als in Echtzeit eingespeist, daher nicht aussagekräftig).</p>
+<h2>5. Entscheidungen und Annahmen</h2>
+<ul>
+<li><strong>E9 Spracherkennung:</strong> Zwischenlösung faster-whisper mit Pausenerkennung (Verzögerung = Abschnittslänge plus Erkennungszeit). SimulStreaming (MIT, Autoren bitten kommerzielle Nutzer um einen Fragebogen) oder WhisperLiveKit (Apache-2.0) bleiben offen und müssen auf der GPU verglichen werden. Whisper selbst steht unter Apache-2.0 (frühere Annahme „MIT“ war falsch).</li>
+<li><strong>E10 Sprachausgabe:</strong> Piper (Paket GPL-3.0, Stimmen mit eigener Lizenz). Rechtliche Folgen für Ihren Einsatz offen.</li>
+<li><strong>Piper-Stimmen:</strong> Ukrainisch <code>ukrainian_tts</code> (CC0, 3 Sprecher, braucht Kleinbuchstaben, daher macht die Anwendung den Text klein) und <code>high</code>-Stimmen (Datenlage der Trainingsbasis nicht gelesen); Englisch <code>en_GB-alba</code> (CC BY 4.0, Namensnennung nötig). <strong>Türkisch:</strong> nur <code>tr_TR-dfki</code> (nicht kommerziell). <strong>Arabisch:</strong> nur <code>ar_JO-kareem</code> (Lizenz ungeklärt). <strong>Persisch:</strong> 5 Stimmen, Lizenzen nicht gelesen. Für Arabisch und Türkisch gibt es keine geklärte freie Piper-Stimme, bis dahin nur Untertitel.</li>
+<li><strong>Kandidaten für Ton in Arabisch und Türkisch</strong> (aus Modellkarten, nicht gehört): VoxCPM2 (Apache-2.0, ca. 8 GB VRAM, RTF ca. 0,30 auf RTX 4090 laut Karte), MOSS-TTS (Apache-2.0, auch Persisch), Chatterbox Multilingual (MIT). Ausgeschlossen: XTTS-v2 und OmniVoice (nicht kommerziell). Ukrainisch steht bei keinem. Anbindung erst nach Hörvergleich (Skript <code>tts_candidate_try.py</code>, ungetestet).</li>
+<li><strong>Übersetzung:</strong> TranslateGemma 12B (Lizenz „gemma“; als gehosteter Dienst gilt es als „Distribution“, die Nutzungseinschränkungen sind in Ihre Nutzungsbedingungen aufzunehmen). Freigabe auf Hugging Face ist <strong>erteilt</strong>. Auch 4B existiert (nicht geprüft, Qualität unbekannt).</li>
+<li><strong>Modellkarte TranslateGemma (laut Browser-Plugin):</strong> „55 Sprachen“ ohne Liste; Technical Report nennt <code>uk_UA</code>, <code>ar_EG</code>/<code>ar_SA</code>, <code>tr_TR</code>, <code>fa_IR</code>, <code>de_DE</code>; Codes ISO 639-1 oder mit Land; Nachrichtenformat mit <code>source_lang_code</code>/<code>target_lang_code</code>; Gewichte ca. 24,4 GB (BF16); Kontext 2K Tokens; <strong>Qualität je Sprache nicht angegeben</strong>.</li>
+<li><strong>Cloud-Anbieter:</strong> centron (Plan). Alternative STACKIT (L40S 1,74 € pro Stunde laut Plan) nicht geprüft.</li>
+</ul>
+<h2>6. Datenschutz (Stand, rechtliche Prüfung steht aus)</h2>
+<ul>
+<li>Belegt (für den Anwendungscode): keine Speicherung, keine Inhalte in Protokollen, keine Cookies, keine Fremdressourcen, keine ausgehenden Verbindungen. Details: <code>docs/datenschutz-nachweis.md</code>.</li>
+<li>Aussage gegenüber Kunden nur so: „Verarbeitung auf einem Server in Deutschland, im Datenpfad kein Drittanbieter-Dienst vorgesehen.“ <strong>Nicht</strong> sagen: „super sicher“, „DSGVO-zertifiziert“, „läuft nicht über amerikanische Server“ ohne Zusatz.</li>
+<li>Offen (bewusst zurückgestellt): Auftragsverarbeitungsvertrag mit centron (in der Console nicht gefunden; Abschluss über die Datenschutz-Adresse von centron), Unterauftragnehmer, rechtliche Prüfung, KI-Hinweis (Art. 50 KI-VO, Frist laut Plan 02.12.2026), Gemma-Pflichten, Sperren ausgehender Verbindungen auf dem Server, Geräteleitfaden für Chromebook und Tablets. Das Plugin und Modell-Downloads laufen über Hugging Face (Sitz nicht geprüft), keine Gesprächsdaten.</li>
+<li>Für Tests nur <strong>erfundene</strong> Texte sprechen.</li>
+<li>Das öffentliche HTTPS für Chromebook/Tablets macht den Bedienplatz im Internet erreichbar: Schutz nur durch den Bedienschlüssel (kein Schutz gegen automatisches Raten), deshalb langer Schlüssel und VM nur für die Dauer des Termins.</li>
+</ul>
+<h2>7. centron: Fakten</h2>
+<ul>
+<li>Konto angelegt (Mitglied seit 12.11.2026). Zahlung/Abrechnung am Monatsersten (Rechnungsdatum 1.12.2026). <strong>2FA wird ab 14.12.2026 Pflicht</strong> (derzeit deaktiviert).</li>
+<li><strong>Startguthaben 200,00 €</strong> (Support bestätigt, 60 Tage). Im Billing steht „Vorauss. Verbrauch 0,00 €“, das spricht dafür, dass es für die VM gilt (nicht ausdrücklich bestätigt; netto oder brutto unbekannt).</li>
+<li><strong>Kein Kostenlimit, keine Vorauszahlung, keine Warnschwelle</strong> (Support bestätigt). Gestoppte oder ausgeschaltete VMs werden <strong>weiter berechnet</strong>. <strong>Nur Zerstören beendet die Kosten.</strong> Abrechnung stundengenau, angefangene Stunde voll.</li>
+<li><strong>Preise (netto laut Doku, zuzüglich 19 % Umsatzsteuer):</strong> RTX 6000 Ada 1,19 € pro Stunde (Console 1,1919), Konfiguration 4 vCPU / 16 GB RAM / 300 GB: <strong>1,2641 € pro Stunde</strong> (910,15 € pro Monat bei Dauerbetrieb). vCPU 1,64 €, RAM 1,90 € pro GB, Speicher 0,05 € pro GB und Monat (RAM-Preis in der Doku 0,97 €: Widerspruch, im Checkout gilt die Anzeige). Weitere GPUs: RTX A4000 16 GB 149,00 € pro Monat (ca. 0,21 € pro Stunde), Quadro RTX 6000 24 GB, A100 40/80 GB (in der Console „belegt“).</li>
+<li><strong>Team-Limits</strong> (auf Bitte erhöht): 20 Kerne, 80 GB RAM, 2000 GB Speicher, 8 GPUs. Pro Test nur <strong>eine</strong> Instanz anlegen.</li>
+<li>Region in der Console „Bamberg · Datacenter 1 · BBG1“ (laut Doku Hallstadt). SSH-Schlüssel <code>kidolmetscher-test</code> im Konto hinterlegt (Team Einstellungen, Tab Sicherheit). VM-Login funktioniert als <code>root</code> mit diesem Schlüssel.</li>
+<li>Beim Anlegen gibt es unter „Erweiterte Optionen“ ein Feld „Cloud-Init Initialisierungsskripte“ (kostenlos). Menüpunkte „Images“, „Network“ (Reservierte IPs) und „S3 Storage“ existieren; ob Abbilder oder feste IPs für GPU-VMs möglich sind und was sie kosten: <strong>unbekannt</strong>.</li>
+</ul>
+<h2>8. Kosten</h2>
+<ul>
+<li>Bisher: Gesamtverbrauch 21,36 € (Stand 13.11. gegen 14 Uhr), rund 30 € pro Tag, wenn die VM läuft.</li>
+<li><strong>Ein Test von 2 bis 3 Stunden</strong> kostet etwa 2,53 bis 3,79 € netto. Ein vergessener Tag etwa 30 €. Dauerbetrieb 910,15 € pro Monat: <strong>nicht vorgesehen</strong>.</li>
+<li>Hebel: kleineres Modell (4B) auf der A4000 (ca. 0,21 € pro Stunde statt 1,26 €), Abbild oder Objektspeicher für Modelle, Cloud-Init zur Einrichtung, automatisches Löschen über die centron-API (Schlüsselrechte unbekannt), Termine mit Vorlauf (VM ca. 1 Stunde vorher anlegen), Kalender-Erinnerung zum Zerstören.</li>
+</ul>
+<h2>9. Aktueller Betriebsstand (13.11.2026)</h2>
+<ul>
+<li>VM <code>xv20213</code> bei centron: RTX 6000 Ada (48 GB), Ubuntu 26.04 LTS, angelegt am 12.11. um 20:54. <strong>Läuft und kostet</strong>, solange sie nicht zerstört wird. Zerstören: VM-Seite, „Zerstören“, Server-ID bestätigen (das klickt der Nutzer selbst).</li>
+<li><strong>GPU-Treiber installiert und geprüft:</strong> <code>nvidia-smi</code> zeigt RTX 6000 Ada, 49.140 MiB, Treiber 595.99.02, CUDA 13.2. (Der Treiber 595-open wurde per <code>apt</code> installiert, danach Neustart.)</li>
+<li>Code liegt auf der VM unter <code>~/kidolmetscher/src</code> (geklont vom GitHub-Zweig). Der erste Einrichtungslauf brach ab wegen eines Fehlers im Skript beim Ausführen als root (<code>DEBIAN_FRONTEND=…</code> als Programm gelesen). <strong>Der Fehler ist behoben und gepusht.</strong> Danach war zu tun: <code>git pull</code> auf der VM, <code>server_setup.sh</code> im Hintergrund starten, mitlesen (<code>~/setup.log</code>), TranslateGemma mit Hugging-Face-Token nachladen.</li>
+<li>Ergebnis des Einrichtungslaufs und die Dauer sind zum Zeitpunkt dieses Protokolls <strong>noch nicht bekannt</strong>.</li>
+<li>Zugang vom Windows-PC: <code>ssh root@&lt;IP aus der Console&gt;</code> (die IP ändert sich bei jeder neuen VM). Das <strong>Chromebook hat keinen SSH-Schlüssel</strong> und kann den Tunnel nicht nutzen; dafür ist die HTTPS-Adresse vorgesehen (ungetestet).</li>
+</ul>
+<h2>10. Erkenntnisse und Stolpersteine</h2>
+<ul>
+<li>Beim Einfügen von Befehlen verklebten zwei Zeilen; Befehle einzeln und von Hand tippen.</li>
+<li>Auf dem Server nicht erneut <code>ssh</code> tippen (fragt nach einem Passwort, das es nicht gibt). <code>ssh</code> nur auf dem Windows-PC.</li>
+<li>Das Browser-Plugin kann <strong>keine</strong> Befehle auf dem eigenen Rechner ausführen und keine Passwörter eingeben; es liest und klickt in der Console, <strong>nie</strong> Erstellen, Akzeptieren oder Löschen ohne Bestätigung.</li>
+<li>Die Console meldete einmal ab; neu anmelden.</li>
+<li>GitHub lieferte kurzzeitig 503; Push wiederholen.</li>
+<li>Der erste Plan (VM ein-/ausschalten) funktioniert bei centron nicht für Kosten: nur Zerstören spart. Deshalb Termin-Ablauf mit Neuanlegen und Cloud-Init.</li>
+<li>Vermeiden: Zahlen mit vier Nachkommastellen (führten zum Missverständnis „über 1000 €“).</li>
+</ul>
+<h2>11. Nächste Schritte (Reihenfolge)</h2>
+<ol>
+<li><strong>Entscheiden:</strong> Wenn heute nicht weitergetestet werden kann, VM <strong>sofort zerstören</strong> (Prompt C), sonst Einrichtung abschließen.</li>
+<li>Einrichtung auf der VM abschließen: <code>git pull</code>, <code>server_setup.sh</code> (mit Hugging-Face-Token, unsichtbar eingegeben), Zeit (<code>real</code>) notieren, GPU-Prüfung lesen.</li>
+<li>Server starten (<code>server_ctl.sh start</code>), Tunnel vom Windows-PC (<code>ssh -L 8000:127.0.0.1:8000 root@&lt;IP&gt;</code>), <code>http://localhost:8000</code>, Bedienschlüssel aus <code>~/kidolmetscher/server.env</code>.</li>
+<li><strong>Qualitätslauf</strong> (<code>scripts/quality_run.py --modes structured,plain</code>), Bewertungsbogen herunterladen (<code>windows/hole-bewertungsbogen.bat</code> oder <code>scp</code>), Muttersprachler bewerten lassen (uk, ar, tr), Stimmen für uk und en anhören (Bewertungsbogen <code>docs/bewertungsbogen.md</code>).</li>
+<li>Verzögerung messen (Zeilen in <code>~/kidolmetscher/server.log</code>: <code>asr_ms</code>, <code>mt_ms</code>, <code>tts_ms</code>), Messprotokoll ergänzen (<code>bench_*.py --write</code>).</li>
+<li>12B mit 4B vergleichen (Qualität und Kosten); bei Erfolg A4000 prüfen.</li>
+<li><strong>Danach:</strong> VM zerstören, Kosten im Billing prüfen, <strong>Hugging-Face-Token widerrufen</strong>.</li>
+<li>Ton für Arabisch und Türkisch: Hörvergleich VoxCPM2/MOSS-TTS/Chatterbox auf der GPU, dann Anbindung.</li>
+<li>Chromebook/Tablets: HTTPS-Adresse (Domain, Caddy, reservierte IP prüfen), Cloud-Init-Skript testen.</li>
+<li>Abbild/Objektspeicher und automatisches Löschen prüfen (Plugin-Prompts im Dokument „Server-Test Ablauf …“).</li>
+<li>Später: Datenschutz und Verträge (Auftragsverarbeitung, rechtliche Prüfung, KI-Hinweis), 2FA vor dem 14.12.2026, Entscheidungen E9 und E10 abschließen, Geräteleitfaden.</li>
+</ol>
+<h2>12. Wichtige Befehle</h2>
+<ul>
+<li>Auf dem Server: <code>bash ~/kidolmetscher/src/kidolmetscher/scripts/server_ctl.sh start|stop|status</code>; Log <code>~/kidolmetscher/server.log</code> (nur Zeiten und Zähler); Konfiguration <code>~/kidolmetscher/server.env</code> (enthält den Bedienschlüssel, nicht weitergeben).</li>
+<li>Qualitätslauf: <code>cd ~/kidolmetscher/src/kidolmetscher &amp;&amp; set -a &amp;&amp; . ~/kidolmetscher/server.env &amp;&amp; set +a &amp;&amp; ~/kidolmetscher/.venv/bin/python scripts/quality_run.py --modes structured,plain --out ~/kidolmetscher/qualitaetslauf</code>.</li>
+<li>Lokal testen (Entwicklung, ohne GPU): <code>kidolmetscher/start.bat</code> (Windows) oder <code>./start.sh</code>, dann <code>http://localhost:8000</code>.</li>
+<li>Tests: <code>cd kidolmetscher/server &amp;&amp; pytest</code>.</li>
+</ul>
+<h2>13. Was bewusst nicht gespeichert ist</h2>
+<p>Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zugangsdaten zur centron-Console, personenbezogene Angaben. Der Bedienschlüssel steht nur auf der VM; das Token gehört nur als Umgebungsvariable beim Einrichtungsaufruf auf den Server und wird danach widerrufen.</p></body></html>
