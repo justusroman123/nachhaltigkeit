@@ -28,7 +28,7 @@ fi
 say "2. Systempakete"
 if [ "${SKIP_APT:-0}" != "1" ]; then
   $SUDO apt-get update -qq
-  $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git python3-venv python3-pip curl >/dev/null
+  $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git python3-venv python3-pip curl >/dev/null
 fi
 
 say "3. Code"
