@@ -96,4 +96,5 @@ Qualität (Klang) habe ich nicht beurteilt; das ist eine Hörprobe (`docs/bewert
 | Whisper large-v3 laden (Hugging Face, 7 Dateien) | ca. 15 s |
 | GPU-Prüfung | PyTorch 2.15.0+cu132 CUDA True; CTranslate2 4.9.0, 1 Gerät, float16 möglich; Whisper auf der GPU geladen, 436 MiB von 49.140 MiB belegt (Wert wirkt niedrig, nicht weiter geprüft) |
 | Treiber `nvidia-driver-595-open` (apt, DKMS) mit Neustart | Dauer nicht gemessen |
-| TranslateGemma 12B laden | noch nicht gemessen |
+| TranslateGemma 12B laden (24,4 GB, 18 Dateien, Hugging Face mit Token) | **1 min 43 s** (Lauf `server_setup.sh` gesamt 1 min 53 s) |
+| Server starten (Modelle in die GPU laden) | noch nicht gemessen |

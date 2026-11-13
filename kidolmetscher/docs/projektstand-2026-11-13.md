@@ -8,18 +8,19 @@ Den folgenden Text zu Beginn eines neuen Chats einfügen:
 
 > Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository `justusroman123/nachhaltigkeit` (Zweig `ccr-4bf88cb4-flgtez`) die Dateien `kidolmetscher/CLAUDE.md` und `kidolmetscher/docs/projektstand-2026-11-13.md`. Mach dann beim Abschnitt „Nächste Schritte“ weiter. Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.
 
-## 0a. Wiederaufnahme nach einer Pause (so startet man neu)
+## 0a. Wiederaufnahme nach einer Pause: ein Knopf, zwei Werte
 
-Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu angelegten VM. Sie brauchen nur Browser, Console-Zugang und (für Tests) den Windows-PC mit dem SSH-Schlüssel.
+Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu angelegten VM.
 
-1. **Neuen Chat öffnen**, den Einstiegstext aus Abschnitt 0 einfügen und schreiben: „VM neu anlegen“. Claude führt dann Schritt für Schritt.
-2. **Vorbereitung (kostenlos, ca. 5 Minuten):** Hugging-Face-Token neu erstellen (Typ „Read“); einen Bedienschlüssel ausdenken (nur Buchstaben und Ziffern, mindestens 24 Zeichen); optional eine Adresse (Domain) festlegen. Diese Werte **nur in einer lokalen Kopie** von `scripts/cloud-init-gpu.sh` oben im Block „EINSTELLUNGEN“ eintragen, nie ins Repository oder in den Chat.
-3. **VM anlegen:** Prompt A2 (steht im Dokument „Server-Test Ablauf mit centron-Antwort“) ans Browser-Plugin geben; in den „Erweiterten Optionen“ den Inhalt der lokalen Skript-Kopie bei „Cloud-Init Initialisierungsskripte“ einfügen; **„VM erstellen“ klicken Sie selbst** (ab dann laufen die Kosten, ca. 1,26 € pro Stunde).
-4. **Warten:** Das Skript lädt Pakete und Modelle (ca. 35 GB), installiert den GPU-Treiber und startet neu. **Dauer unbekannt**, geschätzt 15 bis 60 Minuten. IP-Adresse aus der Console notieren; bei eigener Adresse den DNS-Eintrag auf diese IP setzen.
-5. **Benutzen:** Am Chromebook `https://<Adresse>/` öffnen, Bedienschlüssel eingeben. (Beim ersten Test am Windows-PC stattdessen `windows/start-tunnel.bat`.)
-6. **Ende:** Prompt C (VM zerstören, Kosten prüfen) und Token auf Hugging Face widerrufen.
+1. **Neuen Chat öffnen**, den Einstiegstext aus Abschnitt 0 einfügen, „VM neu anlegen“ schreiben. Claude führt durch die Schritte.
+2. **Die zwei Werte besorgen** (kostenlos): ein **Hugging-Face-Token** (huggingface.co/settings/tokens, Typ „Read“) und ein **Bedienschlüssel** (selbst ausgedacht, nur Buchstaben und Ziffern, mindestens 24 Zeichen).
+3. **Mini-Starter vorbereiten:** Datei `scripts/cloud-init-launcher.sh` (aus dem Repository) in einer **lokalen Kopie** öffnen, die beiden Platzhalter ersetzen (Token, Schlüssel). Die Werte nie ins Repository oder in den Chat.
+4. **VM anlegen:** Prompt A2 (Dokument „Server-Test Ablauf mit centron-Antwort“) ans Browser-Plugin; in „Erweiterte Optionen“ den ganzen Text der lokalen Kopie bei „Cloud-Init Initialisierungsskripte“ einfügen; **„VM erstellen“ klicken Sie selbst** (ab dann laufen die Kosten, ca. 1,26 € pro Stunde).
+5. **Warten.** Das Hauptskript (`cloud-init-gpu.sh`, wird beim Start aus dem Repository geholt, also dort korrigierbar) installiert Treiber, Pakete und alle Modelle, richtet den Dienst ein, startet neu. **Gemessene Teilzeiten:** Einrichtung 2 min 10 s, TranslateGemma (24,4 GB) 1 min 53 s. **Nicht gemessen:** VM anlegen (laut centron ca. 2 min), Treiber mit Neustart. Gesamt grob **10 bis 15 Minuten**.
+6. **Benutzen:** Am Chromebook `https://<Adresse>/` (Ersatzadresse `<IP mit Bindestrichen>.sslip.io`), Bedienschlüssel eingeben. (Beim Test am Windows-PC stattdessen SSH-Tunnel.)
+7. **Ende:** Prompt C (VM zerstören, Kosten prüfen), **Hugging-Face-Token löschen**.
 
-**Ehrlich zum Stand:** Das Cloud-Init-Skript, die HTTPS-Adresse für das Chromebook und die `.bat`-Dateien sind **noch nicht auf einer echten VM durchgelaufen**. Beim ersten Mal ist mit Nacharbeit zu rechnen; die Datei `/var/log/kidolmetscher-init.log` auf der VM zeigt, wo es hängt. Ein echtes „Ein-Klick“ (VM automatisch anlegen und löschen) wäre nur über die centron-API möglich; ob sie dafür taugt und was sie kostet, ist **unbekannt**.
+**Ehrlich zum Stand:** Der Mini-Starter, das Cloud-Init-Hauptskript, die HTTPS-Adresse und die `.bat`-Dateien sind **noch nie auf einer frisch angelegten VM durchgelaufen**. Die einzelnen Teile (Treiber, `server_setup.sh`, Modelle) haben auf der jetzigen VM von Hand funktioniert. Beim ersten Durchlauf ist mit Nacharbeit zu rechnen; `/var/log/kidolmetscher-init.log` zeigt, wo es hängt. Ein vollautomatisches Anlegen und Löschen wäre nur über die centron-API möglich (unbekannt).
 
 ## 0b. Vor dem Zerstören der VM (Checkliste, die VM löscht alles darauf)
 
@@ -124,8 +125,8 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 - VM `xv20213` bei centron: RTX 6000 Ada (48 GB), Ubuntu 26.04 LTS, angelegt am 12.11. um 20:54. **Läuft und kostet**, solange sie nicht zerstört wird. Zerstören: VM-Seite, „Zerstören“, Server-ID bestätigen (das klickt der Nutzer selbst).
 - **GPU-Treiber installiert und geprüft:** `nvidia-smi` zeigt RTX 6000 Ada, 49.140 MiB, Treiber 595.99.02, CUDA 13.2. (Der Treiber 595-open wurde per `apt` installiert, danach Neustart.)
 - Code liegt auf der VM unter `~/kidolmetscher/src` (geklont vom GitHub-Zweig). Der erste Einrichtungslauf brach ab wegen eines Fehlers im Skript beim Ausführen als root (`DEBIAN_FRONTEND=…` als Programm gelesen). **Der Fehler ist behoben und gepusht.** Danach war zu tun: `git pull` auf der VM, `server_setup.sh` im Hintergrund starten, mitlesen (`~/setup.log`), TranslateGemma mit Hugging-Face-Token nachladen.
-- **Messung (13.11.2026): `server_setup.sh` lief fehlerfrei in 2 min 10 s** (real), ohne TranslateGemma: Python-Pakete (u. a. PyTorch 2.15.0+cu132, CTranslate2 4.9.0), Whisper large-v3 (7 Dateien in ca. 15 s von Hugging Face), 2 Piper-Stimmen. GPU-Prüfung: „GPU nutzbar“ (PyTorch CUDA True, CTranslate2 1 Gerät, float16 möglich, Whisper-Modell auf der GPU geladen). Der Download war schnell; TranslateGemma (ca. 24,4 GB) steht noch aus, die Dauer dafür ist **unbekannt** (bei der gemessenen Whisper-Rate grob 2 bis 3 Minuten, nur eine Schätzung).
-- Damit ist die frühere Schätzung „15 bis 60 Minuten“ für das ganze Neuanlegen vermutlich zu hoch: VM anlegen (laut centron ca. 2 min), Treiber mit Neustart (einige Minuten), Einrichtung 2 min 10 s, TranslateGemma (Schätzung 2 bis 3 min). Zusammen vermutlich etwa 15 Minuten, **ungemessen im Ganzen**.
+- **Messung (13.11.2026): `server_setup.sh` lief fehlerfrei in 2 min 10 s** (real), ohne TranslateGemma: Python-Pakete (u. a. PyTorch 2.15.0+cu132, CTranslate2 4.9.0), Whisper large-v3 (7 Dateien in ca. 15 s von Hugging Face), 2 Piper-Stimmen. GPU-Prüfung: „GPU nutzbar“ (PyTorch CUDA True, CTranslate2 1 Gerät, float16 möglich, Whisper-Modell auf der GPU geladen). Der Download war schnell; TranslateGemma wurde danach separat geladen (siehe unten).
+- **TranslateGemma 12B (24,4 GB) geladen in 1 min 43 s** (Lauf gesamt 1 min 53 s). Damit ist die frühere Schätzung „15 bis 60 Minuten“ für das ganze Neuanlegen vermutlich zu hoch: VM anlegen (laut centron ca. 2 min), Treiber mit Neustart (einige Minuten), Einrichtung 2 min 10 s, TranslateGemma (Schätzung 2 bis 3 min). Zusammen vermutlich etwa 10 bis 15 Minuten, **im Ganzen ungemessen**.
 - Zugang vom Windows-PC: `ssh root@<IP aus der Console>` (die IP ändert sich bei jeder neuen VM). Das **Chromebook hat keinen SSH-Schlüssel** und kann den Tunnel nicht nutzen; dafür ist die HTTPS-Adresse vorgesehen (ungetestet).
 
 ## 10. Erkenntnisse und Stolpersteine
