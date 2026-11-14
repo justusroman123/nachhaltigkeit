@@ -118,7 +118,7 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 
 - Bisher: Gesamtverbrauch 21,36 € (Stand 13.11. gegen 14 Uhr), rund 30 € pro Tag, wenn die VM läuft.
 - **Ein Test von 2 bis 3 Stunden** kostet etwa 2,53 bis 3,79 € netto. Ein vergessener Tag etwa 30 €. Dauerbetrieb 910,15 € pro Monat: **nicht vorgesehen**.
-- Hebel: kleineres Modell (4B) auf der A4000 (ca. 0,21 € pro Stunde statt 1,26 €), Abbild oder Objektspeicher für Modelle, Cloud-Init zur Einrichtung, automatisches Löschen über die centron-API (Schlüsselrechte unbekannt), Termine mit Vorlauf (VM ca. 1 Stunde vorher anlegen), Kalender-Erinnerung zum Zerstören.
+- Hebel: kleineres Modell (4B) auf der A4000 (ca. 0,21 € pro Stunde statt 1,26 €), Cloud-Init zur Einrichtung (**Abbild/Snapshot entfällt: bei GPU-VMs nicht möglich**, Stand 14.11., siehe `centron-console-befund.md`), automatisches Löschen über die centron-API (**kein eingeschränkter Schlüssel gefunden**, nur voller Member-Zugriff; daher von Hand zerstören, beim Bestätigen den VM-Namen `kidolmetscher-test` eingeben), Termine mit Vorlauf (VM ca. 1 Stunde vorher anlegen), Kalender-Erinnerung zum Zerstören.
 
 ## 9. Aktueller Betriebsstand (13.11.2026)
 

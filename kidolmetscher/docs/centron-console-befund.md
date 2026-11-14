@@ -81,3 +81,12 @@ Folgerungen: Der Test (ca. 2 bis 4 Stunden, ca. 2,49 bis 5,00 € netto nach mei
 - **Team-Limits jetzt:** Kerne 20, RAM 80 GB, Speicher 2000 GB, GPUs 8 (alle 0 belegt). Das ist deutlich mehr als nötig; die Limits begrenzen also nicht mehr die Kosten. **Pro Test nur eine Instanz anlegen.**
 - **SSH-Schlüssel** "kidolmetscher-test" ist gespeichert (Team Einstellungen > Tab Sicherheit > SSH Keys); Fingerprint stimmte mit dem lokalen Schlüssel überein. Ob er beim Erstellen einer VM auswählbar ist, wurde nicht geprüft.
 - **2FA:** Ab 14.12.2026 Pflicht für die Anmeldung; aktuell deaktiviert. Vor diesem Datum einrichten (Entscheidung der Kontoinhaberin/des Kontoinhabers).
+
+## Nachtrag 14.11.2026: Snapshots, Images, Löschen, API (Bericht des Browser-Plugins, nur gelesen; von mir nicht selbst geprüft)
+
+- **Für GPU-VMs sind keine Snapshots möglich** (Console → Images → Snapshots: „Für Server mit GPU sind keine Snapshots möglich.“). Keine eigenen Images (nur per E-Mail an technik@centron.de). cBacks/cProtect sind nicht als Abbild zum Neuanlegen beschrieben. Die Doku widerspricht sich (Cloud GPU → Features sagt „wie ccloud³-VMs“). **Folgerung: Das „Golden Image“ mit fertigen Modellen entfällt; Neuanlegen läuft per Cloud-Init.** Nicht gefunden: ob ein Snapshot einer Nicht-GPU-VM eine GPU-VM starten kann.
+- **Preise netto pro GB und Monat:** Snapshots 0,00 €, cBacks 0,00 €, cProtect 0,03 €, Disk 0,05 € (Doku-Seiten nennen nur „nutzungsbasiert“, widersprüchlich). Disks sind unabhängige Ressourcen, verschiebbar zwischen VMs im selben Rechenzentrum; **ob eine Disk das Zerstören der VM überlebt und an eine neue GPU-VM passt: nicht geprüft.** Nutzen wäre gering: Modell-Download dauerte gemessen nur ca. 2 Minuten.
+- **Kein automatisches Löschen/keine Zeitschaltung für VMs** gefunden (ca. 520 Doku-Seiten durchsucht). Automatisch gelöscht wird nur bei 14 Tagen Zahlungsverzug.
+- **API:** `DELETE /ccloud/servers/{hostname}` (docs.centron.de/api, OAuth2 Client Credentials, Antwort Task-ID). **Ein eingeschränkter Schlüssel „nur Löschen“ wurde nicht gefunden**; jeder Token hat die Rolle Member mit vollem Zugriff auf Team-Ressourcen (kein Billing). Kein Token angelegt. Folgerung: Löschen weiter von Hand, Erinnerung im Kalender.
+- **„Rechnungswarnungen“** (E-Mail bei selbst gesetztem Betrag) laut Preisseite-FAQ: in Console/Doku nicht gefunden.
+- **Zerstören:** Das Bestätigungsfenster verlangt laut Doku den **VM-Namen `kidolmetscher-test`** (nicht die Server-ID xv20213). Zerstören löscht alle zugehörigen Backups unwiederbringlich.
