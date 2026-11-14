@@ -19,10 +19,10 @@ say() { printf '\n== %s\n' "$*"; }
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 
 say "1. GPU"
-if command -v nvidia-smi >/dev/null; then
-  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+if command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader; then
+  :
 else
-  echo "HINWEIS: nvidia-smi nicht gefunden. Ohne GPU-Treiber laeuft nur die CPU (langsam). Image/Anbieter pruefen."
+  echo "HINWEIS: nvidia-smi nicht nutzbar (Treiber fehlt oder noch nicht geladen). Ohne Treiber laeuft nur die CPU. Nach der Treiber-Installation und einem Neustart erneut pruefen."
 fi
 
 say "2. Systempakete"

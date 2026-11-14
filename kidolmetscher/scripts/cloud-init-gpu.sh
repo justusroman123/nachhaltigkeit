@@ -25,7 +25,8 @@ export HOME=/root DEBIAN_FRONTEND=noninteractive HF_TOKEN MT_REPO
 echo "== Start $(date -Is)"
 apt-get update -y
 apt-get install -y git python3-venv python3-pip curl ubuntu-drivers-common caddy
-git clone --branch ccr-4bf88cb4-flgtez https://github.com/justusroman123/nachhaltigkeit.git /root/kidolmetscher/src
+[ -d /root/kidolmetscher/src/.git ] || git clone --branch ccr-4bf88cb4-flgtez https://github.com/justusroman123/nachhaltigkeit.git /root/kidolmetscher/src
+git -C /root/kidolmetscher/src pull -q --ff-only || true
 SKIP_APT=1 bash /root/kidolmetscher/src/kidolmetscher/scripts/server_setup.sh
 unset HF_TOKEN
 
