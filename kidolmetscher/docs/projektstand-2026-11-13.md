@@ -232,3 +232,24 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Konsequenz:** „Ein Knopf per Cloud-Init“ ist **nicht bestätigt**. Zuverlässiger Rückfall: VM **ohne** Cloud-Init anlegen, per SSH `cat > /root/start.sh` (Starter einfügen, Strg+D), `setsid nohup bash /root/start.sh > /root/start.log 2>&1 &`, danach `rm /root/start.sh`. Offene Fragen an centron-Support: Warum Post-Deployment fehlgeschlagen? Wurde das Cloud-Init-Feld übernommen? Abrechnung des fehlgeschlagenen Versuchs?
 - **DNS:** Der A-Eintrag `dolmetscher` zeigt noch auf die nicht mehr vorhandene IP; bei neuer VM den vorhandenen Eintrag **bearbeiten**.
 
+## 17. Lehren vom 14.11.2026 und Auftrag: Ablauf muss anders werden (Wunsch des Nutzers: „nervig und zeitintensiv, lange Recherche, alles ins Protokoll“)
+
+**Was an diesem Abend schiefging (Fakten):**
+1. **Cloud-Init-Feld:** Der Starter kam bei der zweiten VM nicht in den Datensätzen an (nur centrons eigenes `#cloud-config`); eine VM wurde als „Post deployment failed“ markiert. Ursache unbekannt.
+2. **Von-Hand-Weg mit vielen Einzelschritten:** Mindestens sieben Bedienfehler (Befehle ins `cat` getippt, Variablenname `HF_TOKEN` durch den Token-Wert ersetzt, `OPERATOR_KEY` fehlte, `grep` am Windows-Prompt, Befehle am falschen Prompt, Ausgaben mit Token in den Chat kopiert). **Das Token stand dadurch fünfmal im Chat.** Dreimal lief das Setup mit dem falschen Variablennamen; TranslateGemma wurde nie geladen.
+3. **Fehler im Skript (meiner):** `nvidia-smi` ohne Treiber brach `server_setup.sh` ab (`set -e`); `git clone` war nicht wiederholbar. Behoben und gepusht, **auf einer frischen VM bis zum Ende ungetestet**. Hätte ein Test auf einer billigen VM aufgedeckt.
+4. **Zeit/Kosten:** VM 1 (Ada) ca. 1,26 €/h über ca. 25 h; VM 2 (A4000) 0,27 €/h; Setup-Dauer des Gesamtlaufs: bisher nicht sauber gemessen.
+
+**Regeln ab jetzt:**
+- **Nie wieder „ein Knopf“ behaupten, bevor der Ablauf einmal komplett auf einer Test-VM gelaufen ist.**
+- **Keine Geheimnisse in Zwischenablage-Zeilen mit Platzhaltern zum Ersetzen.** Eingabe nur über versteckte Abfrage (siehe unten).
+- **Skripte vor dem GPU-Einsatz auf einer billigen Nicht-GPU-VM testen** (centron „Optimiertes Cloud Computing“, laut Console ab 2,86 €/Monat netto; Stundenpreis nicht gemessen): Zustellung des Cloud-Init-Texts, Ports 80/443 von außen, Let's-Encrypt-Zertifikat, DNS-Dauer, Setup ohne GPU-Teile.
+- Dem Nutzer nur **einen** Befehl nennen, der danach **eine** Zeile Ergebnis liefert; keine Ausgabe-Kopien des ganzen Terminals.
+
+**Aufgabenliste für die Recherche (nächste Sitzung, nach Rücksetzung des Wochenlimits am So. 15.11. 20:00; die Recherche kostet Limit):**
+1. **centron-API:** Gibt es beim Anlegen einer GPU-VM einen Parameter `user_data` (Cloud-Init) und kommt der Text dort an? Authentifizierung/Rechte (Token mit vollen Rechten: Risiko).
+2. **Ein-Klick-Skript am Windows-PC** (`windows/`): PowerShell-Skript, fragt IP, HF-Token und Bedienschlüssel **versteckt** ab (`Read-Host -AsSecureString`), schickt das Starterskript per `ssh … "bash -s"` über stdin (kein Einfügen im SSH-Fenster, kein Chat), wartet auf Neustart, prüft die Seite und meldet nur „fertig/Fehler“. Zeilenenden (CRLF) beachten. Ungetestet.
+3. **Alternative Anbieter in Deutschland/EU** mit Snapshot/Image-Unterstützung für GPU-VMs, stundengenauer Abrechnung und AVV (Datenschutz, später): z. B. prüfen, ob es das gibt; Auswahl nicht aus dem Gedächtnis, sondern recherchiert.
+4. **DNS ohne Handarbeit:** KAS-API von ALL-INKL für den A-Eintrag oder feste IP (centron „Reservierte IPs“ ist ohne Funktion gefunden).
+5. **Eigene Hardware vor Ort** (Offline-Box) als Alternative zur Cloud: Kosten und Aufwand unbekannt.
+
