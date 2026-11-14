@@ -205,3 +205,12 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Speicher 16 GB:** 4B 8,64 GB + Whisper ca. 4,2 GB; Reserve unbekannt. Läuft der Qualitätslauf (`QUALITAETSLAUF=1`) vor dem Dienst, wird der Speicher getrennt genutzt.
 - **Qualität 4B:** unbekannt; der Qualitätslauf liefert nur den Bewertungsbogen (Sätze, Übersetzungen, Ton wo Stimme vorhanden), Muttersprachler entscheidet. Ein Vergleich mit 12B ist auf der A4000 nicht möglich (24,41 GB).
 - **Altes Hugging-Face-Token:** Nutzer will es weiterverwenden. Es stand mehrfach im Chat; **Risiko: Dritte mit Zugriff auf diese Chats könnten es nutzen. Empfehlung: neues Lesetoken (1 Minute).** Entscheidung beim Nutzer.
+
+### Ergebnis Prompt A3 (Bericht des Plugins vom 14.11.2026, nur gelesen/vorbereitet, nichts bestellt; von mir nicht selbst geprüft)
+
+- **GPUs (nur GPU-Anteil, netto laut Doku, Console nennt es nicht):** RTX A4000 16 GB 0,2069 €/h (149,00 €/Monat), **verfügbar**; RTX 6000 Ada 48 GB 1,1919 €/h (858,19 €/Monat), verfügbar; Quadro RTX 6000 24 GB 0,2764 €/h, A100 40 GB 0,9583 €/h, A100 80 GB 1,7917 €/h: **belegt**. L4/L40S/A10/RTX 4000 Ada: nicht gefunden. Glattbrugg GLB1 voll belegt, Bamberg BBG1 wählbar.
+- **Checkout-Preis A4000 mit 4 vCPU / 16 GB / 100 GB: 0,2652 €/h netto (190,96 €/Monat)**, brutto bei 19 % ca. 0,3156 €/h (Rechnung des Plugins, Console zeigt keinen Brutto-Betrag). Zum Vergleich Ada-Konfiguration 1,2641 €/h. Abrechnung stündlich, Mindestgebühr 1 Stunde, gestoppte VMs werden berechnet.
+- **Firewall im Wizard nicht einstellbar** (kostenpflichtige „Cloud Firewall“ 7,58 €/Monat gefunden, nicht gebucht). **Ob Port 80/443 standardmäßig offen sind: unbekannt**, zeigt der Test.
+- **Reservierte IPs:** Liste leer, kein Anlegen-Button, keine Preisangabe, Neuzuweisung nach Zerstören nicht gefunden (Doku „in Arbeit“). Folge: **A-Eintrag pro neuer VM von Hand ändern.**
+- **Image:** Ubuntu „LTS 26“ gewählt (die erste VM lief mit Ubuntu 26.04.1 LTS laut Login-Meldung). SSH-Key `kidolmetscher-test` gewählt, Cloud-Init leer (füllt der Nutzer), Name `kidolmetscher-test`.
+
