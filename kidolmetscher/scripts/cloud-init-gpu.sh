@@ -10,6 +10,8 @@
 HF_TOKEN="${HF_TOKEN:-}"                     # Hugging-Face-Lesetoken fuer TranslateGemma; leer = TranslateGemma wird nicht geladen.
                                               # Das Token liegt danach noch in den Cloud-Init-Daten der VM: nach dem Test widerrufen.
 MT_REPO="${MT_REPO:-google/translategemma-12b-it}"        # oder google/translategemma-4b-it (kleiner, fuer eine 16-GB-GPU)
+DEFAULT_LANGS="${DEFAULT_LANGS:-}"                     # Vorauswahl der Zielsprachen im Bedienplatz, z. B. "uk" (leer = Standard uk,en). Muss in TARGET_LANGS liegen.
+SERVER_HOURLY_EUR="${SERVER_HOURLY_EUR:-}"             # Stundenpreis der gewaehlten VM fuer die Kostenanzeige (leer = 1.24). Nur Zahl mit Punkt.
 QUALITAETSLAUF="${QUALITAETSLAUF:-1}"                            # 1 = vor dem ersten Start einmal alle Sprachen durchrechnen (Bewertungsbogen)
 OPERATOR_KEY="${OPERATOR_KEY:-}"                               # Ihr Bedienschluessel (nur Buchstaben und Ziffern, mind. 24 Zeichen, z. B. aus dem Passwort-Manager).
                                               # Leer = wird zufaellig erzeugt (steht dann nur in ~/kidolmetscher/server.env auf der VM).
@@ -35,6 +37,8 @@ if echo "$OPERATOR_KEY" | grep -Eq '^[A-Za-z0-9]{24,}$'; then
 else
   echo "HINWEIS: OPERATOR_KEY leer oder ungueltig (nur Buchstaben/Ziffern, mind. 24): zufaelliger Schluessel in server.env bleibt"
 fi
+echo "$DEFAULT_LANGS" | grep -Eq '^[a-z]{2}(,[a-z]{2})*$' && sed -i "s/^DEFAULT_LANGS=.*/DEFAULT_LANGS=$DEFAULT_LANGS/" /root/kidolmetscher/server.env
+echo "$SERVER_HOURLY_EUR" | grep -Eq '^[0-9]+(\.[0-9]+)?$' && sed -i "s/^SERVER_HOURLY_EUR=.*/SERVER_HOURLY_EUR=$SERVER_HOURLY_EUR/" /root/kidolmetscher/server.env
 echo "PUBLIC_URL=https://$DOMAIN" >> /root/kidolmetscher/server.env
 cat > /etc/caddy/Caddyfile <<CEOF
 $DOMAIN {

@@ -184,3 +184,20 @@ Aufgabe: Die Test-Instanz "kidolmetscher-test" beenden und die Kosten prüfen.
    Gibt es noch eine laufende Instanz, einen Speicher oder eine IP-Adresse, die weiter berechnet wird? Nenne Zahlen
    mit zwei Nachkommastellen und ob netto oder brutto. Was du nicht findest: "nicht gefunden".
 ```
+
+### Prompt A3: günstige Variante (RTX A4000, 4B-Modell), Preise lesen, stoppt vor dem Erstellen (Stand 14.11.2026)
+
+Vorher: Starter `scripts/cloud-init-launcher.sh` **lokal** ausfüllen (Token, Bedienschlüssel; `MT_REPO=google/translategemma-4b-it`, `DEFAULT_LANGS=uk`). Das Feld „Cloud-Init“ füllen **Sie** selbst aus (Plugin gibt keine Geheimnisse ein).
+
+```
+Ich bin bei https://cloud.centron.de eingeloggt. Lies nur, bestelle nichts. Klicke NIE auf "VM erstellen", Akzeptieren oder Löschen ohne meine ausdrückliche Bestätigung. Gib keine Schlüssel oder Token ein oder aus.
+Teil 1 (nur lesen, Wizard "Virtuelle Maschine erstellen" -> Cloud GPU, ohne zu erstellen):
+1. Alle wählbaren GPU-Typen mit VRAM, Preis pro Stunde und pro Monat (netto, zwei Nachkommastellen), und ob "belegt" oder verfügbar.
+2. Gesamtpreis pro Stunde (netto) für RTX A4000 mit 4 vCPU, 16 GB RAM, 100 GB Speicher, und für Quadro RTX 6000 24 GB gleich konfiguriert. Mindestwerte je GPU?
+3. Weitere/günstigere GPUs (L4, L40S, RTX 4000 Ada, A10)? Verfügbar?
+4. Network -> Reservierte IPs: Kann ich eine feste IPv4 reservieren und nach dem Zerstören einer VM neu zuweisen? Preis pro Monat auch ohne Zuweisung?
+Teil 2 (vorbereiten): Stelle ein: GPU RTX A4000 16 GB, Region Bamberg BBG1, 4 vCPU, 16 GB RAM, 100 GB Speicher, Name kidolmetscher-test, neuestes Ubuntu LTS, SSH-Schlüssel "kidolmetscher-test", Firewall nur 22, 80, 443 falls einstellbar. Das Feld "Cloud-Init" lasse leer, das fülle ich selbst. Berichte den angezeigten Gesamtpreis pro Stunde (netto/brutto) und was angezeigt wird. Dann STOPP und frage mich.
+Was du nicht findest: "nicht gefunden". Nichts schätzen.
+```
+
+Nach dem Erstellen: IP notieren, bei eigener `DOMAIN` den DNS-Eintrag setzen. Ablauf und Messpunkte siehe Protokoll Abschnitt 15.

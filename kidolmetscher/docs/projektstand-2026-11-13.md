@@ -187,3 +187,21 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **VM `kidolmetscher-test` ist zerstört** (Dashboard: Kerne 0/20, RAM 0/80 GB, GPUs 0/8). Billing-Anzeige am 14.11.: Gesamtverbrauch 31,74 €, Guthaben 200,00 €, voraussichtlicher Verbrauch 0,00 € (nächste Rechnung 1.12.2026). **Ob das Guthaben verrechnet wird und ob 31,74 € netto oder brutto ist: unbekannt**, auf der Rechnung prüfen.
 - **Funktionierende Kette (13.11.):** Whisper-GPU-Fix, Übersetzung kommt an, Verzögerung laut Nutzer ca. 1 s (nicht gemessen).
 - **Offen:** GPU-Typen/Gesamtpreise (Prompt 1, Punkte 1 bis 3 und 6 noch nicht beantwortet), 12B-gegen-4B-Qualitätsvergleich, A4000-Messung, HTTPS für Tablets (`oeffentlich_freigeben.sh` ungetestet), Cloud-Init-Gesamtlauf, Drive-Upload dieses Protokolls, neues HF-Token (altes löschen!), 2FA vor 14.12.2026.
+
+## 15. Plan Neustart mit günstiger Variante (14.11.2026, vorbereitet, noch nicht ausgeführt)
+
+**Ziel:** VM mit RTX A4000 (16 GB) und TranslateGemma 4B, zunächst **eine Sprache** (Standard `uk`), HTTPS-Adresse für Chromebook (Bedienplatz) und Tablets/Handy (Zuhörer).
+
+**Vorbereitet im Repository (alles ungetestet auf der A4000):**
+- `scripts/cloud-init-launcher.sh`: `MT_REPO=google/translategemma-4b-it`, `DEFAULT_LANGS=uk`, optional `SERVER_HOURLY_EUR`; `cloud-init-gpu.sh` trägt beides in `server.env` ein.
+- `docs/server-test-ablauf.md`: **Prompt A3** (Preise/GPU-Typen/reservierte IP lesen, A4000 vorbereiten, stoppt vor „Erstellen“).
+- `docs/endgeraete-recherche.md`: Geräteüberlegungen (kein Gerät ist „datenschutzkonform“ an sich; Übersetzung läuft auf dem Server).
+
+**Ablauf:** (1) Prompt A3 ans Plugin, Preise ansehen, bestätigen. (2) Starter lokal ausfüllen (Token, Bedienschlüssel, ggf. `DOMAIN`), in „Cloud-Init“ einfügen, VM erstellen. (3) IP notieren; bei eigener Domain den A-Eintrag setzen. (4) Warten (Dauer unbekannt, bisher gemessen: Setup 2 min, Modelle 2 min, Treiber+Neustart nicht gemessen). (5) Chromebook: `https://<adresse>/`, Bedienschlüssel, Mikrofon erlauben, Sitzung mit `uk` starten; Tablet: QR-Code/Link. (6) Messen: `t_mt`/`t_tts`, VRAM (`nvidia-smi`), Bewertungsbogen des Qualitätslaufs. (7) VM **zerstören** (Name `kidolmetscher-test` eingeben), Billing prüfen.
+
+**Risiken/Unbekannt:**
+- **Zertifikat für `<ip>.sslip.io`:** Let's Encrypt begrenzt Zertifikate je registrierter Domain (gemeinsam für alle sslip.io-Adressen); bekannte Probleme (Caddy-/OpenVidu-Forum, Websuche 14.11.). **Eigene Subdomain (z. B. unter kischub.de, DNS-Zugang unbekannt) ist sicherer.** Ob Port 80/443 bei centron offen ist: unbekannt.
+- **A4000-Preis uneinheitlich:** centron-Seiten nennen 0,2069 €/h (149,00 €/Monat, deckt sich mit der Console-Anzeige), 0,13 €/h (92,59 €/Monat) und 0,067 €/h (alte Preisliste). Gültig ist die Anzeige im Checkout (Prompt A3).
+- **Speicher 16 GB:** 4B 8,64 GB + Whisper ca. 4,2 GB; Reserve unbekannt. Läuft der Qualitätslauf (`QUALITAETSLAUF=1`) vor dem Dienst, wird der Speicher getrennt genutzt.
+- **Qualität 4B:** unbekannt; der Qualitätslauf liefert nur den Bewertungsbogen (Sätze, Übersetzungen, Ton wo Stimme vorhanden), Muttersprachler entscheidet. Ein Vergleich mit 12B ist auf der A4000 nicht möglich (24,41 GB).
+- **Altes Hugging-Face-Token:** Nutzer will es weiterverwenden. Es stand mehrfach im Chat; **Risiko: Dritte mit Zugriff auf diese Chats könnten es nutzen. Empfehlung: neues Lesetoken (1 Minute).** Entscheidung beim Nutzer.
