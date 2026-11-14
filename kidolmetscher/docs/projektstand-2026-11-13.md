@@ -214,3 +214,11 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Reservierte IPs:** Liste leer, kein Anlegen-Button, keine Preisangabe, Neuzuweisung nach Zerstören nicht gefunden (Doku „in Arbeit“). Folge: **A-Eintrag pro neuer VM von Hand ändern.**
 - **Image:** Ubuntu „LTS 26“ gewählt (die erste VM lief mit Ubuntu 26.04.1 LTS laut Login-Meldung). SSH-Key `kidolmetscher-test` gewählt, Cloud-Init leer (füllt der Nutzer), Name `kidolmetscher-test`.
 
+### Ergebnis Prompt DNS 1 (Bericht des Plugins vom 14.11.2026, nur gelesen; ohne IP-Adressen und Kennungen der anderen Webseite, weil das Repository öffentlich ist)
+
+- **DNS-Anbieter ALL-INKL.COM (KAS)**, Pfad: Tools → DNS-Einstellungen → kischub.de → „Neuen DNS-Eintrag erstellen“ (Felder: Name, Typ, Ziel; Button „Jetzt anlegen“). Die Zone hat 8 Einträge (A für die Hauptdomain, **A mit Wildcard `*`**, MX, TXT für SPF/DMARC/DKIM/Brevo). Es gibt keinen Eintrag und keine KAS-Subdomain für `dolmetscher`.
+- **Die Wildcard `*` zeigt auf die andere Webseite.** Ein neuer A-Eintrag `dolmetscher` überschreibt sie nur für diese eine Subdomain. **Die Einträge A (Hauptdomain) und `*` nicht ändern; die Checkbox „Wildcard soll ebenfalls auf diese IP zeigen“ nicht anhaken.** (Die Subdomain `training` läuft über die Wildcard.)
+- **Kein CAA-Eintrag:** Zertifikate von Let's Encrypt sind nach Standard nicht eingeschränkt (Plugin-Angabe, nicht live geprüft). **DNSSEC:** nicht gefunden. **TTL:** **nicht einstellbar** (kein Feld); die Seite nennt „einige Stunden“ für Änderungen.
+- **Folge für den Ablauf:** Bis `dolmetscher.kischub.de` auf die neue IP zeigt, löst es über die Wildcard auf die andere Webseite auf. Resolver mit altem Ergebnis können bis zum Ablauf der (unbekannten) TTL die falsche IP liefern; Let's Encrypt kann dann zunächst scheitern, Caddy versucht es automatisch erneut. **Wartezeit bis zur Gültigkeit: unbekannt, messen.** Fallback: `scripts/oeffentlich_freigeben.sh` mit der Ersatzadresse `<ip>.sslip.io` (Zertifikat-Limit-Risiko).
+- **Bei jeder neuen VM** den vorhandenen A-Eintrag `dolmetscher` **bearbeiten** (neue IP), nicht neu anlegen.
+
