@@ -20,3 +20,16 @@ Quelle: Bericht des Browser-Plugins aus dem eingeloggten Hugging-Face-Konto (Zug
 - Sprachcodes: Standard sind unsere Kürzel (`uk`, `ar`, `tr`, `fa`, `en`, `de`). Falls das Modell einen ablehnt: `MT_LANG_CODES=ar=ar-SA,uk=uk-UA` usw.
 - Beim ersten Servertest zuerst `scripts/quality_run.py` mit allen vier Sprachen laufen lassen: Fehlerzeilen zeigen abgelehnte Codes, der Bewertungsbogen die Qualität.
 - Speicherbedarf: ca. 24,4 GB Gewichte plus Whisper large-v3 (ca. 3 GB in float16, Schätzung) passen rechnerisch in 48 GB VRAM; gemessen ist das nicht.
+
+## Nachtrag 14.11.2026: Freigabe, Größen, Codes (Bericht des Browser-Plugins aus dem eingeloggten Hugging-Face-Konto, nur gelesen; von mir nicht selbst geprüft)
+
+| Modell | Zugriff | Dateien gesamt (main) |
+| --- | --- | --- |
+| google/translategemma-4b-it | erteilt | 8,64 GB (15 Dateien) |
+| google/translategemma-12b-it | erteilt | 24,41 GB (18 Dateien) |
+| google/translategemma-27b-it | erteilt | 54,90 GB (25 Dateien) |
+
+- **27B passt in BF16 nicht auf die 48 GB der Ada** (54,90 GB Gewichte); nur quantisiert, Qualität/Aufwand unbekannt.
+- Die Modellkarte nennt **keine der vier Sprachen einzeln** („55 languages“, keine Liste). Das `chat_template.jinja` akzeptiert u. a. `uk`/`uk-UA`, `ar`/`ar-EG`/`ar-SA`, `tr`/`tr-TR`, `fa`/`fa-IR`; „akzeptiert“ heißt nicht „Qualität geprüft“.
+- **Quantisierungen:** keine offiziellen von Google; nur Community-Varianten (GGUF, MLX 4-bit u. a.), nicht geprüft.
+- **4B-Variante:** Repository-Name `google/translategemma-4b-it` bestätigt. Setup: `MT_REPO=google/translategemma-4b-it` im Cloud-Init-Starter. Speicher: 8,64 GB Gewichte + Whisper ca. 4,2 GB (gemessen) = ca. 12,9 GB von 16 GB der A4000; **Reserve für Zwischenwerte: unbekannt, messen**.
