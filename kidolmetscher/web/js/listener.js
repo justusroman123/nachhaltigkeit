@@ -3,7 +3,7 @@
   'use strict';
   const NAMES = { uk: 'Українська', ar: 'العربية', en: 'English', tr: 'Türkçe', fa: 'فارسی' };
   const RTL = ['ar', 'fa'];
-  const MAX_LINES = 4;
+  const HISTORY_S = 120;               // Verlauf: Untertitel aelter als 2 Minuten werden geloescht (Anzeige und Speicher)
   const MAX_AUDIO_BACKLOG_S = 6;      // Rueckstau: mehr wartender Ton wird verworfen, Untertitel laufen weiter
   const $ = (id) => document.getElementById(id);
   const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker'),
@@ -25,7 +25,7 @@
   /* ---------- Hinweis (KI) und Texte in der gewaehlten Sprache ---------- */
   function applyStrings() {
     const s = t(), dir = RTL.includes(lang) ? 'rtl' : 'ltr';
-    $('aiText').textContent = s.ai; $('privacyLink').textContent = s.privacy;
+    $('aiText').textContent = s.ai; $('privacyLink').textContent = s.privacy; $('histNote').textContent = s.last2 || '';
     $('notice').dir = dir;
     $('btnStartSound').textContent = '🔊  ' + s.start; $('btnSubsOnly').textContent = s.subsOnly;
     $('startAi').textContent = s.ai; startScreen.dir = dir;
@@ -49,14 +49,23 @@
   $('btnLang').addEventListener('click', () => showPicker(offered));
 
   /* ---------- Untertitel ---------- */
-  function addLine(text, rtl) {
+  const lines = [];                      // {el, at}: nur im Arbeitsspeicher, hoechstens HISTORY_S alt
+  function nearBottom() { return subs.scrollHeight - subs.scrollTop - subs.clientHeight < 80; }
+  function addLine(text, rtl, ageS) {
     const first = subs.firstElementChild;
     if (first && first.id === 'msg') subs.replaceChildren();
+    const stick = nearBottom();                                   // nur mitscrollen, wenn nicht gerade zurueckgelesen wird
     const p = document.createElement('p');
     p.className = 'sub'; p.textContent = text; p.dir = rtl ? 'rtl' : 'ltr';
     subs.appendChild(p);
-    while (subs.children.length > MAX_LINES) subs.removeChild(subs.firstElementChild);
+    lines.push({ el: p, at: Date.now() - (ageS || 0) * 1000 });
+    if (stick) subs.scrollTop = subs.scrollHeight;
   }
+  function purgeHistory() {
+    const limit = Date.now() - HISTORY_S * 1000;
+    while (lines.length && lines[0].at < limit) { const l = lines.shift(); if (l.el.parentNode) l.el.remove(); }
+  }
+  setInterval(purgeHistory, 1000);
   function setFont(delta) {
     fontRem = Math.max(1, Math.min(5, fontRem + delta));
     document.documentElement.style.setProperty('--fs', fontRem + 'rem');
@@ -120,10 +129,11 @@
         document.documentElement.lang = lang;
         applyStrings();
         history.replaceState(null, '', '#t=' + token + '&l=' + lang);
+        if (changed) lines.length = 0;
         if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
         if (!startShown) { startShown = true; startScreen.hidden = false; }   // einmal: "Tippen zum Starten"
       } else if (d.type === 'translation') {
-        addLine(d.text, RTL.includes(d.lang));
+        addLine(d.text, RTL.includes(d.lang), d.age_s);
         play(d.audio);
       } else if (d.type === 'session_end') {
         end('Ende', 'muted', '✔');

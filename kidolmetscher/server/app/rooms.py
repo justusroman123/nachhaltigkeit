@@ -154,7 +154,14 @@ class Room:
         return sorted({l.lang for l in self._listeners.values() if l.lang is not None})
 
     def replay(self, lang: str) -> list[dict]:
-        return list(self._ring.get(lang, ()))
+        """Letzte Untertitel der Sprache, hoechstens HISTORY_S alt (aeltere werden hier geloescht); mit age_s."""
+        ring = self._ring.get(lang)
+        if not ring:
+            return []
+        now = self._clock()
+        while ring and now - ring[0][0] > self.settings.history_s:
+            ring.popleft()
+        return [{**m, "age_s": round(now - t, 1)} for t, m in ring]
 
     # --- Nachrichten ---
     def next_seq(self) -> int:
@@ -167,7 +174,7 @@ class Room:
         n = self.settings.ring_buffer_size
         if n > 0:
             ring = self._ring.setdefault(lang, deque(maxlen=n))
-            ring.append({**message, "audio": None, "replay": True})   # ohne Audio
+            ring.append((self._clock(), {**message, "audio": None, "replay": True}))   # ohne Audio
         delivered = 0
         for l in self._listeners.values():
             if l.lang == lang:

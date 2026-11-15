@@ -301,8 +301,9 @@
       n(t.t_mt, t.t_tts) + ' / ' + n(tts, t.t_out) + ' ms';
     const row = document.createElement('div');
     row.textContent = '#' + d.seq + ' [' + d.lang + '] ' + d.text_src + ' → ' + d.text;
+    row.dataset.at = String(Date.now());
     e.log.prepend(row);
-    while (e.log.children.length > 30) e.log.removeChild(e.log.lastElementChild);
+    while (e.log.children.length > 60) e.log.removeChild(e.log.lastElementChild);
   }
 
   function showCost(s) {
@@ -344,6 +345,10 @@
       });
     } catch (_) {}
   }
+
+  // Verlauf im Bedienplatz: Eintraege aelter als 2 Minuten werden geloescht
+  setInterval(() => { const limit = Date.now() - 120000;
+    [...e.log.children].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); }); }, 1000);
 
   window.addEventListener('pagehide', () => { stopSending(); });
 })();

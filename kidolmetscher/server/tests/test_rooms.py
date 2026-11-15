@@ -186,3 +186,19 @@ def test_raum_mit_eigener_sprachliste(mgr):
     for bad in (["xx"], [], ["uk", "ru"]):           # unbekannt oder nicht in TARGET_LANGS
         with pytest.raises(LanguageError):
             mgr.create_room(bad)
+
+
+def test_verlauf_aelter_als_history_s_wird_geloescht(clock):
+    from conftest import make_settings
+    from app.rooms import RoomManager
+    mgr = RoomManager(make_settings(ring_buffer_size=10, history_s=120.0), clock)
+    room = mgr.create_room()
+    room.publish("uk", {"seq": 0, "lang": "uk", "text": "alt", "audio": None})
+    clock.advance(100)
+    room.publish("uk", {"seq": 1, "lang": "uk", "text": "neu", "audio": None})
+    clock.advance(30)                                    # erster Eintrag jetzt 130 s alt
+    r = room.replay("uk")
+    assert [m["text"] for m in r] == ["neu"] and r[0]["age_s"] == 30.0
+    clock.advance(200)
+    assert room.replay("uk") == []
+

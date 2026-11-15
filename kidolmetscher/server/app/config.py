@@ -80,7 +80,8 @@ class Settings:
     max_listener_ttl_s: int = 28800
     room_ttl_s: int = 43200
     max_listeners_per_room: int = 100      # Platzhalter, nicht gemessen
-    ring_buffer_size: int = 5
+    ring_buffer_size: int = 40             # letzte Untertitel fuer spaet verbundene Zuhoerer (nur Text, ohne Ton)
+    history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
     segment_max_words: int = 12            # Segmentierer: hoechstens so viele Woerter je Uebersetzung
     lang_queue_max: int = 8                # Warteschlange je Sprache; darueber werden aelteste Segmente verworfen
@@ -135,7 +136,7 @@ class Settings:
             raise ConfigError("DEFAULT_LANGS muss nicht leer und Teilmenge von TARGET_LANGS sein")
         if not (1 <= self.min_listener_ttl_s <= self.listener_ttl_s <= self.max_listener_ttl_s):
             raise ConfigError("Es muss gelten: MIN_LISTENER_TTL_S <= LISTENER_TTL_S <= MAX_LISTENER_TTL_S")
-        if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0:
+        if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0 or self.history_s <= 0:
             raise ConfigError("ROOM_TTL_S, MAX_LISTENERS_PER_ROOM oder RING_BUFFER_SIZE ungueltig")
         if self.segment_max_words < 1 or self.lang_queue_max < 1 or self.tts_skip_backlog < 1:
             raise ConfigError("SEGMENT_MAX_WORDS, LANG_QUEUE_MAX, TTS_SKIP_BACKLOG muessen >= 1 sein")
@@ -189,6 +190,7 @@ class Settings:
                 room_ttl_s=int(get("ROOM_TTL_S", d.room_ttl_s)),
                 max_listeners_per_room=int(get("MAX_LISTENERS_PER_ROOM", d.max_listeners_per_room)),
                 ring_buffer_size=int(get("RING_BUFFER_SIZE", d.ring_buffer_size)),
+                history_s=float(get("HISTORY_S", d.history_s)),
                 segment_max_words=int(get("SEGMENT_MAX_WORDS", d.segment_max_words)),
                 lang_queue_max=int(get("LANG_QUEUE_MAX", d.lang_queue_max)),
                 tts_skip_backlog=int(get("TTS_SKIP_BACKLOG", d.tts_skip_backlog)),
