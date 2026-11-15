@@ -273,3 +273,22 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Maßnahmen (Repository, auf der GPU ungetestet):** Stille am Ende wird auf 250 ms gekürzt, bevor Whisper den Abschnitt bekommt (`TAIL_KEEP_MS`); Whisper-Segmente mit hoher Nicht-Sprache-Wahrscheinlichkeit/Schleifenmuster werden verworfen (`no_speech_prob`, `compression_ratio`); `text_clean.entferne_floskeln` entfernt Abspann-Floskeln (Untertitel + Sender/Amara/Jahr); normale Sätze mit „Untertitel“ bleiben unverändert (Test).
 - **Offen:** ob die doppelten Sätze mit anderen Worten vom Sprecher kamen oder vom Server verarbeitet wurden: Nutzer prüft den deutschen Text in der Live-Liste des Bedienplatzes. Vorschlag des Nutzers: **„Dolmetscher-Modus“, bei dem „Sprechen möglich“ erst erscheint, wenn die Übersetzung auf allen Geräten fertig gesprochen/angezeigt ist** (Rückmeldung der Zuhörer-Seiten; Datenschutz: nur Zähler, keine Inhalte). Entwurf: Zuhörer melden „fertig“ (Ton zu Ende oder Untertitel angezeigt), Server meldet dem Bedienplatz „alle fertig“, Zeitgrenze gegen hängende Geräte. Noch nicht gebaut.
 
+## 21. Wunsch: zwei Betriebsarten (Vortrag und Gespräch), Auswahl der Sprache durch den Gast, Neustart ohne „Theater“ (15.11.2026)
+
+**Neustart:** `docs/vm-neu-einrichten.md` (Ablaufplan), `windows/vm-einrichten.ps1/.bat` (Ein-Klick, versteckte Abfrage von Token/Schlüssel, ungetestet), Stichwort in `CLAUDE.md`.
+
+**Betriebsarten (Entwurf, noch nicht gebaut):**
+1. **Vortrag (einseitig, vorhanden):** Ein Sprecher spricht Deutsch, Zuhörer wählen ihre Sprache am eigenen Gerät. Die Anwendung übersetzt nur Sprachen, für die gerade ein Zuhörer verbunden ist.
+2. **Gespräch (zweiseitig, z. B. Behörde):** Mitarbeiter spricht Deutsch am Bedienplatz; der Gast wählt am Tablet zuerst seine Sprache (Auswahlseite gibt es schon, Bedienplatz zeigt „Ukrainisch: 1“) und spricht danach in seiner Sprache in das Tablet; die Übersetzung ins Deutsche erscheint (Text, optional Ton) beim Mitarbeiter. Es antwortet immer wechselseitig (Halbduplex: wer spricht, sperrt das andere Mikrofon, Anzeige „Sie sind dran“/„Bitte warten“).
+3. **Dolmetscher-Modus (Schalter):** „Sprechen möglich“ erst, wenn die Übersetzung auf allen Geräten fertig gesprochen ist (Zuhörer melden „fertig“, nur Zähler, Zeitgrenze gegen hängende Geräte).
+
+**Technisch dafür nötig (Aufwand: unbekannt, geschätzt mehrere Arbeitsschritte, zuerst mit Attrappen testen):**
+- Spracherkennung mit **wählbarer Quellsprache je Strom** (heute fest `de`; Whisper large-v3 ist mehrsprachig, Qualität je Sprache unbekannt).
+- Übersetzung X → Deutsch (TranslateGemma kann es laut Karte, Qualität je Sprache unbekannt).
+- **Deutsche Stimme** für Piper (Lizenz der Stimme prüfen; nicht geprüft) in `TTS_VOICES`, Download in `fetch_voices.py`.
+- Neue Nachrichten: Zuhörer-Seite sendet Mikrofon-Audio und „sprechen/fertig“, Server leitet Ergebnis an den Bedienplatz; Zustandsautomat „wer ist dran“.
+- Zuhörer-Seite: Mikrofon-Freigabe, Sprechen-Taste, Hinweise; Datenschutzhinweis zur Mikrofon-Nutzung (Inhalte nur im Arbeitsspeicher, nicht gespeichert).
+- Tests mit Attrappen, danach GPU-Test mit echtem Gast-Tablet.
+
+**Offene Entscheidungen des Nutzers:** Sprechen per Taste oder automatisch? Soll die Rückübersetzung nur der Mitarbeiter hören/lesen oder auch der Gast sehen (Text seiner eigenen Aussage)? Wie viele Gäste gleichzeitig (Annahme: einer)? Welche Sprachen zuerst (Vorschlag: Ukrainisch und Englisch)? Datenschutz bei Behörden (Auftragsverarbeitung, Folgenabschätzung): zurückgestellt, vor Echtbetrieb klären.
+
