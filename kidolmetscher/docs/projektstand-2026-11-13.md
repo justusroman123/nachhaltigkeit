@@ -253,3 +253,10 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 4. **DNS ohne Handarbeit:** KAS-API von ALL-INKL für den A-Eintrag oder feste IP (centron „Reservierte IPs“ ist ohne Funktion gefunden).
 5. **Eigene Hardware vor Ort** (Offline-Box) als Alternative zur Cloud: Kosten und Aufwand unbekannt.
 
+## 18. Erfolg am 15.11.2026: HTTPS-Adresse läuft (Stand der Beobachtung, Messwerte folgen)
+
+- **Nutzerbericht (Screenshot):** `https://dolmetscher.kischub.de/operator.html` lädt (Inkognito-Fenster, Chrome, Windows-PC), Bedienplatz zeigt Schritt 2 „Zuhörer einladen“ mit **QR-Code und Zuhörer-Link auf der eigenen Adresse**, Mikrofon (Sennheiser Profile) wählbar, „Angebotene Sprachen: English“ (Auswahl in Schritt 1 prüfen; Voreinstellung war `DEFAULT_LANGS=uk`).
+- **Damit belegt:** Port 443 ist bei centron von außen offen; Caddy konnte ein Zertifikat für die eigene Subdomain holen (Zertifikat-Aussteller nicht geprüft); der A-Eintrag bei ALL-INKL wirkte (Dauer **nicht gemessen**: zwischen Eintrag und erster Erreichbarkeit lagen Stunden, vermutlich wegen des lokalen DNS-Zwischenspeichers); die RTX A4000 mit 4B-Modell startet den Dienst.
+- **Noch offen (Messung mit zweitem Gerät):** Untertitel/Ton auf dem Handy, Verzögerung (`t_asr`, `t_mt`, `t_tts` aus der Anzeige), Speicher (`nvidia-smi` bei laufendem Dienst, 16 GB insgesamt), Übersetzungsqualität 4B (Muttersprachler), Dauer des Gesamtlaufs ohne die Fehlversuche.
+- **Der Weg dorthin war nicht reproduzierbar „ein Knopf“;** siehe Abschnitt 17. Der Bedienschlüssel dieses Laufs wurde zufällig erzeugt (steht nur in `server.env` der VM).
+
