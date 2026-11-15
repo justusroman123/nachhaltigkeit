@@ -4,6 +4,7 @@
   const NAMES = { uk: 'Українська', ar: 'العربية', en: 'English', tr: 'Türkçe', fa: 'فارسی' };
   const RTL = ['ar', 'fa'];
   const HISTORY_S = 120;               // Verlauf: Untertitel aelter als 2 Minuten werden geloescht (Anzeige und Speicher)
+  const MAX_LINES = 10;                // und es bleiben hoechstens die letzten 10 Nachrichten (die neueste ist immer sichtbar)
   const MAX_AUDIO_BACKLOG_S = 6;      // Rueckstau: mehr wartender Ton wird verworfen, Untertitel laufen weiter
   const $ = (id) => document.getElementById(id);
   const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker'),
@@ -50,16 +51,25 @@
   $('btnLang').addEventListener('click', () => showPicker(offered));
 
   /* ---------- Untertitel ---------- */
-  const lines = [];                      // {el, at}: nur im Arbeitsspeicher, hoechstens HISTORY_S alt
+  const lines = [];                      // {el, at, seq}: nur im Arbeitsspeicher
+  const seen = new Set();                // schon angezeigte Nachrichten (seq): verhindert Wiederholungen, wenn der Server beim Neuverbinden den Verlauf noch einmal schickt
+  let lastUserScroll = 0;
+  subs.addEventListener('scroll', () => { if (!nearBottom()) lastUserScroll = Date.now(); }, { passive: true });
   function nearBottom() { return subs.scrollHeight - subs.scrollTop - subs.clientHeight < 80; }
-  function addLine(text, rtl, ageS) {
+  function addLine(text, rtl, ageS, seq) {
+    if (Number.isInteger(seq)) {
+      if (seen.has(seq)) return;                                  // Wiederholung (Neuverbinden): nicht noch einmal anzeigen
+      seen.add(seq);
+    }
     const first = subs.firstElementChild;
     if (first && first.id === 'msg') subs.replaceChildren();
-    const stick = nearBottom();                                   // nur mitscrollen, wenn nicht gerade zurueckgelesen wird
+    // Neueste Zeile immer sichtbar: mitscrollen, ausser jemand liest gerade bewusst weiter oben (dann nach 4 s wieder unten)
+    const stick = nearBottom() || Date.now() - lastUserScroll > 4000;
     const p = document.createElement('p');
     p.className = 'sub'; p.textContent = text; p.dir = rtl ? 'rtl' : 'ltr';
     subs.appendChild(p);
-    lines.push({ el: p, at: Date.now() - (ageS || 0) * 1000 });
+    lines.push({ el: p, at: Date.now() - (ageS || 0) * 1000, seq });
+    while (lines.length > MAX_LINES) { const l = lines.shift(); if (l.el.parentNode) l.el.remove(); }
     if (stick) subs.scrollTop = subs.scrollHeight;
   }
   function purgeHistory() {
@@ -134,11 +144,11 @@
         applyStrings();
         setupTalk();
         history.replaceState(null, '', '#t=' + token + '&l=' + lang);
-        if (changed) lines.length = 0;
+        if (changed) { lines.length = 0; seen.clear(); }
         if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
         if (!startShown) { startShown = true; startScreen.hidden = false; }   // einmal: "Tippen zum Starten"
       } else if (d.type === 'translation') {
-        addLine(d.text, RTL.includes(d.lang), d.age_s);
+        addLine(d.text, RTL.includes(d.lang), d.age_s, d.seq);
         const p = play(d.audio);
         if (mode === 'gespraech' && !d.replay && Number.isInteger(d.seq)) p.then(() => sendJson({ type: 'played', seq: d.seq }));   // "fertig": Ton zu Ende oder Text angezeigt
       } else if (d.type === 'turn') {
@@ -165,7 +175,8 @@
   /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ---------- */
   let mode = 'vortrag', turn = { state: 'frei', who: null }, talking = false, cfg = null;
   let micStream = null, micCtx = null, micNode = null, talkMs = 0, quietMs = 0, spoke = false, sentMs = 0, sentQuiet = 0;
-  const TURN_END_MS = 2000, NO_SPEECH_MS = 5000;           // Annahmen: Aussage endet nach 2 s Pause, ohne Sprache nach 5 s
+  const NO_SPEECH_MS = 5000;                                 // Annahme: ohne Sprache endet der Versuch nach 5 s
+  const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
   const dock = $('talkDock'), band = $('turnBand'), sentBar = $('sentBar'), btnTalk = $('btnTalk'), talkNote = $('talkNote');
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   let myDevice = null;                                      // Kennung dieses Geraets (vom Server in "ready")
@@ -220,7 +231,7 @@
     sentBar.firstElementChild.style.width = Math.round(f * 100) + '%';
     sentBar.className = 'sentbar' + (f >= 0.65 ? ' warn' : '');
     if (mine()) bandSet(f >= 0.85 ? 'warn' : '', f >= 0.85 ? '⚠ ' + tt('done') + ' …' : '🎙 ' + tt('youSpeak'));
-    if ((spoke && quietMs >= TURN_END_MS) || (!spoke && talkMs >= NO_SPEECH_MS)) endTalk();
+    if ((spoke && quietMs >= turnEndMs()) || (!spoke && talkMs >= NO_SPEECH_MS)) endTalk();
   }
   function endTalk() { if (!talking) return; talking = false; micOff(); sendJson({ type: 'talk', on: false }); }
   btnTalk.addEventListener('click', async () => {

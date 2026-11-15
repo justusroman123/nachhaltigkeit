@@ -313,3 +313,12 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 **Noch offen / nicht gebaut:** Tippen statt Sprechen; Ton der Gast-Antwort am Bedienplatz (deutsche Stimme, Lizenz der Stimme prüfen); Qualität von Ukrainisch (Spracherkennung und Übersetzung ins Deutsche) **unbekannt**; Messung der Zeitgrenzen und der „fertig“-Meldungen mit echtem Ton auf Tablets; Test mit echter GPU; Muttersprachler-Prüfung der Oberflächentexte; Datenschutz für Behörden (zurückgestellt).
 
+## 24. Korrektur nach Nutzer-Rückmeldung (15.11.2026, später): längere Sätze, aktueller Verlauf
+
+- **Rückmeldung:** Man soll **längere Sätze** sprechen können und das Fenster ganz ausnutzen; eine kurze Atempause darf nicht sofort eine Übersetzung auslösen. Der Verlauf muss **immer aktuell** sein: die neueste Übersetzung immer sichtbar, dazu nur die letzten Nachrichten (Nutzer: „vielleicht die letzten 10“).
+- **Geändert (im Repository; Browser-Test mit Attrappen; auf der GPU ungetestet):**
+  - Pause bis zum Abschluss eines Abschnitts **`ASR_SILENCE_MS` 700 → 1200 ms**, längster Abschnitt **`ASR_MAX_UTTERANCE_S` 12 → 20 s**, **`SEGMENT_MAX_WORDS` 12 → 40** (Sätze werden am Satzende getrennt, nicht mitten im Satz). Der Balken der Satzlänge und die Anzeigegrenzen folgen diesen Werten automatisch. Das Ende einer Aussage im Gespräch liegt jetzt bei Pause + 0,8 s (mindestens 2 s). Alle Werte sind **Annahmen und zu messen**; längere Abschnitte erhöhen die Wartezeit bis zur Übersetzung.
+  - **Verlauf:** Zuhörer-Seite zeigt höchstens die **letzten 10 Nachrichten** und nichts, was älter als 2 Minuten ist; die **neueste Zeile ist immer sichtbar** (Mitscrollen, außer jemand liest bewusst weiter oben; nach 4 s springt es wieder nach unten); Bedienplatz-Protokoll zeigt die letzten 20.
+  - **Fehler gefunden und behoben:** Beim **Neuverbinden** (z. B. Mobilfunkwechsel) schickte der Server den Verlauf erneut, und die Zuhörer-Seite zeigte Sätze **doppelt**. Jetzt merkt sich die Seite die Nummern der schon angezeigten Nachrichten (Test im Browser: nach Verbindungsabbruch 0 doppelte Zeilen). Das kann einen Teil der gemeldeten **Wiederholungen** erklärt haben (nicht belegt, andere Ursachen bleiben möglich).
+- **Offen:** Ob die Übersetzung bei längeren Abschnitten (bis 20 s) mit TranslateGemma 4B noch gut ist und wie lang die Wartezeit wird: **unbekannt, messen**.
+

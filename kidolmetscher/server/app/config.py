@@ -84,7 +84,7 @@ class Settings:
     ring_buffer_size: int = 40             # letzte Untertitel fuer spaet verbundene Zuhoerer (nur Text, ohne Ton)
     history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
-    segment_max_words: int = 12            # Segmentierer: hoechstens so viele Woerter je Uebersetzung
+    segment_max_words: int = 40            # Segmentierer: hoechstens so viele Woerter je Uebersetzung (Saetze werden am Satzende getrennt)
     lang_queue_max: int = 8                # Warteschlange je Sprache; darueber werden aelteste Segmente verworfen
     tts_skip_backlog: int = 2              # ab so vielen wartenden Segmenten entfaellt der Ton, Untertitel bleiben
     server_hourly_eur: float = 0.0         # optional, netto; 0 = unbekannt
@@ -98,8 +98,8 @@ class Settings:
     asr_device: str = "auto"               # auto | cuda | cpu
     asr_compute_type: str = "default"      # z. B. float16 (GPU), int8 (CPU)
     asr_beam_size: int = 5
-    asr_silence_ms: int = 700              # Pause, nach der ein Satzabschnitt als beendet gilt (Annahme, messen)
-    asr_max_utterance_s: float = 12.0      # laengster Abschnitt ohne Pause (Annahme, messen)
+    asr_silence_ms: int = 1200             # Pause, nach der ein Abschnitt als beendet gilt: kurze Atempausen schneiden nicht ab (Annahme, messen)
+    asr_max_utterance_s: float = 20.0      # laengster Abschnitt ohne Pause; Balken der Satzlaenge zeigt dagegen (Annahme, messen)
     asr_min_speech_ms: int = 300           # kuerzere Abschnitte werden verworfen
     asr_vad_rms: int = 400                 # Lautstaerke-Schwelle (RMS, 16-Bit-Skala) fuer "es wird gesprochen" (Annahme, messen)
     mt_model_id: str = ""

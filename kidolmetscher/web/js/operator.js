@@ -71,7 +71,8 @@
 
   /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ---------- */
   const conv = { talking: false, ms: 0, quietMs: 0, spoke: false, sentMs: 0, sentQuiet: 0, turn: { state: 'frei', who: null } };
-  const TURN_END_MS = 2000, NO_SPEECH_MS = 5000;            // Annahmen: Aussage endet nach 2 s Pause, ohne Sprache nach 5 s
+  const NO_SPEECH_MS = 5000;                                 // Annahme: ohne Sprache endet der Versuch nach 5 s
+  const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null }; convRender(); }
   function convMine() { return conv.turn.state === 'spricht' && conv.turn.who === 'staff'; }
@@ -110,7 +111,7 @@
       else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
       else talkShow('ok', '🎙 SIE SPRECHEN', f);
     }
-    if ((conv.spoke && conv.quietMs >= TURN_END_MS) || (!conv.spoke && conv.ms >= NO_SPEECH_MS)) convEnd();
+    if ((conv.spoke && conv.quietMs >= turnEndMs()) || (!conv.spoke && conv.ms >= NO_SPEECH_MS)) convEnd();
   }
   e.btnTalk.addEventListener('click', () => {
     if (convMine()) return convEnd();
@@ -378,7 +379,7 @@
     row.textContent = '#' + d.seq + ' [' + d.lang + '] ' + d.text_src + ' → ' + d.text;
     row.dataset.at = String(Date.now());
     e.log.prepend(row);
-    while (e.log.children.length > 60) e.log.removeChild(e.log.lastElementChild);
+    while (e.log.children.length > 20) e.log.removeChild(e.log.lastElementChild);
   }
 
   function showCost(s) {
