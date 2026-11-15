@@ -21,8 +21,10 @@ from ..config import ConfigError, Settings
 from ..messages import now_ms
 from .base import AsrSegment, AsrStream, AudioChunk
 
+from .text_clean import entdoppeln
 log = logging.getLogger("kidolmetscher.pipeline")
 PEGEL_ALLE_BLOECKE = 100     # Pegel-Logzeile etwa alle 5 s (nur Zahlen, keine Inhalte)
+REPEAT_WINDOW_MS = 4000    # gleicher Text kurz nach dem vorigen Abschnitt gilt als Wiederholung (Whisper-Schleife)
 PREROLL_MS = 200          # Audio vor dem ersten lauten Block, damit der Wortanfang nicht fehlt
 
 
@@ -44,6 +46,7 @@ class RealAsrStream:
         self._pre: deque[AudioChunk] = deque()
         self._pre_ms = 0.0
         self._n = self._laut_n = self._rms_max = 0
+        self._last_norm, self._last_t = "", 0
         self._reset()
 
     def _reset(self) -> None:
@@ -61,9 +64,15 @@ class RealAsrStream:
         if not pcm or speech_ms < self._o.settings.asr_min_speech_ms:
             return []
         text = await self._o.transcribe(pcm, rate)
-        log.info("asr_abschnitt sprach_ms=%d erkannt=%s", speech_ms, bool(text))
-        if not text:
+        text, bereinigt = entdoppeln(text)                   # Whisper wiederholt manchmal denselben Satz
+        norm = " ".join(text.casefold().split())
+        jetzt = self._clock()
+        gleich_wie_zuletzt = bool(norm) and norm == self._last_norm and jetzt - self._last_t < REPEAT_WINDOW_MS
+        log.info("asr_abschnitt sprach_ms=%d erkannt=%s bereinigt=%s doppelt=%s", speech_ms, bool(text), bereinigt,
+                 gleich_wie_zuletzt)
+        if not text or gleich_wie_zuletzt:
             return []
+        self._last_norm, self._last_t = norm, jetzt
         return [AsrSegment(text=text, final=True, t_audio_in=first_in if first_in is not None else self._clock(),
                            t_asr=self._clock())]
 

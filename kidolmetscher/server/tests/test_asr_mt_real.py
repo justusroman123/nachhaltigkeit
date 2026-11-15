@@ -249,3 +249,36 @@ def test_fehlertext_mit_und_ohne_debug():
     ohne, mit = make_settings(), make_settings(debug_fehler=True)
     assert ohne.fehler(ValueError("geheim")) == "ValueError"
     assert mit.fehler(ValueError("x" * 500)).startswith("ValueError: xxx") and len(mit.fehler(ValueError("x" * 500))) < 230
+
+
+# ---------- Wiederholungsschutz ----------
+from app.pipeline.text_clean import entdoppeln
+from app.pipeline.mt_real import max_neue_tokens
+
+
+def test_entdoppeln_entfernt_wiederholte_saetze():
+    t, b = entdoppeln("Guten Tag. Guten Tag. Guten Tag. Wir beginnen jetzt.")
+    assert t == "Guten Tag. Wir beginnen jetzt." and b
+
+
+def test_entdoppeln_entfernt_wortfolgen_schleifen():
+    t, b = entdoppeln("wir zeigen Ihnen heute wir zeigen Ihnen heute wir zeigen Ihnen heute eine Uebersetzung")
+    assert t == "wir zeigen Ihnen heute eine Uebersetzung" and b
+
+
+def test_entdoppeln_laesst_normalen_text_in_ruhe():
+    for text in ("Das ist sehr sehr gut.", "Nein, nein, das stimmt so.", "Heute ist Samstag. Morgen ist Sonntag.", ""):
+        t, b = entdoppeln(text)
+        assert t == text.strip() and not b
+
+
+def test_entdoppeln_einzelwort_ab_vier():
+    t, b = entdoppeln("danke danke danke danke danke")
+    assert t == "danke" and b
+
+
+def test_max_neue_tokens_waechst_mit_dem_satz_und_hat_eine_obergrenze():
+    assert max_neue_tokens("Hallo", 256) == 32
+    assert max_neue_tokens(" ".join(["wort"] * 12), 256) == 96
+    assert max_neue_tokens(" ".join(["wort"] * 100), 256) == 256
+    assert max_neue_tokens("Hallo", 20) == 20

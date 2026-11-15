@@ -12,10 +12,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any, Optional
 
 from ..config import ConfigError, Settings, parse_lang_codes
+from .text_clean import entdoppeln
 from .mt_prompt import build_prompt
+
+log = logging.getLogger("kidolmetscher.pipeline")
+
+
+def max_neue_tokens(text: str, limit: int) -> int:
+    """Obergrenze der erzeugten Tokens nach Laenge des Satzes: bremst Endlosschleifen kleiner Modelle."""
+    return max(1, min(limit, max(32, 6 * len(text.split()) + 24)))
 
 
 class RealMt:
@@ -72,9 +81,13 @@ class RealMt:
         inputs = self._proc.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True,
                                                 return_tensors="pt").to(self._device)
         with torch.inference_mode():
-            out = self._model.generate(**inputs, max_new_tokens=self._s.mt_max_new_tokens, do_sample=False)
+            out = self._model.generate(**inputs, max_new_tokens=max_neue_tokens(text, self._s.mt_max_new_tokens),
+                                       do_sample=False)
         new = out[0][inputs["input_ids"].shape[1]:]
-        return self._proc.decode(new, skip_special_tokens=True).strip()
+        text_out, bereinigt = entdoppeln(self._proc.decode(new, skip_special_tokens=True).strip())
+        if bereinigt:
+            log.info("mt_wiederholung_entfernt")             # nur ein Hinweis, kein Inhalt
+        return text_out
 
     async def translate(self, text: str, src: str, tgt: str) -> str:
         if self._model is None or self._lock is None:

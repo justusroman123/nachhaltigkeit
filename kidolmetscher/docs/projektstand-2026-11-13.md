@@ -260,3 +260,10 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Noch offen (Messung mit zweitem Gerät):** Untertitel/Ton auf dem Handy, Verzögerung (`t_asr`, `t_mt`, `t_tts` aus der Anzeige), Speicher (`nvidia-smi` bei laufendem Dienst, 16 GB insgesamt), Übersetzungsqualität 4B (Muttersprachler), Dauer des Gesamtlaufs ohne die Fehlversuche.
 - **Der Weg dorthin war nicht reproduzierbar „ein Knopf“;** siehe Abschnitt 17. Der Bedienschlüssel dieses Laufs wurde zufällig erzeugt (steht nur in `server.env` der VM).
 
+## 19. Rückmeldung nach dem Handy-Test (15.11.2026) und Änderungen
+
+- **Nutzerbericht:** Übersetzung funktioniert auch auf dem Smartphone („sehr gut“, Verzögerung laut Nutzer ca. 1 s, Schätzung). **Fehler:** Sätze wurden teils mehrfach wiederholt; die Sprech-Anzeige (erste Fassung) sprang zwischen „Stopp“ und „Sprechen“ hin und her.
+- **Ursache der Wiederholungen: unbekannt** (Kandidaten: Whisper wiederholt Sätze bei Nachlauf/Rauschen; kleines Modell 4B mit Greedy-Decoding läuft in Schleifen, bis `MT_MAX_NEW_TOKENS`=256). Ob Quelltext oder Übersetzung wiederholt, zeigt die Liste unten im Bedienplatz („#Nr [Sprache] deutscher Text → Übersetzung“).
+- **Gegenmaßnahmen (im Repository, auf der GPU ungetestet):** `pipeline/text_clean.py` entfernt direkte Satz- und Wortfolgen-Wiederholungen in Spracherkennung und Übersetzung; gleicher Text innerhalb von 4 s nach dem vorigen Abschnitt wird verworfen (`REPEAT_WINDOW_MS`); die Token-Grenze der Übersetzung richtet sich nach der Satzlänge (`max_neue_tokens`); Logzeilen `asr_abschnitt … bereinigt=… doppelt=…` und `mt_wiederholung_entfernt` (nur Hinweise, keine Inhalte).
+- **Sprech-Anzeige neu:** drei feste Zustände „SPRECHEN MÖGLICH“ (grün), „SIE SPRECHEN“ mit Balken (grün/orange, Grenze 12 s Abschnittslänge laut `ASR_MAX_UTTERANCE_S`) und „STOPP, wird übersetzt“ (rot; bleibt 1,5 bis 8 s stehen, bis die Übersetzung eintrifft); kurze Geräusche (< 250 ms) und kurze Pausen (< 0,7 s) lösen keinen Wechsel aus. Rein am Bedienplatz aus dem Pegel berechnet. Logik in Node mit simulierten Blöcken geprüft, im Browser mit echtem Mikrofon **noch nicht**.
+

@@ -19,40 +19,54 @@
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
 
-  /* ---------- Sprech-Anzeige: Laenge des laufenden Abschnitts gegen die Grenzen der Spracherkennung ----------
-     Zustaende: idle (bereit) -> speaking (Balken waechst) -> translating (Pause erkannt, Uebersetzung laeuft) -> idle.
-     Rein am Bedienplatz berechnet aus dem Pegel; Grenzen kommen vom Server (/api/config). Keine Inhalte. */
-  const talk = { state: 'idle', ms: 0, quietMs: 0, pendingSince: 0 };
-  const TALK_WARN = 0.65, TALK_STOP = 0.85;
-  function talkShow(cls, text, frac) {
-    e.talk.className = 'talk' + (cls === 'ok' ? '' : ' ' + cls);
+  /* ---------- Sprech-Anzeige: eindeutig, wann gesprochen werden darf ----------
+     Drei Zustaende, kein Hin und Her:
+       idle     gruen  "SPRECHEN MOEGLICH"
+       talking  gruen/orange  "SIE SPRECHEN" mit Balken (Laenge des Abschnitts gegen die Grenze der Spracherkennung)
+       stop     rot    "STOPP, wird uebersetzt": bleibt mindestens 1,5 s und hoechstens 8 s stehen, bis die Uebersetzung da ist.
+     Rein am Bedienplatz aus dem Pegel berechnet (Grenzen vom Server, /api/config). Keine Inhalte. */
+  const talk = { state: 'idle', ms: 0, quietMs: 0, loudRun: 0, stopSince: 0, got: false, hintMs: 0 };
+  const TALK_MIN_LOUD_MS = 250, TALK_MIN_SPEECH_MS = 500, STOP_MIN_MS = 1500, STOP_MAX_MS = 8000;
+  const TALK_WARN = 0.65, TALK_LATE = 0.85;
+  function talkShow(kind, text, frac) {
+    e.talk.className = 'talk ' + kind;
     e.talkBar.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
-    say(e.talkMsg, text, cls);
+    e.talkMsg.textContent = text; e.talkMsg.className = 'talkmsg ' + kind;
   }
-  function talkReset(text) { talk.state = 'idle'; talk.ms = 0; talk.quietMs = 0; talkShow('', text || 'Bereit. Sie können sprechen.', 0); }
+  function talkIdle(text) {
+    talk.state = 'idle'; talk.ms = talk.quietMs = talk.loudRun = talk.hintMs = 0; talk.got = false;
+    talkShow('ok', text || '● SPRECHEN MÖGLICH', 0);
+  }
   function talkBlock(rmsInt16, blockMs) {
     const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000, quietLimit = (cfg && cfg.silence_ms) || 700;
-    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400);
-    if (talk.state === 'translating' && !loud && performance.now() - talk.pendingSince > 15000) return talkReset();
-    if (loud) {
-      if (talk.state !== 'speaking') { talk.state = 'speaking'; talk.ms = 0; }
-      talk.quietMs = 0;
-    } else if (talk.state === 'speaking') {
-      talk.quietMs += blockMs;
-      if (talk.quietMs >= quietLimit) {              // Pause lang genug: der Server schliesst den Abschnitt ab
-        talk.state = 'translating'; talk.pendingSince = performance.now();
-        return talkShow('ok', '⏳ Wird übersetzt … Sie können weitersprechen, wenn Sie möchten.', 0);
+    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), now = performance.now();
+    if (talk.state === 'stop') {
+      const el = now - talk.stopSince;
+      if ((talk.got && el >= STOP_MIN_MS) || el >= STOP_MAX_MS) return talkIdle();
+      talk.hintMs = loud ? talk.hintMs + blockMs : 0;      // Zustand bleibt, nur der Hinweistext aendert sich
+      talkShow('stop', talk.hintMs >= 400 ? '■ STOPP – bitte noch warten, es wird übersetzt' : '■ STOPP – wird übersetzt', 1);
+      return;
+    }
+    if (talk.state === 'idle') {
+      talk.loudRun = loud ? talk.loudRun + blockMs : 0;       // kurze Geraeusche (Klick, Atmen) starten nichts
+      if (talk.loudRun < TALK_MIN_LOUD_MS) return;
+      talk.state = 'talking'; talk.ms = talk.loudRun; talk.quietMs = 0;
+    } else {
+      talk.ms += blockMs;
+      talk.quietMs = loud ? 0 : talk.quietMs + blockMs;
+      if (talk.quietMs >= quietLimit) {                        // lange Pause: der Server schliesst den Abschnitt ab
+        if (talk.ms - talk.quietMs < TALK_MIN_SPEECH_MS) return talkIdle();   // zu kurz, der Server verwirft ihn
+        talk.state = 'stop'; talk.stopSince = now; talk.got = false; talk.hintMs = 0;
+        return talkShow('stop', '■ STOPP – wird übersetzt', 1);
       }
     }
-    if (talk.state !== 'speaking') return;
-    talk.ms += blockMs;
     const f = talk.ms / maxMs;
-    if (f >= 1) { talk.ms = 0; return talkShow('bad', 'Abschnitt zu lang, wurde geteilt. Bitte kurz Pause machen.', 1); }
-    if (f >= TALK_STOP) talkShow('bad', '⛔ Jetzt eine kurze Pause machen!', f);
+    if (f >= 1) { talk.ms = 0; return talkShow('warn', 'JETZT PAUSE MACHEN – Abschnitt wurde geteilt', 1); }
+    if (f >= TALK_LATE) talkShow('warn', 'JETZT PAUSE MACHEN', f);
     else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
-    else talkShow('ok', '🎙 Sie sprechen', f);
+    else talkShow('ok', '🎙 SIE SPRECHEN', f);
   }
-  function talkTranslated() { if (talk.state === 'translating') talkReset('✔ Übersetzt. Sie können weitersprechen.'); }
+  function talkTranslated() { if (talk.state === 'stop') talk.got = true; }
 
   const api = (method, path, body) => fetch(path, {
     method, headers: { 'X-Operator-Key': key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -262,8 +276,8 @@
       };
       ctx.createMediaStreamSource(stream).connect(node);
       e.start.disabled = true; e.stop.disabled = false;
-      talkReset();
-      say(e.micMsg, '● Sendet. Bitte sprechen.', 'ok');
+      talkIdle();
+      say(e.micMsg, '● Sendet.', 'ok');
     } catch (err) { say(e.micMsg, 'Mikrofon-Fehler: ' + err.name, 'bad'); stopSending(); }
   }
 
@@ -273,7 +287,7 @@
     if (node) { node.disconnect(); node = null; }
     if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
     if (ctx) { ctx.close().catch(() => {}); ctx = null; }
-    e.level.style.width = '0%'; talk.state = 'idle'; talk.ms = 0; talkShow('', 'Noch nicht gesendet.', 0);
+    e.level.style.width = '0%'; talk.state = 'idle'; talk.ms = 0; talkShow('ok', 'Noch nicht gesendet.', 0);
     e.start.disabled = false; e.stop.disabled = true;
   }
   e.stop.addEventListener('click', () => { stopSending(); say(e.micMsg, 'Pause. Zum Weitermachen „Senden starten“.', ''); });
