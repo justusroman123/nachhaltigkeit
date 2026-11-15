@@ -135,3 +135,33 @@ def test_vortrag_zustellkontrolle_angezeigt_und_gesprochen(client):
     uk.send_json({"type": "played", "seq": msg["seq"]})
     recv_until(op, lambda m: m["type"] == "delivery" and m["seq"] == msg["seq"] and m["played"] == 1)
     recv_until(op, lambda m: m["type"] == "flow" and m["busy"] is False)          # alles angekommen
+
+
+def test_dolmetschen_sperre_nur_fuer_den_bedienplatz(conv):
+    """Betriebsart dolmetschen: nur der Bedienplatz spricht; Audio ohne vorheriges "Sprechen" wird ignoriert; frei erst nach "fertig"."""
+    rid = conv.post("/api/rooms", headers=hdr(), json={"mode": "dolmetschen", "langs": ["uk"]}).json()["room_id"]
+    op = open_operator(conv, rid)
+    uk = open_listener(conv, link(conv, rid, "uk"))
+    ready = recv(uk)
+    assert ready["mode"] == "dolmetschen" and ready["turn"]["state"] == "frei"
+    for _ in range(4):
+        op.send_bytes(chunk(100))                                  # ohne "Sprechen" gesendet: wird verworfen
+    uk.send_json({"type": "talk", "on": True})                     # Gaeste koennen im Dolmetschen nicht sprechen: kein Zustandswechsel
+    op.send_json({"type": "talk", "on": True})
+    recv_until(uk, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == "staff")
+    for _ in range(3):
+        op.send_bytes(chunk(100))
+    op.send_json({"type": "talk", "on": False})
+    texts, states = [], []
+    while True:
+        m = recv(uk)
+        if m["type"] == "translation":
+            texts.append(m["text"])
+            uk.send_json({"type": "shown", "seq": m["seq"]})
+            uk.send_json({"type": "played", "seq": m["seq"]})
+        if m["type"] == "turn":
+            states.append(m["state"])
+            if m["state"] == "frei":
+                break
+    assert texts and len(texts) <= 2                                # nur die gesprochenen Saetze, keine aus dem verworfenen Audio
+    assert "wiedergabe" in states and states[-1] == "frei"

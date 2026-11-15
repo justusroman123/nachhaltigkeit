@@ -50,7 +50,7 @@ REAPER_INTERVAL_S = 30
 
 class RoomRequest(BaseModel):
     langs: Optional[list[str]] = None      # angebotene Sprachen; leer = alle aus TARGET_LANGS
-    mode: Optional[str] = None             # "vortrag" (Standard) oder "gespraech"
+    mode: Optional[str] = None             # "vortrag" (Standard), "dolmetschen" (Sperre, nur der Bedienplatz spricht) oder "gespraech"
 
 
 class LinkRequest(BaseModel):
@@ -319,7 +319,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if len(data) > MAX_FRAME_BYTES or len(data) % 2:
                         room.counters["bad_frames"] += 1
                         continue
-                    if room.mode == "gespraech":
+                    if room.strict:
                         if not (room.turns.state == SPRICHT and room.turns.who == "staff"):
                             end_staff_utterance()          # Zeitgrenze oder Sperre: Rest abschliessen, weitere Audioblocks verwerfen
                             continue
@@ -337,7 +337,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             break
                         if kind == "ping" and isinstance(data_t.get("t"), (int, float)):
                             await to_operator(control_message("pong", t=data_t["t"]))   # Netz-Laufzeit-Messung
-                        elif kind == "talk" and room.mode == "gespraech":
+                        elif kind == "talk" and room.strict:
                             if data_t.get("on"):
                                 ok, _ = room.turns.claim("staff")
                                 if not ok:

@@ -102,7 +102,13 @@
   }
   function convEnd() { if (!conv.talking) return; conv.talking = false; sendJson({ type: 'talk', on: false }); }
   function convBlock(rmsInt16, blockMs) {
-    if (!conv.talking) return;
+    if (!conv.talking) {                                          // gesperrt: wer trotzdem spricht, wird gewarnt (die Worte gehen nicht verloren, sondern werden gar nicht erst gesendet)
+      if (conv.turn.state !== 'frei' && !convMine() && rmsInt16 >= ((cfg && cfg.vad_rms) || 400)) {
+        conv.hintMs = (conv.hintMs || 0) + blockMs;
+        if (conv.hintMs >= 400) convRender('bitte warten – Ihre Worte werden jetzt NICHT übersetzt');
+      } else conv.hintMs = 0;
+      return;
+    }
     const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), quietLimit = (cfg && cfg.silence_ms) || 700;
     const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000;
     conv.ms += blockMs;
@@ -227,8 +233,8 @@
     e.key.value = '';
     e.stepStart.hidden = true;
     [e.stepInvite, e.stepMic, e.stepLive, e.stepCheck].forEach((s) => { s.hidden = false; });
-    const conversation = room.mode === 'gespraech';
-    e.vortragBox.hidden = conversation; e.convBox.hidden = !conversation; e.stepGuest.hidden = !conversation;
+    const conversation = room.mode !== 'vortrag';              // Dolmetschen und Gespraech: Sprechen-Knopf mit Sperre
+    e.vortragBox.hidden = conversation; e.convBox.hidden = !conversation; e.stepGuest.hidden = room.mode !== 'gespraech';
     await createInvite();
     renderSingleLinks();
     await listDevices();
@@ -345,7 +351,7 @@
         if (d.turn) conv.turn = d.turn;
         if (demoMode) { if (!demoTimer) startDemo(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, Demo läuft.', 'ok'); }
         else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden.', 'ok');
-        if (room && room.mode === 'gespraech') convRender();
+        if (room && room.mode !== 'vortrag') convRender();
         clearInterval(pingTimer);
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
       } else if (d.type === 'translation') { showMessage(d); talkTranslated(); checkTranslation(d); }
@@ -391,7 +397,7 @@
       node = new AudioWorkletNode(ctx, 'pcm-capture');
       node.port.onmessage = (ev) => {
         const buf = ev.data;
-        const inConv = room && room.mode === 'gespraech';
+        const inConv = room && room.mode !== 'vortrag';
         if (ws && ws.readyState === 1 && (!inConv || conv.talking)) ws.send(buf);     // Gespraech: nur senden, solange man das Wort hat
         const s = new Int16Array(buf); let sum = 0;
         for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
@@ -402,8 +408,8 @@
       };
       ctx.createMediaStreamSource(stream).connect(node);
       e.start.disabled = true; e.stop.disabled = false;
-      if (room && room.mode === 'gespraech') convRender(); else talkIdle();
-      say(e.micMsg, room && room.mode === 'gespraech' ? '● Mikrofon bereit. Zum Sprechen „Sprechen“ tippen.' : '● Sendet.', 'ok');
+      if (room && room.mode !== 'vortrag') convRender(); else talkIdle();
+      say(e.micMsg, room && room.mode !== 'vortrag' ? '● Mikrofon bereit. Zum Sprechen „Sprechen“ tippen.' : '● Sendet.', 'ok');
     } catch (err) { say(e.micMsg, 'Mikrofon-Fehler: ' + err.name, 'bad'); stopSending(); }
   }
 

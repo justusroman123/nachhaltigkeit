@@ -152,7 +152,10 @@
         const added = addLine(d.text, RTL.includes(d.lang), d.age_s, d.seq);
         if (added && !d.replay && Number.isInteger(d.seq)) {
           sendJson({ type: 'shown', seq: d.seq });                    // Rueckmeldung: Text steht auf dem Bildschirm
-          play(d.audio).then(() => sendJson({ type: 'played', seq: d.seq }));   // Rueckmeldung: Ton zu Ende gesprochen (oder kein Ton)
+          // Rueckmeldung "fertig": Ton zu Ende gespielt. Ohne Ton (stumm oder keine Stimme) gilt eine Lesezeit nach der Wortzahl (Annahme: 200 Woerter/Minute)
+          const hadSound = soundOn && !!d.audio;
+          const readMs = hadSound ? 0 : Math.min(15000, 800 + d.text.split(/\s+/).length * 300);
+          play(d.audio).then(() => setTimeout(() => sendJson({ type: 'played', seq: d.seq }), readMs));
         } else play(d.audio);
       } else if (d.type === 'turn') {
         turn = d; talkRender();

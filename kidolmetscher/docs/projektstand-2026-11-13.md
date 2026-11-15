@@ -345,3 +345,14 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Warnungen** am Bedienplatz (rot): Spracherkennung fehlgeschlagen, nicht verstanden, Übersetzung fehlgeschlagen, Audio verworfen, Gerät hat nicht bestätigt; der Gast bekommt „Nicht verstanden. Bitte wiederholen.“
 - **Grenzen:** „fertig gesprochen“ meldet das Gerät (Browser: Ton zu Ende); ob ein Mensch es **verstanden** hat oder die **Übersetzung inhaltlich stimmt**, prüft das System nicht. Hundertprozentige Sicherheit ist nicht belegt; Qualität (Ukrainisch, lange Sätze mit 4B) bleibt zu messen; denkbar als Zusatz: Rückübersetzung ins Deutsche zur Kontrolle (nicht gebaut).
 
+## 26. Betriebsart „Dolmetschen“ mit echter Sperre (Nutzerwunsch 15.11.2026, abends)
+
+- **Rückmeldung:** Während die Übersetzung noch ausgegeben wird, konnte der Bedienplatz schon wieder sprechen (im **Vortrag** war STOPP nur eine Anzeige). Praxisbeispiel: Anweisung („Seite 52, Formular …“), kurze Verständigung („ist das okay?“): man muss warten, bis die Übersetzung **komplett angekommen und angezeigt/gehört** ist; dazwischen eine Pause. Es muss „in die Praxis passen“.
+- **Gebaut (Browser-Test mit Attrappen, 212 Tests grün; GPU/Tablets ungetestet):** drei Betriebsarten beim Sitzungsstart:
+  1. **Dolmetschen** (Vorauswahl, empfohlen): nur der Bedienplatz spricht (Sprechen-Knopf, Ende nach Pause + 0,8 s, mindestens 2 s, oder „Fertig“); danach **echte Sperre**: Der Server nimmt kein Audio des Bedienplatzes mehr an, bis alle Zuhörer-Geräte **„angezeigt“ und „fertig gesprochen“** gemeldet haben (Zeitgrenze = erwartete Tonlänge + 8 s, mindestens 15 s, Verarbeitung höchstens 90 s). Wer trotzdem spricht, sieht „bitte warten – Ihre Worte werden jetzt NICHT übersetzt“. Notbremse „Freigeben“.
+  2. **Gespräch:** wie Dolmetschen, zusätzlich sprechen die Gäste (bis zu 3) abwechselnd, ebenfalls mit Sperre.
+  3. **Vortrag:** durchgehend sprechen, keine Sperre (STOPP nur als Anzeige).
+- **Gerät ohne Ton:** Das Zuhörer-Gerät meldet „fertig“ erst nach einer **Lesezeit** (800 ms + 300 ms pro Wort, höchstens 15 s; Annahme ca. 200 Wörter pro Minute), damit die Sperre nicht schon beim Erscheinen des Textes freigibt. **Ob ein Mensch den Text wirklich gelesen oder verstanden hat, ist nicht prüfbar.**
+- **Folge:** Im Dolmetschen-Betrieb geht gesprochene Sprache verloren, wenn sie **während der Sperre** gesprochen wird (sie wird bewusst nicht gesendet); der Bedienplatz warnt dann. Das ist die gewünschte Wartephase, kostet aber Zeit pro Austausch.
+- **Offen:** Wie lang die Wartephase in der Praxis ist (hängt von Erkennung, Übersetzung, Ton, Netz ab): **unbekannt, mit GPU und Tablets messen**; ob 1,2 s Pause plus 0,8 s als Aussageende angenehm sind; Verhalten bei Verbindungsabbruch eines Zuhörer-Geräts (Zeitgrenze, danach frei).
+
