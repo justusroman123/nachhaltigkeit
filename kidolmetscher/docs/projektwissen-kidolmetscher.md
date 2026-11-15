@@ -1,8 +1,6 @@
-# Projektwissen KI-Dolmetscher (KI-SCHUB), Stand 14.11.2026
+# Projektwissen KI-Dolmetscher (KI-SCHUB), Stand 15.11.2026 (abends)
 
-Dieses Dokument bündelt den Projektstand zum Hochladen als **Wissen eines Claude-Projekts** (claude.ai → Projekte). Quelle ist das Repository `github.com/justusroman123/nachhaltigkeit`, Zweig `ccr-4bf88cb4-flgtez`, Ordner `kidolmetscher/docs/`. Enthält **keine** Token, Schlüssel oder Zugangsdaten. Bei Abweichungen gilt das Repository.
-
-**Wichtig für einen neuen Chat:** Zuerst den Abschnitt „Neuer Chat“ im Protokoll lesen, Regeln einhalten (Deutsch, kurz, Kernaussagen fett, nichts raten, Preise mit zwei Nachkommastellen, vor Kosten/Konten/Systemänderungen fragen).
+Bündel zum Hochladen als **Wissen eines Claude-Projekts**. Quelle: Repository `github.com/justusroman123/nachhaltigkeit`, Zweig `ccr-4bf88cb4-flgtez`, Ordner `kidolmetscher/`. Enthält **keine** Token oder Schlüssel. Bei Abweichungen gilt das Repository. **Wichtig:** Es gibt genau zwei Betriebsarten (Protokoll Abschnitt 27).
 
 ---
 
@@ -41,6 +39,13 @@ im Drive-Ordner. Stand der Umsetzung: `docs/plan-abgleich.md`. Provider laut Pla
 ## Aktueller Stand und Fortsetzung
 Ausführliches Protokoll (Stand, Entscheidungen, centron-Fakten, Kosten, nächste Schritte, Stolpersteine): `docs/projektstand-2026-11-13.md`.
 Nutzerwünsche: Deutsch, kurz, Kernaussagen fett, nichts raten, Preise mit zwei Nachkommastellen. Die gemietete GPU-VM bei centron kostet laufend (ca. 1,26 € pro Stunde), bis der Nutzer sie in der Console zerstört.
+
+## Stichwort „VM einrichten“
+Sagt der Nutzer „Ich möchte die VM wieder einrichten“ (oder Ähnliches), den Ablauf in `docs/vm-neu-einrichten.md` Schritt für Schritt führen: immer nur **einen** Schritt nennen, Ergebnis abwarten. Token und Bedienschlüssel nie im Chat (versteckte Abfrage in `windows/vm-einrichten.ps1`). Cloud-Init-Feld der Console nicht verwenden. Nach dem Test erinnern: VM zerstören (Name `kidolmetscher-test`).
+
+## Betriebsarten (FEST, nicht erweitern ohne Auftrag des Nutzers)
+Es gibt **genau zwei** Betriebsarten: **Vortrag** (durchgehend sprechen, keine Sperre, Sprecher muss nicht aufs Gerät schauen) und **Gespräch** (abwechselnd, Sperre für alle, bis alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben). Details: Protokoll Abschnitt 27. Keine dritte Betriebsart, keine zusätzlichen Schalter.
+
 
 
 # ===== Datei: docs/projektstand-2026-11-13.md =====
@@ -269,6 +274,284 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Folge für den Ablauf:** Bis `dolmetscher.kischub.de` auf die neue IP zeigt, löst es über die Wildcard auf die andere Webseite auf. Resolver mit altem Ergebnis können bis zum Ablauf der (unbekannten) TTL die falsche IP liefern; Let's Encrypt kann dann zunächst scheitern, Caddy versucht es automatisch erneut. **Wartezeit bis zur Gültigkeit: unbekannt, messen.** Fallback: `scripts/oeffentlich_freigeben.sh` mit der Ersatzadresse `<ip>.sslip.io` (Zertifikat-Limit-Risiko).
 - **Bei jeder neuen VM** den vorhandenen A-Eintrag `dolmetscher` **bearbeiten** (neue IP), nicht neu anlegen.
 
+## 16. Zweiter Versuch am 14.11.2026: Cloud-Init-Weg gescheitert, VM weg (festgehalten am Abend)
+
+- **Ablauf:** VM `kidolmetscher-test` (RTX A4000, 4 vCPU/16 GB/100 GB, Ubuntu LTS 26) um ca. 19:34 per Console erstellt, Starter ins Cloud-Init-Feld gelegt (Nutzerangabe; Inhalt unbestätigt). DNS-Eintrag `dolmetscher` (A) angelegt (9 Einträge in der Zone, die 8 bestehenden unverändert). Browser: `ERR_CONNECTION_REFUSED` (nichts lauschte auf 443).
+- **Befund auf der VM (SSH ging um 19:48):** keine Log-Datei von `cloud-init-gpu.sh`, kein `caddy`, kein Dienst. `cloud-init status`: done, keine Fehler. `user-data.txt` (1609 Bytes) beginnt mit `#cloud-config` und enthält centrons eigene Einrichtung (apt, users, fqdn, ssh, `runcmd` mit Hosts, sysctl, sshd-Änderung, `curl --insecure … ; bash /tmp/.post-install…`). **Der Starter des Nutzers war darin nicht enthalten.** Netz zur VM war in Ordnung (GitHub-Datei HTTP 200). Auf Anweisung wurde `runcmd` von Hand erneut ausgeführt (Fehler von mir: nicht vorher geprüft, dass es centrons Skript ist); Wirkung unbekannt.
+- **Danach:** SSH-Zeitüberschreitung auf Port 22. Console (Plugin-Bericht): `xv20237` steht unter **„Fehlgeschlagen: The post deployment process failed“** (Hinweis: Support kontaktieren; fehlgeschlagene VMs nur 24 Stunden sichtbar), keine Detailseite, Dashboard Kerne 0/20, GPUs 0/8. Mitteilungen: `create-server` **failed** 14.11. 19:34, `setup-addon` done 19:35; **kein `delete-server` am 14.11.** Die erste VM (12.11.) war `done`. **Ursache des Fehlschlags: unbekannt** (Hypothesen ungeprüft: Cloud-Init-Feld, centron-Post-Deployment, GPU-Image).
+- **Kosten:** Gesamtverbrauch 31,74 € (14.11. vormittags) auf 31,86 € (Abend), Guthaben 200,00 € (Netto/Brutto und Verrechnung unbekannt). Ob der fehlgeschlagene Versuch abgerechnet wird: **nicht gefunden**, im Billing prüfen.
+- **centron-Doku (Websuche):** Cloud-Init akzeptiert laut Doku Cloud-Config oder jedes Skript (z. B. Bash), Feld unter „Erweiterte Optionen → Initialisierungsskripte“; verfügbar auf neuesten Ubuntu-/CentOS-Images.
+- **Konsequenz:** „Ein Knopf per Cloud-Init“ ist **nicht bestätigt**. Zuverlässiger Rückfall: VM **ohne** Cloud-Init anlegen, per SSH `cat > /root/start.sh` (Starter einfügen, Strg+D), `setsid nohup bash /root/start.sh > /root/start.log 2>&1 &`, danach `rm /root/start.sh`. Offene Fragen an centron-Support: Warum Post-Deployment fehlgeschlagen? Wurde das Cloud-Init-Feld übernommen? Abrechnung des fehlgeschlagenen Versuchs?
+- **DNS:** Der A-Eintrag `dolmetscher` zeigt noch auf die nicht mehr vorhandene IP; bei neuer VM den vorhandenen Eintrag **bearbeiten**.
+
+## 17. Lehren vom 14.11.2026 und Auftrag: Ablauf muss anders werden (Wunsch des Nutzers: „nervig und zeitintensiv, lange Recherche, alles ins Protokoll“)
+
+**Was an diesem Abend schiefging (Fakten):**
+1. **Cloud-Init-Feld:** Der Starter kam bei der zweiten VM nicht in den Datensätzen an (nur centrons eigenes `#cloud-config`); eine VM wurde als „Post deployment failed“ markiert. Ursache unbekannt.
+2. **Von-Hand-Weg mit vielen Einzelschritten:** Mindestens sieben Bedienfehler (Befehle ins `cat` getippt, Variablenname `HF_TOKEN` durch den Token-Wert ersetzt, `OPERATOR_KEY` fehlte, `grep` am Windows-Prompt, Befehle am falschen Prompt, Ausgaben mit Token in den Chat kopiert). **Das Token stand dadurch fünfmal im Chat.** Dreimal lief das Setup mit dem falschen Variablennamen; TranslateGemma wurde nie geladen.
+3. **Fehler im Skript (meiner):** `nvidia-smi` ohne Treiber brach `server_setup.sh` ab (`set -e`); `git clone` war nicht wiederholbar. Behoben und gepusht, **auf einer frischen VM bis zum Ende ungetestet**. Hätte ein Test auf einer billigen VM aufgedeckt.
+4. **Zeit/Kosten:** VM 1 (Ada) ca. 1,26 €/h über ca. 25 h; VM 2 (A4000) 0,27 €/h; Setup-Dauer des Gesamtlaufs: bisher nicht sauber gemessen.
+
+**Regeln ab jetzt:**
+- **Nie wieder „ein Knopf“ behaupten, bevor der Ablauf einmal komplett auf einer Test-VM gelaufen ist.**
+- **Keine Geheimnisse in Zwischenablage-Zeilen mit Platzhaltern zum Ersetzen.** Eingabe nur über versteckte Abfrage (siehe unten).
+- **Skripte vor dem GPU-Einsatz auf einer billigen Nicht-GPU-VM testen** (centron „Optimiertes Cloud Computing“, laut Console ab 2,86 €/Monat netto; Stundenpreis nicht gemessen): Zustellung des Cloud-Init-Texts, Ports 80/443 von außen, Let's-Encrypt-Zertifikat, DNS-Dauer, Setup ohne GPU-Teile.
+- Dem Nutzer nur **einen** Befehl nennen, der danach **eine** Zeile Ergebnis liefert; keine Ausgabe-Kopien des ganzen Terminals.
+
+**Aufgabenliste für die Recherche (nächste Sitzung, nach Rücksetzung des Wochenlimits am So. 15.11. 20:00; die Recherche kostet Limit):**
+1. **centron-API:** Gibt es beim Anlegen einer GPU-VM einen Parameter `user_data` (Cloud-Init) und kommt der Text dort an? Authentifizierung/Rechte (Token mit vollen Rechten: Risiko).
+2. **Ein-Klick-Skript am Windows-PC** (`windows/`): PowerShell-Skript, fragt IP, HF-Token und Bedienschlüssel **versteckt** ab (`Read-Host -AsSecureString`), schickt das Starterskript per `ssh … "bash -s"` über stdin (kein Einfügen im SSH-Fenster, kein Chat), wartet auf Neustart, prüft die Seite und meldet nur „fertig/Fehler“. Zeilenenden (CRLF) beachten. Ungetestet.
+3. **Alternative Anbieter in Deutschland/EU** mit Snapshot/Image-Unterstützung für GPU-VMs, stundengenauer Abrechnung und AVV (Datenschutz, später): z. B. prüfen, ob es das gibt; Auswahl nicht aus dem Gedächtnis, sondern recherchiert.
+4. **DNS ohne Handarbeit:** KAS-API von ALL-INKL für den A-Eintrag oder feste IP (centron „Reservierte IPs“ ist ohne Funktion gefunden).
+5. **Eigene Hardware vor Ort** (Offline-Box) als Alternative zur Cloud: Kosten und Aufwand unbekannt.
+
+## 18. Erfolg am 15.11.2026: HTTPS-Adresse läuft (Stand der Beobachtung, Messwerte folgen)
+
+- **Nutzerbericht (Screenshot):** `https://dolmetscher.kischub.de/operator.html` lädt (Inkognito-Fenster, Chrome, Windows-PC), Bedienplatz zeigt Schritt 2 „Zuhörer einladen“ mit **QR-Code und Zuhörer-Link auf der eigenen Adresse**, Mikrofon (Sennheiser Profile) wählbar, „Angebotene Sprachen: English“ (Auswahl in Schritt 1 prüfen; Voreinstellung war `DEFAULT_LANGS=uk`).
+- **Damit belegt:** Port 443 ist bei centron von außen offen; Caddy konnte ein Zertifikat für die eigene Subdomain holen (Zertifikat-Aussteller nicht geprüft); der A-Eintrag bei ALL-INKL wirkte (Dauer **nicht gemessen**: zwischen Eintrag und erster Erreichbarkeit lagen Stunden, vermutlich wegen des lokalen DNS-Zwischenspeichers); die RTX A4000 mit 4B-Modell startet den Dienst.
+- **Noch offen (Messung mit zweitem Gerät):** Untertitel/Ton auf dem Handy, Verzögerung (`t_asr`, `t_mt`, `t_tts` aus der Anzeige), Speicher (`nvidia-smi` bei laufendem Dienst, 16 GB insgesamt), Übersetzungsqualität 4B (Muttersprachler), Dauer des Gesamtlaufs ohne die Fehlversuche.
+- **Der Weg dorthin war nicht reproduzierbar „ein Knopf“;** siehe Abschnitt 17. Der Bedienschlüssel dieses Laufs wurde zufällig erzeugt (steht nur in `server.env` der VM).
+
+## 19. Rückmeldung nach dem Handy-Test (15.11.2026) und Änderungen
+
+- **Nutzerbericht:** Übersetzung funktioniert auch auf dem Smartphone („sehr gut“, Verzögerung laut Nutzer ca. 1 s, Schätzung). **Fehler:** Sätze wurden teils mehrfach wiederholt; die Sprech-Anzeige (erste Fassung) sprang zwischen „Stopp“ und „Sprechen“ hin und her.
+- **Ursache der Wiederholungen: unbekannt** (Kandidaten: Whisper wiederholt Sätze bei Nachlauf/Rauschen; kleines Modell 4B mit Greedy-Decoding läuft in Schleifen, bis `MT_MAX_NEW_TOKENS`=256). Ob Quelltext oder Übersetzung wiederholt, zeigt die Liste unten im Bedienplatz („#Nr [Sprache] deutscher Text → Übersetzung“).
+- **Gegenmaßnahmen (im Repository, auf der GPU ungetestet):** `pipeline/text_clean.py` entfernt direkte Satz- und Wortfolgen-Wiederholungen in Spracherkennung und Übersetzung; gleicher Text innerhalb von 4 s nach dem vorigen Abschnitt wird verworfen (`REPEAT_WINDOW_MS`); die Token-Grenze der Übersetzung richtet sich nach der Satzlänge (`max_neue_tokens`); Logzeilen `asr_abschnitt … bereinigt=… doppelt=…` und `mt_wiederholung_entfernt` (nur Hinweise, keine Inhalte).
+- **Sprech-Anzeige neu:** drei feste Zustände „SPRECHEN MÖGLICH“ (grün), „SIE SPRECHEN“ mit Balken (grün/orange, Grenze 12 s Abschnittslänge laut `ASR_MAX_UTTERANCE_S`) und „STOPP, wird übersetzt“ (rot; bleibt 1,5 bis 8 s stehen, bis die Übersetzung eintrifft); kurze Geräusche (< 250 ms) und kurze Pausen (< 0,7 s) lösen keinen Wechsel aus. Rein am Bedienplatz aus dem Pegel berechnet. Logik in Node mit simulierten Blöcken geprüft, im Browser mit echtem Mikrofon **noch nicht**.
+
+## 20. Befund Handy-Screenshot (15.11.2026): erfundene Abspann-Zeilen der Spracherkennung
+
+- **Beobachtung (Nutzer-Screenshots, Listener-Seite):** Untertitel enthalten Fragmente wie „Subtitling.“ und „BR 2018: I'll just speak for a bit and see what happens.“; außerdem erscheinen Sätze doppelt mit leicht anderen Worten („possible“/„achievable“). **„BR 2018“ passt zu bekannten Whisper-Halluzinationen** („Untertitelung des BR 2018“, „Untertitel im Auftrag des ZDF“) bei Stille/Rauschen am Abschnittsende (Einordnung nach Muster, nicht am deutschen Originaltext belegt).
+- **Maßnahmen (Repository, auf der GPU ungetestet):** Stille am Ende wird auf 250 ms gekürzt, bevor Whisper den Abschnitt bekommt (`TAIL_KEEP_MS`); Whisper-Segmente mit hoher Nicht-Sprache-Wahrscheinlichkeit/Schleifenmuster werden verworfen (`no_speech_prob`, `compression_ratio`); `text_clean.entferne_floskeln` entfernt Abspann-Floskeln (Untertitel + Sender/Amara/Jahr); normale Sätze mit „Untertitel“ bleiben unverändert (Test).
+- **Offen:** ob die doppelten Sätze mit anderen Worten vom Sprecher kamen oder vom Server verarbeitet wurden: Nutzer prüft den deutschen Text in der Live-Liste des Bedienplatzes. Vorschlag des Nutzers: **„Dolmetscher-Modus“, bei dem „Sprechen möglich“ erst erscheint, wenn die Übersetzung auf allen Geräten fertig gesprochen/angezeigt ist** (Rückmeldung der Zuhörer-Seiten; Datenschutz: nur Zähler, keine Inhalte). Entwurf: Zuhörer melden „fertig“ (Ton zu Ende oder Untertitel angezeigt), Server meldet dem Bedienplatz „alle fertig“, Zeitgrenze gegen hängende Geräte. Noch nicht gebaut.
+
+## 21. Wunsch: zwei Betriebsarten (Vortrag und Gespräch), Auswahl der Sprache durch den Gast, Neustart ohne „Theater“ (15.11.2026)
+
+**Neustart:** `docs/vm-neu-einrichten.md` (Ablaufplan), `windows/vm-einrichten.ps1/.bat` (Ein-Klick, versteckte Abfrage von Token/Schlüssel, ungetestet), Stichwort in `CLAUDE.md`.
+
+**Betriebsarten (Entwurf, noch nicht gebaut):**
+1. **Vortrag (einseitig, vorhanden):** Ein Sprecher spricht Deutsch, Zuhörer wählen ihre Sprache am eigenen Gerät. Die Anwendung übersetzt nur Sprachen, für die gerade ein Zuhörer verbunden ist.
+2. **Gespräch (zweiseitig, z. B. Behörde):** Mitarbeiter spricht Deutsch am Bedienplatz; der Gast wählt am Tablet zuerst seine Sprache (Auswahlseite gibt es schon, Bedienplatz zeigt „Ukrainisch: 1“) und spricht danach in seiner Sprache in das Tablet; die Übersetzung ins Deutsche erscheint (Text, optional Ton) beim Mitarbeiter. Es antwortet immer wechselseitig (Halbduplex: wer spricht, sperrt das andere Mikrofon, Anzeige „Sie sind dran“/„Bitte warten“).
+3. **Dolmetscher-Modus (Schalter):** „Sprechen möglich“ erst, wenn die Übersetzung auf allen Geräten fertig gesprochen ist (Zuhörer melden „fertig“, nur Zähler, Zeitgrenze gegen hängende Geräte).
+
+**Technisch dafür nötig (Aufwand: unbekannt, geschätzt mehrere Arbeitsschritte, zuerst mit Attrappen testen):**
+- Spracherkennung mit **wählbarer Quellsprache je Strom** (heute fest `de`; Whisper large-v3 ist mehrsprachig, Qualität je Sprache unbekannt).
+- Übersetzung X → Deutsch (TranslateGemma kann es laut Karte, Qualität je Sprache unbekannt).
+- **Deutsche Stimme** für Piper (Lizenz der Stimme prüfen; nicht geprüft) in `TTS_VOICES`, Download in `fetch_voices.py`.
+- Neue Nachrichten: Zuhörer-Seite sendet Mikrofon-Audio und „sprechen/fertig“, Server leitet Ergebnis an den Bedienplatz; Zustandsautomat „wer ist dran“.
+- Zuhörer-Seite: Mikrofon-Freigabe, Sprechen-Taste, Hinweise; Datenschutzhinweis zur Mikrofon-Nutzung (Inhalte nur im Arbeitsspeicher, nicht gespeichert).
+- Tests mit Attrappen, danach GPU-Test mit echtem Gast-Tablet.
+
+**Offene Entscheidungen des Nutzers:** Sprechen per Taste oder automatisch? Soll die Rückübersetzung nur der Mitarbeiter hören/lesen oder auch der Gast sehen (Text seiner eigenen Aussage)? Wie viele Gäste gleichzeitig (Annahme: einer)? Welche Sprachen zuerst (Vorschlag: Ukrainisch und Englisch)? Datenschutz bei Behörden (Auftragsverarbeitung, Folgenabschätzung): zurückgestellt, vor Echtbetrieb klären.
+
+## 22. Entscheidungen und Fortschritt zum Gesprächsmodus (15.11.2026)
+
+- **Antworten des Nutzers:** alles per Sprache, optional Tippen; super einfach; keine Anzeige der eigenen Aussagen beim Gast; Sperre für alle, solange gesprochen, übersetzt oder vorgelesen wird; zunächst bis zu 3 Gäste, Ukrainisch und Englisch; keine Lizenzkosten; alles protokollieren.
+- **Ergebnis:** vollständiger Entwurf in `docs/gespraechsmodus-entwurf.md` (Betriebsarten, Bedienung, Zustandsautomat, Protokoll, Randfälle, Datenschutz, Lizenzen, Bauplan, offene Punkte). **Gebaut und getestet (Attrappen-Ebene): Sperrlogik `server/app/turns.py` mit 8 Tests (202 Tests gesamt grün).** Noch nicht in Server und Oberflächen eingebunden.
+- **Lizenz-Befund Websuche (15.11.):** Thorsten-Stimme laut Piper-Modellkarte CC0; eine Drittseite behauptet „nur privat/nicht kommerziell“ (Widerspruch, Modellkarte selbst prüfen). eva_k/karlsson: Quelle M-AILABS laut Community-Angabe, Lizenzwortlaut nicht bestätigt.
+- **Nächste Schritte:** siehe Entwurf Abschnitt 8 und 9 (vier offene Fragen an den Nutzer).
+
+## 23. Umgesetzt am 15.11.2026: Gesprächsmodus, 2-Minuten-Verlauf (Stand der Prüfung: Attrappen, noch nicht auf der GPU)
+
+**Entscheidungen des Nutzers (15.11., Nachmittag):** Gäste hören sich **nicht** untereinander; **letzte 2 Minuten** der Texte sichtbar (wegen Lärm), danach gelöscht; Sprechdauer muss **eindeutig** angezeigt werden; „macht alles gut“ = Standardannahmen aus dem Entwurf (Antippen zum Sprechen, Ende nach ca. 2 s Pause, Mitarbeiter liest die Gast-Antwort).
+
+**Gebaut (Code im Repository, 209 Tests grün, zusätzlich Ablauf im echten Chromium mit Attrappen und Fake-Mikrofon durchgespielt):**
+- **Verlauf 2 Minuten:** Zuhörer-Seite behält alle Untertitel der letzten 2 Minuten (scrollbar, Mitscrollen nur wenn man unten ist), ältere werden aus Anzeige und Speicher gelöscht; derselbe Verlauf im Bedienplatz-Protokoll; Server-Ringpuffer mit Zeitgrenze `HISTORY_S=120` und bis zu 40 Einträgen (`RING_BUFFER_SIZE`).
+- **Betriebsarten:** Auswahl beim Sitzungsstart („Vortrag“/„Gespräch“); `POST /api/rooms {mode}`.
+- **Gespräch:** `server/app/turns.py` (Sperre: frei → spricht → übersetzt → wiedergabe → frei, Zeitgrenzen 60/20/15 s, Schonfrist 0,5 s, Notbremse „Freigeben“); `conversation.py` (Gast: Whisper mit seiner Sprache → TranslateGemma → Deutsch → Bedienplatz); Zuhörer melden „fertig“ (`played`), erst wenn alle fertig sind, wird frei; bis zu 3 Gäste (`MAX_GUESTS`); Zustand an alle Geräte (`turn`, `busy`); keine Inhalte in Logs.
+- **Bedienplatz:** großer Knopf „Sprechen/Fertig“, Statusband vom Server (grün „SPRECHEN MÖGLICH“, „SIE SPRECHEN“ mit Balken der Satzlänge, rot „STOPP – <Grund>“), Gast-Antworten als große deutsche Zeilen (2 Minuten).
+- **Gast-Tablet:** Knopf „Sprechen/Fertig“ in Ukrainisch/Englisch/Deutsch (uk ungeprüft; ar/tr/fa fallen auf Englisch zurück), dreifarbiges Band in seiner Sprache, Mikrofon nur nach Tippen aktiv, Einwilligungshinweis, Balken der Satzlänge.
+- **Spracherkennung mit Quellsprache** je Strom (`new_stream(lang)`), Halluzinations-Filter (Abschnitt 20).
+
+**Noch offen / nicht gebaut:** Tippen statt Sprechen; Ton der Gast-Antwort am Bedienplatz (deutsche Stimme, Lizenz der Stimme prüfen); Qualität von Ukrainisch (Spracherkennung und Übersetzung ins Deutsche) **unbekannt**; Messung der Zeitgrenzen und der „fertig“-Meldungen mit echtem Ton auf Tablets; Test mit echter GPU; Muttersprachler-Prüfung der Oberflächentexte; Datenschutz für Behörden (zurückgestellt).
+
+## 24. Korrektur nach Nutzer-Rückmeldung (15.11.2026, später): längere Sätze, aktueller Verlauf
+
+- **Rückmeldung:** Man soll **längere Sätze** sprechen können und das Fenster ganz ausnutzen; eine kurze Atempause darf nicht sofort eine Übersetzung auslösen. Der Verlauf muss **immer aktuell** sein: die neueste Übersetzung immer sichtbar, dazu nur die letzten Nachrichten (Nutzer: „vielleicht die letzten 10“).
+- **Geändert (im Repository; Browser-Test mit Attrappen; auf der GPU ungetestet):**
+  - Pause bis zum Abschluss eines Abschnitts **`ASR_SILENCE_MS` 700 → 1200 ms**, längster Abschnitt **`ASR_MAX_UTTERANCE_S` 12 → 20 s**, **`SEGMENT_MAX_WORDS` 12 → 40** (Sätze werden am Satzende getrennt, nicht mitten im Satz). Der Balken der Satzlänge und die Anzeigegrenzen folgen diesen Werten automatisch. Das Ende einer Aussage im Gespräch liegt jetzt bei Pause + 0,8 s (mindestens 2 s). Alle Werte sind **Annahmen und zu messen**; längere Abschnitte erhöhen die Wartezeit bis zur Übersetzung.
+  - **Verlauf:** Zuhörer-Seite zeigt höchstens die **letzten 10 Nachrichten** und nichts, was älter als 2 Minuten ist; die **neueste Zeile ist immer sichtbar** (Mitscrollen, außer jemand liest bewusst weiter oben; nach 4 s springt es wieder nach unten); Bedienplatz-Protokoll zeigt die letzten 20.
+  - **Fehler gefunden und behoben:** Beim **Neuverbinden** (z. B. Mobilfunkwechsel) schickte der Server den Verlauf erneut, und die Zuhörer-Seite zeigte Sätze **doppelt**. Jetzt merkt sich die Seite die Nummern der schon angezeigten Nachrichten (Test im Browser: nach Verbindungsabbruch 0 doppelte Zeilen). Das kann einen Teil der gemeldeten **Wiederholungen** erklärt haben (nicht belegt, andere Ursachen bleiben möglich).
+- **Offen:** Ob die Übersetzung bei längeren Abschnitten (bis 20 s) mit TranslateGemma 4B noch gut ist und wie lang die Wartezeit wird: **unbekannt, messen**.
+
+## 25. Vollständigkeit der Übersetzung (Rückmeldung vom 15.11.2026, abends) – Ursachenanalyse und Maßnahmen
+
+**Rückmeldung des Nutzers:** Übersetzung nicht komplett: Texte fangen an und hören mittendrin auf; im Untertitel steht etwas, wurde aber nicht (ganz) gesprochen; bei Behörden muss **jedes Wort** übersetzt, angezeigt und gesagt werden; **STOPP muss bleiben, bis auf allen anderen Geräten alles fertig ist**; zusätzlich eine **Kontrolle** (eigener erkannter Text, wie es ausgespielt wird, dass es bei den anderen ankommt).
+
+**Gefundene Verlustquellen im Code (aus dem Quelltext abgelesen, nicht auf der GPU gemessen; Ursache der konkreten Beobachtung deshalb nicht bewiesen):**
+1. `TTS_SKIP_BACKLOG=2`: bei 2 wartenden Sätzen entfiel der **Ton**, der Untertitel blieb → passt genau zu „im Untertitel gesehen, aber nicht gesagt“. Jetzt praktisch aus (100000).
+2. Zuhörer-Seite ließ Ton aus, wenn mehr als 6 s Ton warteten (`MAX_AUDIO_BACKLOG_S`). Jetzt nie.
+3. `LANG_QUEUE_MAX=8`: bei Rückstau wurde der **älteste Satz verworfen**. Jetzt 500; Zuhörer-Warteschlange 50 → 500.
+4. Audio-Warteschlange des Bedienplatzes (100 Blöcke = 5 s) verwarf bei langsamer Erkennung **Sprache**. Jetzt 3000 Blöcke (150 s); ein Verwerfen wird dem Bedienplatz gemeldet.
+5. Satzende ohne Satzzeichen: der **letzte Satz blieb im Segmentierer liegen**, bis weitergesprochen wurde. Jetzt wird der Rest nach jeder Pause sofort ausgegeben.
+6. Höchstlänge des Abschnitts schnitt **mitten im Wort**. Jetzt Schnitt an der leisesten Stelle im letzten Viertel (0,5 bis 3 s), der Rest bleibt für den nächsten Abschnitt erhalten.
+7. Nachlauf nach dem letzten lauten Block wurde auf 250 ms gekürzt (leise Wortenden gingen verloren). Jetzt 600 ms und Hysterese (innerhalb einer Aussage zählt ab 60 % der Schwelle noch als Sprache).
+8. Whisper-Filter zu streng (`no_speech`, `compression_ratio`, eigener VAD): Segmente konnten verschwinden. Jetzt weichere Werte; nur sehr wahrscheinlich Nicht-Sprache wird verworfen.
+9. „Gleicher Text wie zuletzt“ verwarf eine **bewusst wiederholte Aussage**. Entfernt. Entdoppelung konservativer (Sätze erst ab 4 gleichen in Folge, Wortfolgen ab 4, Einzelwörter ab 6).
+10. Übersetzung wurde bei zu kleiner Token-Grenze **abgeschnitten**. Jetzt: Abbruch erkennen und mit doppelter Grenze wiederholen (bis `MT_MAX_NEW_TOKENS`=1024).
+11. Zeitgrenzen der Sperre (20 s Verarbeitung, 15 s Wiedergabe) konnten **vor** dem Ende lang laufender Ausgabe freigeben. Jetzt 90 s Verarbeitung und Wiedergabe-Grenze = erwartete Tonlänge + 8 s (mindestens 15 s).
+
+**Neu für Kontrolle und Eindeutigkeit (Browser-Test mit Attrappen, 211 Tests grün; GPU/Tablets ungetestet):**
+- Jedes Zuhörer-Gerät meldet je Satz **„angezeigt“** und **„fertig gesprochen“** (nur Zähler, keine Inhalte); der Bedienplatz zeigt in der **Kontroll-Ansicht** (aufklappbar) pro Satz den erkannten deutschen Text, die Übersetzung je Sprache und „angezeigt x/y · gesprochen x/y“ (letzte 2 Minuten, höchstens 10 Sätze).
+- **Vortrag:** STOPP bleibt, bis der Server „nichts in Arbeit und alle Geräte fertig“ meldet (`flow`); ohne erkannte Abschnitte nach 8 s frei; Höchstdauer 180 s. **Gespräch:** echte Sperre wie bisher, jetzt mit Tonlänge in der Zeitgrenze.
+- **Warnungen** am Bedienplatz (rot): Spracherkennung fehlgeschlagen, nicht verstanden, Übersetzung fehlgeschlagen, Audio verworfen, Gerät hat nicht bestätigt; der Gast bekommt „Nicht verstanden. Bitte wiederholen.“
+- **Grenzen:** „fertig gesprochen“ meldet das Gerät (Browser: Ton zu Ende); ob ein Mensch es **verstanden** hat oder die **Übersetzung inhaltlich stimmt**, prüft das System nicht. Hundertprozentige Sicherheit ist nicht belegt; Qualität (Ukrainisch, lange Sätze mit 4B) bleibt zu messen; denkbar als Zusatz: Rückübersetzung ins Deutsche zur Kontrolle (nicht gebaut).
+
+## 26. Betriebsart „Dolmetschen“ mit echter Sperre (Nutzerwunsch 15.11.2026, abends)
+
+- **Rückmeldung:** Während die Übersetzung noch ausgegeben wird, konnte der Bedienplatz schon wieder sprechen (im **Vortrag** war STOPP nur eine Anzeige). Praxisbeispiel: Anweisung („Seite 52, Formular …“), kurze Verständigung („ist das okay?“): man muss warten, bis die Übersetzung **komplett angekommen und angezeigt/gehört** ist; dazwischen eine Pause. Es muss „in die Praxis passen“.
+- **Gebaut (Browser-Test mit Attrappen, 212 Tests grün; GPU/Tablets ungetestet):** drei Betriebsarten beim Sitzungsstart:
+  1. **Dolmetschen** (Vorauswahl, empfohlen): nur der Bedienplatz spricht (Sprechen-Knopf, Ende nach Pause + 0,8 s, mindestens 2 s, oder „Fertig“); danach **echte Sperre**: Der Server nimmt kein Audio des Bedienplatzes mehr an, bis alle Zuhörer-Geräte **„angezeigt“ und „fertig gesprochen“** gemeldet haben (Zeitgrenze = erwartete Tonlänge + 8 s, mindestens 15 s, Verarbeitung höchstens 90 s). Wer trotzdem spricht, sieht „bitte warten – Ihre Worte werden jetzt NICHT übersetzt“. Notbremse „Freigeben“.
+  2. **Gespräch:** wie Dolmetschen, zusätzlich sprechen die Gäste (bis zu 3) abwechselnd, ebenfalls mit Sperre.
+  3. **Vortrag:** durchgehend sprechen, keine Sperre (STOPP nur als Anzeige).
+- **Gerät ohne Ton:** Das Zuhörer-Gerät meldet „fertig“ erst nach einer **Lesezeit** (800 ms + 300 ms pro Wort, höchstens 15 s; Annahme ca. 200 Wörter pro Minute), damit die Sperre nicht schon beim Erscheinen des Textes freigibt. **Ob ein Mensch den Text wirklich gelesen oder verstanden hat, ist nicht prüfbar.**
+- **Folge:** Im Dolmetschen-Betrieb geht gesprochene Sprache verloren, wenn sie **während der Sperre** gesprochen wird (sie wird bewusst nicht gesendet); der Bedienplatz warnt dann. Das ist die gewünschte Wartephase, kostet aber Zeit pro Austausch.
+- **Offen:** Wie lang die Wartephase in der Praxis ist (hängt von Erkennung, Übersetzung, Ton, Netz ab): **unbekannt, mit GPU und Tablets messen**; ob 1,2 s Pause plus 0,8 s als Aussageende angenehm sind; Verhalten bei Verbindungsabbruch eines Zuhörer-Geräts (Zeitgrenze, danach frei).
+
+## 27. FESTLEGUNG: Es gibt genau ZWEI Betriebsarten (Vorgabe des Nutzers, 15.11.2026, abends) – ersetzt die Aussagen zu „Dolmetschen“ in Abschnitt 26
+
+**Status: umgesetzt und mit Attrappen im Browser geprüft (213 Tests grün); vom Nutzer noch NICHT getestet; auf GPU und Tablets ungetestet.**
+
+| | **Vortrag** | **Gespräch** |
+| --- | --- | --- |
+| Zweck | Eine Person spricht durchgehend (z. B. Präsentation); Zuhörer hören und lesen mit | Unterhaltung, z. B. Behörde: Mitarbeiter und Gäste sprechen **abwechselnd** |
+| Bedienung | Sprecher muss **nicht aufs Gerät schauen**; Mikrofon läuft durchgehend, das System übersetzt fortlaufend | Großer Knopf „Sprechen“ (Bedienplatz und Gast-Tablet), Ende der Aussage nach Pause oder „Fertig“ |
+| Sperre | **Keine.** Ruhige Anzeige „Läuft – einfach sprechen“ (mit Hinweis, wenn Sätze in Arbeit sind); rote Warnung nur bei Problemen | **Echt für alle:** Solange jemand spricht, übersetzt wird oder vorgelesen wird, darf **niemand** sprechen. Erst wenn **alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben**, wird frei (grün) |
+| Gäste | hören/lesen nur | bis zu 3, sprechen in ihrer Sprache, der Mitarbeiter liest den deutschen Text; sie hören sich nicht untereinander |
+| Kontrolle | aufklappbar: erkannter Text, Übersetzung je Sprache, „angezeigt x/y · gesprochen x/y“ | dito, zusätzlich Gast-Antworten (letzte 2 Minuten) |
+
+**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (Abschnitt 25); Verlauf = letzte 10 Nachrichten und höchstens 2 Minuten, neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
+
+**Ausdrücklich NICHT mehr vorhanden:** eine dritte Betriebsart „Dolmetschen“ (aus Abschnitt 26 entfernt; ihre Wirkung, „erst weiter, wenn alles angekommen ist“, gehört jetzt zum **Gespräch**), Dolmetscher-Schalter, getrennte Vorträge mit Sperre. Auswahl beim Sitzungsstart: zwei Optionen, Vorauswahl **Vortrag**.
+
+
+
+# ===== Datei: docs/vm-neu-einrichten.md =====
+
+# VM neu einrichten (Ablaufplan, Stand 15.11.2026)
+
+**Stichwort für einen neuen Chat:** „Ich möchte die VM wieder einrichten.“ Dann dieses Dokument Schritt für Schritt abarbeiten: jeweils **einen** Schritt nennen, auf das Ergebnis warten, nichts vorwegnehmen. Token und Schlüssel **nie** in den Chat (Nutzer tippt sie nur in die versteckte Abfrage des Skripts).
+
+**Status der Teile:** Gelaufen am 14./15.11.2026: Setup-Skripte auf der VM (mit mehreren Fehlversuchen, jetzt behoben), HTTPS-Adresse, Dienst, Handy-Test. **Ungetestet:** `windows/vm-einrichten.ps1` (Ein-Klick-Einrichtung) und der Gesamtablauf ohne manuelle Eingriffe. Cloud-Init-Feld der Console: **nicht verwenden** (Text kam nicht an, VM wurde einmal als „fehlgeschlagen“ markiert).
+
+## Einmalig vorbereitet (vorhanden)
+- centron-Konto, SSH-Schlüssel `kidolmetscher-test` (in der Console hinterlegt, privater Schlüssel am Windows-PC).
+- Hugging-Face-Konto mit Freigabe für TranslateGemma 4B/12B/27B.
+- DNS: A-Eintrag `dolmetscher` bei ALL-INKL (KAS), zeigt auf die jeweils letzte VM-IP. Wildcard `*` und Hauptdomain **nie ändern**.
+
+## Ablauf
+1. **Vorher besorgen:** neues Hugging-Face-Lesetoken (Typ Read; altes löschen), Bedienschlüssel (24 oder mehr Buchstaben/Ziffern, im Passwort-Manager) **oder** das Skript einen erzeugen lassen.
+2. **VM anlegen (selbst oder mit Plugin-Prompt „Wizard vorbereiten“, Cloud-Init AUS):** GPU RTX A4000 16 GB, Bamberg BBG1, 4 vCPU / 16 GB RAM / 100 GB, Ubuntu LTS 26, SSH-Key `kidolmetscher-test`, Name `kidolmetscher-test`. Preisleiste prüfen (zuletzt 0,2652 € pro Stunde netto), **selbst „VM erstellen“ klicken**. Status in der Serverliste prüfen: Steht dort „Fehlgeschlagen“, nicht weitermachen.
+3. **IP notieren** (VM-Seite, Netzwerk). **DNS-Eintrag `dolmetscher` bearbeiten** (KAS: Tools → DNS-Einstellungen → kischub.de → Stift beim Eintrag `dolmetscher` → neue IP). Nur diesen einen Eintrag ändern; die Liste muss 9 Einträge zeigen.
+4. **Am Windows-PC `windows\vm-einrichten.bat` doppelklicken.** Das Skript fragt IP, Token und Schlüssel (unsichtbar), prüft SSH, schickt das Startskript, wartet (ca. 10 bis 20 Minuten, **ungemessen**) und prüft `https://dolmetscher.kischub.de/healthz`. Am Ende zeigt es die Adresse (und den Schlüssel, falls erzeugt: in den Passwort-Manager kopieren).
+5. **Testen:** Bedienplatz öffnen, anmelden, Sitzung, QR-Code am Handy, 10 Sekunden sprechen.
+6. **Fertig: VM zerstören** (Console → ccloud³ → Server → `kidolmetscher-test` → Zerstören, Namen eingeben). Billing am nächsten Tag prüfen.
+
+## Falls das Skript fehlschlägt (Rückfall von Hand, nur mit Einzelbefehlen)
+- SSH am Windows-PC: `ssh root@<IP>` (Prompt muss `root@xv…:~#` zeigen).
+- Fortschritt: `grep -a "^==" /var/log/kidolmetscher-init.log | tail -n 10`
+- Modell fehlt (`/root/kidolmetscher/models/translategemma` nicht da): `strings /var/log/kidolmetscher-init.log | grep HINWEIS`; Token prüfen; Modell laden: ` HF_TOKEN='hf_…' /root/kidolmetscher/.venv/bin/python /root/kidolmetscher/src/kidolmetscher/scripts/fetch_models.py google/translategemma-4b-it /root/kidolmetscher/models/translategemma`, dann `systemctl restart kidolmetscher`.
+- Dienst/Zertifikat: `journalctl -u kidolmetscher --no-pager | tail`, `journalctl -u caddy --no-pager | tail`.
+- Neue Programmversion einspielen: `cd /root/kidolmetscher/src && git pull -q --ff-only && systemctl restart kidolmetscher`.
+
+## Bekannte Stolpersteine (alle am 14./15.11. erlebt)
+- Bei der Einrichtung **Befehle einzeln** eingeben; nie `cat > datei` und danach Befehle tippen; Prompt (`C:\Users\Dell>` = PC, `root@xv…:~#` = VM) vor jedem Befehl prüfen.
+- Variablennamen nicht überschreiben (`HF_TOKEN=` bleibt stehen): deshalb die versteckte Abfrage im Skript.
+- Alte VM-IP im Browser-Cache: `ipconfig /flushdns`; Test an DNS vorbei: `curl.exe -I --resolve dolmetscher.kischub.de:443:<IP> https://dolmetscher.kischub.de/`.
+- Der Dienst startet erst nach dem Neustart der VM; das Setup meldet „Fertig, Neustart“.
+
+## Test-Empfehlung vor dem nächsten GPU-Einsatz
+Skript `vm-einrichten.ps1` **einmal auf einer billigen Nicht-GPU-VM** (centron „Optimiertes Cloud Computing“) ausprobieren: Zustellung per SSH, Ports 80/443, Zertifikat. Die GPU-spezifischen Schritte (Treiber, Whisper, Modell) bleiben dabei ungeprüft.
+
+
+# ===== Datei: docs/gespraechsmodus-entwurf.md =====
+
+# Entwurf: Betriebsarten „Vortrag“ und „Gespräch“ (Stand 15.11.2026)
+
+> **Maßgeblich ist Abschnitt 27 des Protokolls: genau ZWEI Betriebsarten (Vortrag ohne Sperre, Gespräch mit Sperre).** Andere Betriebsarten oder Schalter in diesem Entwurf gelten nicht mehr.
+
+Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends: Server, Bedienplatz und Gast-Seite sind gebaut (siehe Protokoll Abschnitt 23); offen: Tippen statt Sprechen, Ton am Bedienplatz, GPU-Test.** Zahlen mit „Annahme“ sind nicht gemessen.
+
+## 0. Vorgaben des Nutzers
+- **Alles per Sprache.** Optional zusätzlich Tippen (z. B. laute Umgebung). Es muss **super einfach** bleiben, wie die bisherige Bedienung.
+- **Zwei Betriebsarten:** Vortrag (einseitig) und Gespräch (zweiseitig).
+- **Sperren:** Spricht jemand oder wird übersetzt oder vorgelesen, ist das Sprechen **für alle** gesperrt. Alles muss logisch und eindeutig sein.
+- **Der Gast sieht seine eigenen Aussagen nicht** (kein Nutzen).
+- **Bis zu 3 Gäste**, zuerst **Ukrainisch und Englisch**.
+- **Keine Lizenzkosten**, möglichst Open Source.
+- **Alles protokollieren.**
+
+## 1. Betriebsarten
+| | Vortrag (vorhanden) | Gespräch (neu) |
+| --- | --- | --- |
+| Sprecher | nur der Bedienplatz, Deutsch | Bedienplatz (Deutsch) und Gäste (ihre Sprache), abwechselnd |
+| Zuhörer/Gäste | wählen ihre Sprache, hören/lesen | wählen ihre Sprache, hören/lesen **und können sprechen** |
+| Sperre | nur Anzeige am Bedienplatz (vorhanden) | **echte Sperre für alle** (siehe 3) |
+| Auswahl | beim Start der Sitzung am Bedienplatz: zwei große Knöpfe „Vortrag“ / „Gespräch“ |
+
+## 2. Bedienung (so einfach wie möglich)
+**Bedienplatz (Mitarbeiter):** Beim Start „Vortrag“ oder „Gespräch“ wählen. Im Gespräch steht **ein großer Knopf „Sprechen“**. Tippen = Aussage beginnt; sie endet **automatisch nach ca. 2 Sekunden Pause** oder durch erneutes Tippen. Die Anzeige hat drei Zustände wie heute: grün „SPRECHEN MÖGLICH“, orange „Übersetzung läuft“, rot „STOPP: <wer> spricht / wird vorgelesen“. Der Knopf ist gesperrt, solange nicht grün. **„Freigeben“-Knopf** (klein) als Notbremse. Antworten der Gäste erscheinen als **deutscher Text** (optional Ton, Schalter).
+
+**Gast-Tablet:** Der Gast scannt den QR-Code oder öffnet den Link, wählt **zuerst seine Sprache** (vorhanden), sieht danach Untertitel (und hört den Ton) wie heute. Zusätzlich unten **ein großer Knopf „Sprechen“** (in seiner Sprache beschriftet). Tippen = sprechen; nach ca. 2 Sekunden Pause endet die Aussage automatisch. Oben dieselbe dreifarbige Statusleiste in seiner Sprache. Eigene Aussagen werden **nicht** angezeigt; nach dem Sprechen zeigt die Leiste „Bitte warten“, bis es wieder frei ist.
+**Tippen statt Sprechen:** Unter dem Knopf eine einklappbare Zeile „Tippen“. Der Text läuft durch dieselbe Übersetzung und dieselbe Sperre (kein Ton-Mikrofon).
+
+**Warum Tippen zum Sprechen und nicht Dauer-Mikrofon:** Verhindert Rückkopplung (Tablet spielt Ton, Mikrofon hört ihn), Dauer-Streaming von Hintergrundgeräuschen und Datenschutz-Bedenken (Mikrofon nur bewusst offen), und es spart Datenvolumen.
+
+## 3. Sperrlogik (Zustandsautomat, gebaut in `server/app/turns.py`, 8 Tests)
+**Zustände:** `frei` → `spricht` → `uebersetzt` → `wiedergabe` → `frei`.
+- **frei:** jeder darf „Sprechen“ antippen. **Wer zuerst kommt, bekommt das Wort**; alle anderen bekommen „busy“ (Knopf bleibt grau mit Erklärung).
+- **spricht:** Ende durch Pause (ca. 2 s, Annahme), Antippen oder **Zeitgrenze 60 s** (Annahme). Spricht jemand mit getrenntem Gerät weiter: Aussage gilt als beendet.
+- **uebersetzt:** solange noch Abschnitte der Aussage verarbeitet werden. **Zeitgrenze 20 s** (Annahme).
+- **wiedergabe:** Ergebnisse sind verteilt. Jedes Empfängergerät meldet **„fertig“** (Ton zu Ende gespielt, bei stumm/ohne Stimme: Untertitel angezeigt). Wenn alle fertig sind, folgt eine **Schonfrist 0,5 s**, dann `frei`. **Zeitgrenze 15 s**, damit ein ausgeschaltetes Gerät nicht blockiert.
+- **Notbremse:** „Freigeben“ am Bedienplatz setzt sofort auf `frei`.
+- Die Sperre gilt für **alle** Geräte einschließlich des Bedienplatzes. Der Server entscheidet (nicht die Browser), damit zwei gleichzeitige Tipper eindeutig sind.
+- Im **Vortrag** läuft nur die Anzeige am Bedienplatz (kein Sperren der Zuhörer, es sprechen keine).
+
+## 4. Technik (Bauplan, Aufwand unbekannt)
+1. **Fertig:** `turns.py` (Zustandsautomat) mit Tests.
+2. **Raum-Art:** `mode` = `vortrag|gespraech` beim Anlegen des Raums; `max_gaeste=3`; Gäste bekommen Kennung `gast:<n>` nach Beitrittsreihenfolge.
+3. **Spracherkennung je Strom mit Quellsprache** (heute fest `de`): `new_stream(lang)` mit `language=lang` (Ukrainisch, Englisch zuerst). **Whisper-Qualität für Ukrainisch ist unbekannt** (messen mit eigenen Sätzen).
+4. **Rückrichtung:** Gast-Text → TranslateGemma `lang→de` → Bedienplatz (Text, optional Ton). Nur der Mitarbeiter bekommt die Übersetzung (Annahme; andere Gäste sehen nur „Gast spricht“).
+5. **Deutsche Stimme** für den Ton am Bedienplatz (optional, Schalter): Piper `de_DE-thorsten-medium`; die Modellkarte nennt laut Suchergebnis **CC0**, eine Drittseite behauptet „nur nichtkommerziell“ (Widerspruch). **Vor Einsatz Modellkarte selbst lesen.**
+6. **Protokoll (JSON):**
+   - Zuhörer-Seite → Server: `{"type":"talk","on":true|false}`, Binär-Audio (PCM16, 16 kHz) während `on`, `{"type":"text","text":"…"}` (max. 500 Zeichen), `{"type":"played","seq":n}` („fertig“).
+   - Server → alle: `{"type":"turn","state":"frei|spricht|uebersetzt|wiedergabe","who":"staff|gast:n","reason":""}` bei jeder Änderung; Fehler `busy`.
+   - Server → Bedienplatz: `{"type":"guest_message","seq","lang","text_de","audio?","t":{t_audio_in,t_asr,t_mt,t_tts,t_out}}` (Zeitstempel wie Regel 4).
+7. **Oberflächen:** Bedienplatz: Moduswahl, großer Sprechen-Knopf, Statusleiste, „Freigeben“. Zuhörer-Seite: Sprechen-Knopf, Statusleiste, Tippen-Zeile, Texte in Ukrainisch/Englisch (`strings.js`).
+8. **Tests:** Attrappen (Mock-ASR/MT/TTS) für den ganzen Ablauf, simulierte Geräte (zwei Gäste drücken gleichzeitig, Gerät bricht ab, Zeitgrenzen). **Danach GPU-Test** mit echtem Gast-Tablet.
+
+## 5. Randfälle (zu berücksichtigen)
+- Zwei tippen gleichzeitig: Server nimmt den ersten, der zweite bekommt „busy“ und eine klare Anzeige.
+- Gast verlässt die Seite mitten im Satz: Sperre löst sich nach ca. 3 s ohne Audio (Annahme) bzw. durch `device_left`.
+- Netz bricht ab (Mobilfunk): Geräte verbinden sich neu; die Zeitgrenzen verhindern Dauer-Sperren.
+- Ein Gast wechselt die Sprache: gilt ab der nächsten Aussage.
+- Gast spricht eine andere Sprache als gewählt: Erkennung wird schlecht; Hinweis „Bitte Sprache prüfen“ nur, wenn `no_speech`/leerer Text mehrfach (Annahme).
+- Stille/Rauschen nach dem Tippen: Aussage wird verworfen, Sperre löst sich sofort (kein Text).
+- Sehr lange Aussagen: Zeitgrenze 60 s, danach Übersetzung der bisherigen Abschnitte.
+- Mehrere Gäste mit verschiedenen Sprachen: Aussage des Mitarbeiters geht an alle Sprachen; Aussage eines Gastes nur an den Mitarbeiter.
+
+## 6. Datenschutz
+Mikrofon nur nach Tippen offen; Audio und Text nur im Arbeitsspeicher, nichts wird gespeichert, keine Inhalte in Logs (nur Zähler und Zeiten); Einwilligungshinweis auf der Gast-Seite („Ihre Stimme wird zum Übersetzen an den Server gesendet und nicht gespeichert“); Zufalls-Link mit Ablauf. **Rechtliche Fragen bei Behörden (Auftragsverarbeitung, Folgenabschätzung): zurückgestellt**, vor Echtbetrieb klären (keine Rechtsberatung).
+
+## 7. Lizenzen und Kosten (Anforderung: keine Lizenzkosten)
+| Baustein | Lizenz (laut `lizenzen-recherche.md` und Suche vom 15.11.) | Kosten |
+| --- | --- | --- |
+| faster-whisper, CTranslate2, Whisper large-v3 | MIT bzw. Apache-2.0 (large-v3: Apache-2.0) | keine |
+| TranslateGemma 4B/12B | Gemma-Nutzungsbedingungen: **kostenlos, aber keine Open-Source-Lizenz im üblichen Sinn**; als gehosteter Dienst gilt es laut Bedingungen als „Distribution“ (Auflagen weitergeben); Prohibited-Use-Policy **nicht ausgewertet** | keine Lizenzgebühr gefunden; Auflagen rechtlich klären |
+| Piper (`piper-tts`) | Original MIT (archiviert), Nachfolger **GPL-3.0**; für Betrieb als eigener Dienst ohne Weitergabe der Software meist unkritisch, **rechtlich klären** | keine |
+| Piper-Stimmen | je Stimme eigene Karte: `uk_UA-ukrainian_tts` CC0 laut früherer Lesung; `en_GB-alba` CC BY 4.0; `de_DE-thorsten` CC0 laut Modellkarte (Widerspruch einer Drittseite) | keine, aber Namensnennung bei CC BY |
+| Caddy, Let's Encrypt, Ubuntu, FastAPI | Apache-2.0 / kostenlos / frei / MIT | keine |
+| **Echte Kosten** | GPU-Server bei centron (A4000 zuletzt 0,2652 € pro Stunde netto) | nur Miete |
+Keine Rechtsberatung; Lizenzprüfung vor Echtbetrieb wiederholen.
+
+## 8. Reihenfolge der nächsten Arbeitsschritte
+(a) Entscheidung des Nutzers zu offenen Punkten (unten), (b) Raum-Art und Sperr-Integration im Server (Attrappen-Test), (c) Spracherkennung mit Quellsprache und Rückübersetzung, (d) Bedienplatz-Oberfläche, (e) Gast-Oberfläche (Ukrainisch/Englisch), (f) Test mit zwei echten Geräten auf der GPU, (g) Messwerte und Qualität (Muttersprachler) für Ukrainisch und Englisch.
+
+## 9. Offene Punkte für den Nutzer
+1. Sprechen per **Antippen mit automatischem Ende nach Pause** (Empfehlung) oder Halten des Knopfes?
+2. Soll der Mitarbeiter die Gäste-Antwort **nur lesen** oder auch **hören** (deutsche Stimme)? Empfehlung: lesen, Ton per Schalter.
+3. Sollen sich **Gäste untereinander** übersetzt hören (nur der Mitarbeiter ist Annahme)?
+4. Ist **ca. 2 Sekunden Pause** als Ende der Aussage in Ordnung?
 
 
 # ===== Datei: docs/centron-console-befund.md =====

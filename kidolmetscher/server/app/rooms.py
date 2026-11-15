@@ -18,7 +18,7 @@ from .config import Settings
 from .messages import SUPPORTED_LANGS, control_message
 from .turns import FREI, FlowTracker, TurnManager
 
-MODES = ("vortrag", "dolmetschen", "gespraech")   # dolmetschen: nur der Bedienplatz spricht, aber mit Sperre bis alles angekommen ist
+MODES = ("vortrag", "gespraech")   # genau zwei Betriebsarten (Vorgabe des Nutzers): durchgehend sprechen / abwechselnd mit Sperre
 
 
 class RoomError(Exception):
@@ -87,7 +87,7 @@ class Room:
             raise RoomError(f"Betriebsart unbekannt: {mode}")
         self.id = room_id
         self.mode = mode
-        self.strict = mode != "vortrag"                          # echte Sperre: erst weitersprechen, wenn alles angekommen ist
+        self.strict = mode == "gespraech"                        # echte Sperre: erst weitersprechen, wenn alles angekommen ist
         self._operator_q: asyncio.Queue = asyncio.Queue(200)    # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
         self.turns = TurnManager(on_change=self._turn_changed)  # Sperre im Gespraechsmodus
         self.flow = FlowTracker(on_change=self._flow_changed)   # Vortrag: nur Anzeige, ob noch etwas laeuft
@@ -223,7 +223,7 @@ class Room:
 
     @property
     def tracker(self):
-        """Dolmetschen/Gespraech: TurnManager (echte Sperre), Vortrag: FlowTracker (nur Anzeige)."""
+        """Gespraech: TurnManager (echte Sperre), Vortrag: FlowTracker (nur Zaehler fuer die Anzeige)."""
         return self.turns if self.strict else self.flow
 
     def _flow_changed(self, snapshot: dict) -> None:

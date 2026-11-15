@@ -1,5 +1,7 @@
 # Entwurf: Betriebsarten „Vortrag“ und „Gespräch“ (Stand 15.11.2026)
 
+> **Maßgeblich ist Abschnitt 27 des Protokolls: genau ZWEI Betriebsarten (Vortrag ohne Sperre, Gespräch mit Sperre).** Andere Betriebsarten oder Schalter in diesem Entwurf gelten nicht mehr.
+
 Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends: Server, Bedienplatz und Gast-Seite sind gebaut (siehe Protokoll Abschnitt 23); offen: Tippen statt Sprechen, Ton am Bedienplatz, GPU-Test.** Zahlen mit „Annahme“ sind nicht gemessen.
 
 ## 0. Vorgaben des Nutzers

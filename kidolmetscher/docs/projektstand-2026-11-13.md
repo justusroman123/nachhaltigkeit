@@ -356,3 +356,19 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Folge:** Im Dolmetschen-Betrieb geht gesprochene Sprache verloren, wenn sie **während der Sperre** gesprochen wird (sie wird bewusst nicht gesendet); der Bedienplatz warnt dann. Das ist die gewünschte Wartephase, kostet aber Zeit pro Austausch.
 - **Offen:** Wie lang die Wartephase in der Praxis ist (hängt von Erkennung, Übersetzung, Ton, Netz ab): **unbekannt, mit GPU und Tablets messen**; ob 1,2 s Pause plus 0,8 s als Aussageende angenehm sind; Verhalten bei Verbindungsabbruch eines Zuhörer-Geräts (Zeitgrenze, danach frei).
 
+## 27. FESTLEGUNG: Es gibt genau ZWEI Betriebsarten (Vorgabe des Nutzers, 15.11.2026, abends) – ersetzt die Aussagen zu „Dolmetschen“ in Abschnitt 26
+
+**Status: umgesetzt und mit Attrappen im Browser geprüft (213 Tests grün); vom Nutzer noch NICHT getestet; auf GPU und Tablets ungetestet.**
+
+| | **Vortrag** | **Gespräch** |
+| --- | --- | --- |
+| Zweck | Eine Person spricht durchgehend (z. B. Präsentation); Zuhörer hören und lesen mit | Unterhaltung, z. B. Behörde: Mitarbeiter und Gäste sprechen **abwechselnd** |
+| Bedienung | Sprecher muss **nicht aufs Gerät schauen**; Mikrofon läuft durchgehend, das System übersetzt fortlaufend | Großer Knopf „Sprechen“ (Bedienplatz und Gast-Tablet), Ende der Aussage nach Pause oder „Fertig“ |
+| Sperre | **Keine.** Ruhige Anzeige „Läuft – einfach sprechen“ (mit Hinweis, wenn Sätze in Arbeit sind); rote Warnung nur bei Problemen | **Echt für alle:** Solange jemand spricht, übersetzt wird oder vorgelesen wird, darf **niemand** sprechen. Erst wenn **alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben**, wird frei (grün) |
+| Gäste | hören/lesen nur | bis zu 3, sprechen in ihrer Sprache, der Mitarbeiter liest den deutschen Text; sie hören sich nicht untereinander |
+| Kontrolle | aufklappbar: erkannter Text, Übersetzung je Sprache, „angezeigt x/y · gesprochen x/y“ | dito, zusätzlich Gast-Antworten (letzte 2 Minuten) |
+
+**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (Abschnitt 25); Verlauf = letzte 10 Nachrichten und höchstens 2 Minuten, neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
+
+**Ausdrücklich NICHT mehr vorhanden:** eine dritte Betriebsart „Dolmetschen“ (aus Abschnitt 26 entfernt; ihre Wirkung, „erst weiter, wenn alles angekommen ist“, gehört jetzt zum **Gespräch**), Dolmetscher-Schalter, getrennte Vorträge mit Sperre. Auswahl beim Sitzungsstart: zwei Optionen, Vorauswahl **Vortrag**.
+

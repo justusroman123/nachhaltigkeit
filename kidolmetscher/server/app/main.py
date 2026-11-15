@@ -50,7 +50,7 @@ REAPER_INTERVAL_S = 30
 
 class RoomRequest(BaseModel):
     langs: Optional[list[str]] = None      # angebotene Sprachen; leer = alle aus TARGET_LANGS
-    mode: Optional[str] = None             # "vortrag" (Standard), "dolmetschen" (Sperre, nur der Bedienplatz spricht) oder "gespraech"
+    mode: Optional[str] = None             # "vortrag" (Standard) oder "gespraech" - genau zwei Betriebsarten
 
 
 class LinkRequest(BaseModel):

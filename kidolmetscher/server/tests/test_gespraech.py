@@ -137,16 +137,15 @@ def test_vortrag_zustellkontrolle_angezeigt_und_gesprochen(client):
     recv_until(op, lambda m: m["type"] == "flow" and m["busy"] is False)          # alles angekommen
 
 
-def test_dolmetschen_sperre_nur_fuer_den_bedienplatz(conv):
-    """Betriebsart dolmetschen: nur der Bedienplatz spricht; Audio ohne vorheriges "Sprechen" wird ignoriert; frei erst nach "fertig"."""
-    rid = conv.post("/api/rooms", headers=hdr(), json={"mode": "dolmetschen", "langs": ["uk"]}).json()["room_id"]
+def test_gespraech_audio_ohne_sprechen_wird_ignoriert_und_sperre_wartet_auf_fertig(conv):
+    """Mitarbeiter allein im Gespraech: Audio ohne vorheriges "Sprechen" wird verworfen; frei erst nach "fertig" aller Geraete."""
+    rid = new_conv_room(conv, ("uk",))
     op = open_operator(conv, rid)
     uk = open_listener(conv, link(conv, rid, "uk"))
     ready = recv(uk)
-    assert ready["mode"] == "dolmetschen" and ready["turn"]["state"] == "frei"
+    assert ready["mode"] == "gespraech" and ready["turn"]["state"] == "frei"
     for _ in range(4):
         op.send_bytes(chunk(100))                                  # ohne "Sprechen" gesendet: wird verworfen
-    uk.send_json({"type": "talk", "on": True})                     # Gaeste koennen im Dolmetschen nicht sprechen: kein Zustandswechsel
     op.send_json({"type": "talk", "on": True})
     recv_until(uk, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == "staff")
     for _ in range(3):
@@ -165,3 +164,9 @@ def test_dolmetschen_sperre_nur_fuer_den_bedienplatz(conv):
                 break
     assert texts and len(texts) <= 2                                # nur die gesprochenen Saetze, keine aus dem verworfenen Audio
     assert "wiedergabe" in states and states[-1] == "frei"
+
+
+def test_nur_zwei_betriebsarten(conv):
+    assert conv.post("/api/rooms", headers=hdr(), json={"mode": "dolmetschen"}).status_code == 400
+    for mode in ("vortrag", "gespraech"):
+        assert conv.post("/api/rooms", headers=hdr(), json={"mode": mode}).status_code == 200

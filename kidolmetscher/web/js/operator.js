@@ -40,7 +40,12 @@
     talk.state = 'idle'; talk.ms = talk.quietMs = talk.loudRun = talk.hintMs = 0; talk.got = false;
     talkShow('ok', text || '● SPRECHEN MÖGLICH', 0);
   }
+  function vortragStatus() {                              // Vortrag: ruhige Anzeige, kein STOPP, nur Hinweis auf Rueckstand
+    const n = flow.pending > 0 ? ' · ' + flow.pending + ' Satz in Arbeit' : '';
+    talkShow('ok', '● Läuft – einfach sprechen' + n, 0);
+  }
   function talkBlock(rmsInt16, blockMs) {
+    if (room && room.mode === 'vortrag') return;              // Vortrag: keine Sperre, keine Warteanzeige
     const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000, quietLimit = (cfg && cfg.silence_ms) || 700;
     const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), now = performance.now();
     if (talk.state === 'stop') {
@@ -356,7 +361,7 @@
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
       } else if (d.type === 'translation') { showMessage(d); talkTranslated(); checkTranslation(d); }
       else if (d.type === 'turn') convTurn(d);
-      else if (d.type === 'flow') { flow.busy = d.busy; flow.pending = d.pending; flow.awaiting = d.awaiting; if (d.busy) flow.seenBusy = true; }
+      else if (d.type === 'flow') { flow.busy = d.busy; flow.pending = d.pending; flow.awaiting = d.awaiting; if (d.busy) flow.seenBusy = true; if (room && room.mode === 'vortrag') vortragStatus(); }
       else if (d.type === 'delivery') checkDelivery(d);
       else if (d.type === 'problem') showProblem(d);
       else if (d.type === 'busy') { conv.talking = false; convRender('Gerade spricht jemand oder es wird übersetzt.'); }
@@ -408,7 +413,7 @@
       };
       ctx.createMediaStreamSource(stream).connect(node);
       e.start.disabled = true; e.stop.disabled = false;
-      if (room && room.mode !== 'vortrag') convRender(); else talkIdle();
+      if (room && room.mode !== 'vortrag') convRender(); else vortragStatus();
       say(e.micMsg, room && room.mode !== 'vortrag' ? '● Mikrofon bereit. Zum Sprechen „Sprechen“ tippen.' : '● Sendet.', 'ok');
     } catch (err) { say(e.micMsg, 'Mikrofon-Fehler: ' + err.name, 'bad'); stopSending(); }
   }
