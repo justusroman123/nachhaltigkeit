@@ -124,3 +124,67 @@ class TurnManager:
                 self._advance()
             else:
                 self._set(FREI, None, None, "zeitgrenze_wiedergabe")
+
+
+@dataclass
+class FlowTracker:
+    """Vortrag: keine Sperre, aber der Bedienplatz erfaehrt, ob noch etwas verarbeitet wird oder noch nicht alle Geraete
+    "fertig" gemeldet haben (Anzeige STOPP bis alles angekommen ist). Gleiche Schnittstelle wie TurnManager."""
+    clock: Callable[[], float] = time.monotonic
+    on_change: Optional[Callable[[dict], None]] = None
+    ack_base_s: float = 15.0         # Mindest-Wartezeit auf "fertig" je Ausgabe; dazu kommt die Tonlaenge (Annahme)
+
+    def __post_init__(self) -> None:
+        self.pending = 0
+        self.awaiting: dict[tuple[int, str], float] = {}     # (seq, geraet) -> Zeitgrenze
+        self._dev_audio: dict[str, float] = {}
+        self._busy = False
+        self.timeouts = 0
+
+    @property
+    def busy(self) -> bool:
+        return self.pending > 0 or bool(self.awaiting)
+
+    def snapshot(self) -> dict:
+        return {"busy": self.busy, "pending": self.pending, "awaiting": len(self.awaiting)}
+
+    def _notify(self) -> None:
+        if self.busy != self._busy:
+            self._busy = self.busy
+            if self.on_change:
+                self.on_change(self.snapshot())
+
+    def segment_started(self) -> None:
+        self.pending += 1
+        self._notify()
+
+    def segment_done(self) -> None:
+        self.pending = max(0, self.pending - 1)
+        self._notify()
+
+    def expect_playback(self, seq: int, device: str, audio_s: float = 0.0) -> None:
+        self._dev_audio[device] = self._dev_audio.get(device, 0.0) + max(0.0, audio_s)
+        self.awaiting[(seq, device)] = self.clock() + self.ack_base_s + self._dev_audio[device]
+        self._notify()
+
+    def playback_done(self, seq: int, device: str) -> None:
+        self.awaiting.pop((seq, device), None)
+        if not any(d == device for _, d in self.awaiting):
+            self._dev_audio.pop(device, None)
+        self._notify()
+
+    def device_left(self, device: str) -> None:
+        self.awaiting = {k: v for k, v in self.awaiting.items() if k[1] != device}
+        self._dev_audio.pop(device, None)
+        self._notify()
+
+    def tick(self) -> int:
+        """Abgelaufene Erwartungen entfernen (Geraet meldet nie "fertig"); gibt deren Anzahl zurueck."""
+        now = self.clock()
+        expired = [k for k, v in self.awaiting.items() if now >= v]
+        for k in expired:
+            self.awaiting.pop(k, None)
+        if expired:
+            self.timeouts += len(expired)
+            self._notify()
+        return len(expired)

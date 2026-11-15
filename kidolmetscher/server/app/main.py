@@ -292,6 +292,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     except Exception:
                         return
                 room.turns.tick()
+                if room.flow.tick():                        # Geraet meldet nicht "fertig": dem Bedienplatz sagen
+                    room.push_operator(control_message("problem", what="geraet_antwortet_nicht"))
 
         worker_task = asyncio.create_task(worker())
         pump_task = asyncio.create_task(pump())
@@ -307,7 +309,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
         try:
             await to_operator(control_message("ready", langs=list(room.langs), sample_rate=settings.sample_rate,
-                                              mode=room.mode, turn=room.turns.snapshot()))
+                                              mode=room.mode, turn=room.turns.snapshot(), flow=room.flow.snapshot()))
             while not room.closed:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
@@ -438,6 +440,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 kind = data.get("type")
                 if kind == "select":
                     select(data.get("lang"))
+                elif kind in ("shown", "played") and isinstance(data.get("seq"), int) and not isinstance(data.get("seq"), bool):
+                    room.ack(device, data["seq"], kind)           # Rueckmeldung: angezeigt / fertig gesprochen
                 elif room.mode == "gespraech" and listener.lang is not None:
                     if kind == "talk" and data.get("on"):
                         ok, _ = room.turns.claim(device)
@@ -450,8 +454,6 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             listener.push(control_message("busy"))
                     elif kind == "talk":
                         await end_talk()
-                    elif kind == "played" and isinstance(data.get("seq"), int) and not isinstance(data.get("seq"), bool):
-                        room.turns.playback_done(data["seq"], device)
 
         recv_task = asyncio.create_task(drain())
         get_task: Optional[asyncio.Task] = None
@@ -490,6 +492,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     t.cancel()
             room.detach_listener(listener)
             room.turns.device_left(device)
+            room.flow.device_left(device)
             if guest is not None:
                 with contextlib.suppress(Exception):
                     await guest.close()

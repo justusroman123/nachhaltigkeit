@@ -58,7 +58,7 @@
   function nearBottom() { return subs.scrollHeight - subs.scrollTop - subs.clientHeight < 80; }
   function addLine(text, rtl, ageS, seq) {
     if (Number.isInteger(seq)) {
-      if (seen.has(seq)) return;                                  // Wiederholung (Neuverbinden): nicht noch einmal anzeigen
+      if (seen.has(seq)) return false;                            // Wiederholung (Neuverbinden): nicht noch einmal anzeigen
       seen.add(seq);
     }
     const first = subs.firstElementChild;
@@ -71,6 +71,7 @@
     lines.push({ el: p, at: Date.now() - (ageS || 0) * 1000, seq });
     while (lines.length > MAX_LINES) { const l = lines.shift(); if (l.el.parentNode) l.el.remove(); }
     if (stick) subs.scrollTop = subs.scrollHeight;
+    return true;
   }
   function purgeHistory() {
     const limit = Date.now() - HISTORY_S * 1000;
@@ -148,13 +149,17 @@
         if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
         if (!startShown) { startShown = true; startScreen.hidden = false; }   // einmal: "Tippen zum Starten"
       } else if (d.type === 'translation') {
-        addLine(d.text, RTL.includes(d.lang), d.age_s, d.seq);
-        const p = play(d.audio);
-        if (mode === 'gespraech' && !d.replay && Number.isInteger(d.seq)) p.then(() => sendJson({ type: 'played', seq: d.seq }));   // "fertig": Ton zu Ende oder Text angezeigt
+        const added = addLine(d.text, RTL.includes(d.lang), d.age_s, d.seq);
+        if (added && !d.replay && Number.isInteger(d.seq)) {
+          sendJson({ type: 'shown', seq: d.seq });                    // Rueckmeldung: Text steht auf dem Bildschirm
+          play(d.audio).then(() => sendJson({ type: 'played', seq: d.seq }));   // Rueckmeldung: Ton zu Ende gesprochen (oder kein Ton)
+        } else play(d.audio);
       } else if (d.type === 'turn') {
         turn = d; talkRender();
       } else if (d.type === 'busy') {
         talking = false; talkRender(tt('busy'));
+      } else if (d.type === 'problem') {
+        talking = false; micOff(); talkRender(tt('repeat'));
       } else if (d.type === 'session_end') {
         end('Ende', 'muted', '✔');
       } else if (d.type === 'token_expired') {

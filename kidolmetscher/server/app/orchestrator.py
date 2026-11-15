@@ -37,7 +37,7 @@ class Orchestrator:
         self._segmenter = Segmenter(settings.segment_max_words)
         self._queues: dict[str, asyncio.Queue] = {}
         self._workers: dict[str, asyncio.Task] = {}
-        self._conv = room.mode == "gespraech"             # Gespraechsmodus: Sperre muss auf alle Sprachen warten
+        self._flow = room.tracker                         # Gespraech: echte Sperre, Vortrag: Anzeige, ob noch etwas laeuft
         self._open: dict[int, int] = {}                  # seq -> noch offene Sprachen
 
     # ---------- Eingang ----------
@@ -61,12 +61,12 @@ class Orchestrator:
 
     def _done_one(self, seq: int) -> None:
         """Eine Sprache eines Abschnitts ist fertig (oder verworfen); sind alle fertig, ist der Abschnitt erledigt."""
-        if not self._conv or seq not in self._open:
+        if seq not in self._open:
             return
         self._open[seq] -= 1
         if self._open[seq] <= 0:
             del self._open[seq]
-            self.room.turns.segment_done()
+            self._flow.segment_done()
 
     async def finish(self) -> list[TranslationMessage]:
         """Rest ausgeben, Warteschlangen leeren, ASR-Puffer loeschen, Arbeiter beenden."""
@@ -120,9 +120,8 @@ class Orchestrator:
                 self.room.counters["segments_no_listener"] += 1
                 continue
             seq = self.room.next_seq()
-            if self._conv:
-                self.room.turns.segment_started()
-                self._open[seq] = len(langs)
+            self._flow.segment_started()
+            self._open[seq] = len(langs)
             for lang in langs:
                 q = self._queue(lang)
                 if q.full():                       # Rueckstau: aeltestes Segment dieser Sprache verwerfen

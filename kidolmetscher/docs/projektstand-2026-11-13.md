@@ -322,3 +322,26 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
   - **Fehler gefunden und behoben:** Beim **Neuverbinden** (z. B. Mobilfunkwechsel) schickte der Server den Verlauf erneut, und die Zuhörer-Seite zeigte Sätze **doppelt**. Jetzt merkt sich die Seite die Nummern der schon angezeigten Nachrichten (Test im Browser: nach Verbindungsabbruch 0 doppelte Zeilen). Das kann einen Teil der gemeldeten **Wiederholungen** erklärt haben (nicht belegt, andere Ursachen bleiben möglich).
 - **Offen:** Ob die Übersetzung bei längeren Abschnitten (bis 20 s) mit TranslateGemma 4B noch gut ist und wie lang die Wartezeit wird: **unbekannt, messen**.
 
+## 25. Vollständigkeit der Übersetzung (Rückmeldung vom 15.11.2026, abends) – Ursachenanalyse und Maßnahmen
+
+**Rückmeldung des Nutzers:** Übersetzung nicht komplett: Texte fangen an und hören mittendrin auf; im Untertitel steht etwas, wurde aber nicht (ganz) gesprochen; bei Behörden muss **jedes Wort** übersetzt, angezeigt und gesagt werden; **STOPP muss bleiben, bis auf allen anderen Geräten alles fertig ist**; zusätzlich eine **Kontrolle** (eigener erkannter Text, wie es ausgespielt wird, dass es bei den anderen ankommt).
+
+**Gefundene Verlustquellen im Code (aus dem Quelltext abgelesen, nicht auf der GPU gemessen; Ursache der konkreten Beobachtung deshalb nicht bewiesen):**
+1. `TTS_SKIP_BACKLOG=2`: bei 2 wartenden Sätzen entfiel der **Ton**, der Untertitel blieb → passt genau zu „im Untertitel gesehen, aber nicht gesagt“. Jetzt praktisch aus (100000).
+2. Zuhörer-Seite ließ Ton aus, wenn mehr als 6 s Ton warteten (`MAX_AUDIO_BACKLOG_S`). Jetzt nie.
+3. `LANG_QUEUE_MAX=8`: bei Rückstau wurde der **älteste Satz verworfen**. Jetzt 500; Zuhörer-Warteschlange 50 → 500.
+4. Audio-Warteschlange des Bedienplatzes (100 Blöcke = 5 s) verwarf bei langsamer Erkennung **Sprache**. Jetzt 3000 Blöcke (150 s); ein Verwerfen wird dem Bedienplatz gemeldet.
+5. Satzende ohne Satzzeichen: der **letzte Satz blieb im Segmentierer liegen**, bis weitergesprochen wurde. Jetzt wird der Rest nach jeder Pause sofort ausgegeben.
+6. Höchstlänge des Abschnitts schnitt **mitten im Wort**. Jetzt Schnitt an der leisesten Stelle im letzten Viertel (0,5 bis 3 s), der Rest bleibt für den nächsten Abschnitt erhalten.
+7. Nachlauf nach dem letzten lauten Block wurde auf 250 ms gekürzt (leise Wortenden gingen verloren). Jetzt 600 ms und Hysterese (innerhalb einer Aussage zählt ab 60 % der Schwelle noch als Sprache).
+8. Whisper-Filter zu streng (`no_speech`, `compression_ratio`, eigener VAD): Segmente konnten verschwinden. Jetzt weichere Werte; nur sehr wahrscheinlich Nicht-Sprache wird verworfen.
+9. „Gleicher Text wie zuletzt“ verwarf eine **bewusst wiederholte Aussage**. Entfernt. Entdoppelung konservativer (Sätze erst ab 4 gleichen in Folge, Wortfolgen ab 4, Einzelwörter ab 6).
+10. Übersetzung wurde bei zu kleiner Token-Grenze **abgeschnitten**. Jetzt: Abbruch erkennen und mit doppelter Grenze wiederholen (bis `MT_MAX_NEW_TOKENS`=1024).
+11. Zeitgrenzen der Sperre (20 s Verarbeitung, 15 s Wiedergabe) konnten **vor** dem Ende lang laufender Ausgabe freigeben. Jetzt 90 s Verarbeitung und Wiedergabe-Grenze = erwartete Tonlänge + 8 s (mindestens 15 s).
+
+**Neu für Kontrolle und Eindeutigkeit (Browser-Test mit Attrappen, 211 Tests grün; GPU/Tablets ungetestet):**
+- Jedes Zuhörer-Gerät meldet je Satz **„angezeigt“** und **„fertig gesprochen“** (nur Zähler, keine Inhalte); der Bedienplatz zeigt in der **Kontroll-Ansicht** (aufklappbar) pro Satz den erkannten deutschen Text, die Übersetzung je Sprache und „angezeigt x/y · gesprochen x/y“ (letzte 2 Minuten, höchstens 10 Sätze).
+- **Vortrag:** STOPP bleibt, bis der Server „nichts in Arbeit und alle Geräte fertig“ meldet (`flow`); ohne erkannte Abschnitte nach 8 s frei; Höchstdauer 180 s. **Gespräch:** echte Sperre wie bisher, jetzt mit Tonlänge in der Zeitgrenze.
+- **Warnungen** am Bedienplatz (rot): Spracherkennung fehlgeschlagen, nicht verstanden, Übersetzung fehlgeschlagen, Audio verworfen, Gerät hat nicht bestätigt; der Gast bekommt „Nicht verstanden. Bitte wiederholen.“
+- **Grenzen:** „fertig gesprochen“ meldet das Gerät (Browser: Ton zu Ende); ob ein Mensch es **verstanden** hat oder die **Übersetzung inhaltlich stimmt**, prüft das System nicht. Hundertprozentige Sicherheit ist nicht belegt; Qualität (Ukrainisch, lange Sätze mit 4B) bleibt zu messen; denkbar als Zusatz: Rückübersetzung ins Deutsche zur Kontrolle (nicht gebaut).
+

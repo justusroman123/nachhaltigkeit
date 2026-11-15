@@ -117,3 +117,21 @@ def test_im_vortrag_gibt_es_keine_sperre(client):
     op.send_json({"type": "talk", "on": True})                      # wird ignoriert
     op.send_json({"type": "ping", "t": 1})
     assert recv_until(op, lambda m: m["type"] == "pong")
+
+
+def test_vortrag_zustellkontrolle_angezeigt_und_gesprochen(client):
+    """Rueckmeldungen der Zuhoerer: der Bedienplatz sieht, wer es angezeigt und fertig gesprochen hat; flow zeigt busy."""
+    rid = client.post("/api/rooms", headers=hdr()).json()["room_id"]
+    uk = open_listener(client, token_of(client.post(f"/api/rooms/{rid}/listener-links", headers=hdr(), json={"lang": "uk"}).json()))
+    recv(uk)
+    op = open_operator(client, rid)
+    for _ in range(3):
+        op.send_bytes(chunk(100))
+    msg, _ = recv_until(uk, lambda m: m["type"] == "translation")
+    flow, _ = recv_until(op, lambda m: m["type"] == "flow" and m["busy"] is True)
+    uk.send_json({"type": "shown", "seq": msg["seq"]})
+    d, _ = recv_until(op, lambda m: m["type"] == "delivery" and m["seq"] == msg["seq"] and m["shown"] == 1)
+    assert d["expected"] == 1 and d["played"] == 0 and d["lang"] == "uk"
+    uk.send_json({"type": "played", "seq": msg["seq"]})
+    recv_until(op, lambda m: m["type"] == "delivery" and m["seq"] == msg["seq"] and m["played"] == 1)
+    recv_until(op, lambda m: m["type"] == "flow" and m["busy"] is False)          # alles angekommen

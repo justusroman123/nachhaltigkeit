@@ -87,8 +87,15 @@
   <div class="meter" aria-label="Pegel"><div id="level"></div></div>
   <div class="talk" aria-label="Länge des aktuellen Abschnitts"><div id="talkBar"></div></div>
   <p id="talkMsg" class="talkmsg" role="status" aria-live="polite">Noch nicht gesendet.</p>
+  <p id="problemBar" class="problem" role="alert" hidden></p>
   <p id="micMsg" role="status"></p>
 </section>
+
+<details id="stepCheck" class="card" hidden>
+  <summary><strong>Kontrolle</strong> – was wurde erkannt, übersetzt und bei den Geräten angezeigt und gesprochen?</summary>
+  <p class="muted">Pro Satz: Ihr erkannter deutscher Text, die Übersetzung je Sprache und ob alle Zuhörer-Geräte sie <b>angezeigt</b> und <b>fertig gesprochen</b> haben (letzte 2 Minuten, höchstens 10 Sätze).</p>
+  <div id="checkList"><p class="muted" id="checkEmpty">Noch nichts gesendet.</p></div>
+</details>
 
 <section id="stepGuest" class="card" hidden>
   <h2>Antworten der Gäste <small class="muted">(letzte 2 Minuten, danach gelöscht)</small></h2>

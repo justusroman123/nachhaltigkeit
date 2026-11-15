@@ -16,7 +16,7 @@
     backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo'),
     talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg'),
     vortragBox: $('vortragBox'), convBox: $('convBox'), btnTalk: $('btnTalk'), btnRelease: $('btnRelease'),
-    stepGuest: $('stepGuest'), guestLog: $('guestLog') };
+    stepGuest: $('stepGuest'), guestLog: $('guestLog'), stepCheck: $('stepCheck'), checkList: $('checkList'), problemBar: $('problemBar') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
@@ -28,7 +28,8 @@
        stop     rot    "STOPP, wird uebersetzt": bleibt mindestens 1,5 s und hoechstens 8 s stehen, bis die Uebersetzung da ist.
      Rein am Bedienplatz aus dem Pegel berechnet (Grenzen vom Server, /api/config). Keine Inhalte. */
   const talk = { state: 'idle', ms: 0, quietMs: 0, loudRun: 0, stopSince: 0, got: false, hintMs: 0 };
-  const TALK_MIN_LOUD_MS = 250, TALK_MIN_SPEECH_MS = 500, STOP_MIN_MS = 1500, STOP_MAX_MS = 8000;
+  const flow = { busy: false, pending: 0, awaiting: 0, seenBusy: false };   // Server: laeuft noch etwas / fehlt noch ein "fertig" eines Geraets?
+  const TALK_MIN_LOUD_MS = 250, TALK_MIN_SPEECH_MS = 500, STOP_MIN_MS = 1500, STOP_NOSEG_MS = 8000, STOP_MAX_MS = 180000;
   const TALK_WARN = 0.65, TALK_LATE = 0.85;
   function talkShow(kind, text, frac) {
     e.talk.className = 'talk ' + kind;
@@ -44,9 +45,12 @@
     const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), now = performance.now();
     if (talk.state === 'stop') {
       const el = now - talk.stopSince;
-      if ((talk.got && el >= STOP_MIN_MS) || el >= STOP_MAX_MS) return talkIdle();
+      // STOPP bleibt, bis der Server meldet: nichts wird mehr verarbeitet und alle Geraete haben "fertig" gemeldet
+      const done = (flow.seenBusy && !flow.busy && el >= STOP_MIN_MS) || (!flow.seenBusy && el >= STOP_NOSEG_MS) || el >= STOP_MAX_MS;
+      if (done) return talkIdle();
       talk.hintMs = loud ? talk.hintMs + blockMs : 0;      // Zustand bleibt, nur der Hinweistext aendert sich
-      talkShow('stop', talk.hintMs >= 400 ? '■ STOPP – bitte noch warten, es wird übersetzt' : '■ STOPP – wird übersetzt', 1);
+      const what = flow.pending > 0 ? 'wird übersetzt' : (flow.awaiting > 0 ? 'wird bei den Zuhörern ausgegeben' : 'wird übersetzt');
+      talkShow('stop', talk.hintMs >= 400 ? '■ STOPP – bitte noch warten, ' + what : '■ STOPP – ' + what, 1);
       return;
     }
     if (talk.state === 'idle') {
@@ -58,7 +62,7 @@
       talk.quietMs = loud ? 0 : talk.quietMs + blockMs;
       if (talk.quietMs >= quietLimit) {                        // lange Pause: der Server schliesst den Abschnitt ab
         if (talk.ms - talk.quietMs < TALK_MIN_SPEECH_MS) return talkIdle();   // zu kurz, der Server verwirft ihn
-        talk.state = 'stop'; talk.stopSince = now; talk.got = false; talk.hintMs = 0;
+        talk.state = 'stop'; talk.stopSince = now; talk.got = false; talk.hintMs = 0; flow.seenBusy = flow.busy;
         return talkShow('stop', '■ STOPP – wird übersetzt', 1);
       }
     }
@@ -130,6 +134,48 @@
     row.append(who, txt); e.guestLog.prepend(row);
     while (e.guestLog.querySelectorAll('.guestline').length > 40) e.guestLog.querySelector('.guestline:last-of-type').remove();
   }
+
+  /* ---------- Kontrolle: erkannter Text, Uebersetzung je Sprache, Zustellung (angezeigt/gesprochen) ---------- */
+  const CHECK_MAX = 10, checks = new Map();
+  function checkEntry(seq, src) {
+    let c = checks.get(seq);
+    if (!c) {
+      const empty = $('checkEmpty'); if (empty) empty.remove();
+      const box = document.createElement('div'); box.className = 'chk'; box.dataset.at = String(Date.now());
+      const head = document.createElement('div'); head.className = 'src';
+      box.appendChild(head); e.checkList.prepend(box);
+      c = { box, head, rows: {} }; checks.set(seq, c);
+      while (checks.size > CHECK_MAX) { const k = checks.keys().next().value; checks.get(k).box.remove(); checks.delete(k); }
+    }
+    if (src) c.head.textContent = '#' + seq + '  Erkannt: ' + src;
+    return c;
+  }
+  function checkRow(c, lang) {
+    if (!c.rows[lang]) {
+      const row = document.createElement('div'); row.className = 'row';
+      const tr = document.createElement('span'); tr.className = 'tr'; const st = document.createElement('span'); st.className = 'st'; st.textContent = '⏳ wartet …';
+      row.append(tr, st); c.box.appendChild(row); c.rows[lang] = { tr, st };
+    }
+    return c.rows[lang];
+  }
+  function checkTranslation(d) { const c = checkEntry(d.seq, d.text_src); checkRow(c, d.lang).tr.textContent = '[' + (SHORT[d.lang] || d.lang) + '] ' + d.text; }
+  function checkGuest(d) { const c = checkEntry(d.seq, d.text_src); c.head.textContent = '#' + d.seq + '  Gast (' + (SHORT[d.from_lang] || d.from_lang) + '): ' + d.text_src; checkRow(c, 'de').tr.textContent = '[Deutsch] ' + d.text; const st = c.rows.de.st; st.textContent = '✔ beim Mitarbeiter'; st.className = 'st ok'; c.box.classList.add('ok'); }
+  function checkDelivery(d) {
+    const c = checkEntry(d.seq, null), r = checkRow(c, d.lang);
+    if (d.expected === 0) { r.st.textContent = 'kein Zuhörer'; return; }
+    const full = d.shown >= d.expected && d.played >= d.expected;
+    r.st.textContent = (full ? '✔ ' : '⏳ ') + 'angezeigt ' + d.shown + '/' + d.expected + ' · gesprochen ' + d.played + '/' + d.expected;
+    r.st.className = 'st' + (full ? ' ok' : '');
+    c.box.classList.toggle('ok', Object.values(c.rows).every((x) => x.st.className.includes('ok')));
+  }
+  const PROBLEMS = { spracherkennung: 'Spracherkennung fehlgeschlagen, ein Satz ging verloren.', nicht_erkannt: 'Nicht verstanden (zu leise oder unklar).',
+    uebersetzung: 'Übersetzung fehlgeschlagen.', audio_verworfen: 'Verbindung zu langsam, ein Stück Sprache ging verloren.',
+    geraet_antwortet_nicht: 'Ein Gerät hat die Ausgabe nicht bestätigt (Verbindung prüfen).', gast_nicht_erkannt: 'Gast nicht verstanden (zu leise oder unklar).' };
+  let problemTimer = 0;
+  function showProblem(d) {
+    e.problemBar.textContent = '⚠ ' + (PROBLEMS[d.what] || 'Fehler') + (d.lang ? ' (' + (SHORT[d.lang] || d.lang) + ')' : '') + ' Bitte den letzten Satz wiederholen und in der Kontrolle prüfen.';
+    e.problemBar.hidden = false; clearTimeout(problemTimer); problemTimer = setTimeout(() => { e.problemBar.hidden = true; }, 30000);
+  }
   function talkTranslated() { if (talk.state === 'stop') talk.got = true; }
 
   const api = (method, path, body) => fetch(path, {
@@ -180,7 +226,7 @@
     } catch (_) { return say(e.roomMsg, 'Server nicht erreichbar.', 'bad'); }
     e.key.value = '';
     e.stepStart.hidden = true;
-    [e.stepInvite, e.stepMic, e.stepLive].forEach((s) => { s.hidden = false; });
+    [e.stepInvite, e.stepMic, e.stepLive, e.stepCheck].forEach((s) => { s.hidden = false; });
     const conversation = room.mode === 'gespraech';
     e.vortragBox.hidden = conversation; e.convBox.hidden = !conversation; e.stepGuest.hidden = !conversation;
     await createInvite();
@@ -197,7 +243,8 @@
     if (room) { try { await api('DELETE', '/api/rooms/' + room.room_id); } catch (_) {} }
     room = null; key = '';
     e.log.replaceChildren(); e.statL.replaceChildren(); e.qr.removeAttribute('src'); e.linkText.textContent = '';
-    [e.stepInvite, e.stepMic, e.stepLive, e.stepGuest].forEach((s) => { s.hidden = true; });
+    [e.stepInvite, e.stepMic, e.stepLive, e.stepGuest, e.stepCheck].forEach((s) => { s.hidden = true; });
+    e.checkList.querySelectorAll('.chk').forEach((n) => n.remove());
     e.guestLog.querySelectorAll('.guestline').forEach((n) => n.remove());
     e.stepStart.hidden = false;
     say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt beenden oder pausieren (Kosten laufen sonst weiter) und auf den Tablets den Browserverlauf löschen.', 'ok');
@@ -301,10 +348,13 @@
         if (room && room.mode === 'gespraech') convRender();
         clearInterval(pingTimer);
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
-      } else if (d.type === 'translation') { showMessage(d); talkTranslated(); }
+      } else if (d.type === 'translation') { showMessage(d); talkTranslated(); checkTranslation(d); }
       else if (d.type === 'turn') convTurn(d);
+      else if (d.type === 'flow') { flow.busy = d.busy; flow.pending = d.pending; flow.awaiting = d.awaiting; if (d.busy) flow.seenBusy = true; }
+      else if (d.type === 'delivery') checkDelivery(d);
+      else if (d.type === 'problem') showProblem(d);
       else if (d.type === 'busy') { conv.talking = false; convRender('Gerade spricht jemand oder es wird übersetzt.'); }
-      else if (d.type === 'guest_message') showGuest(d);
+      else if (d.type === 'guest_message') { showGuest(d); checkGuest(d); }
       else if (d.type === 'pong') showPing(performance.now() - d.t);
     };
   }
@@ -424,7 +474,8 @@
 
   // Verlauf im Bedienplatz: Eintraege aelter als 2 Minuten werden geloescht
   setInterval(() => { const limit = Date.now() - 120000;
-    [...e.log.children, ...e.guestLog.querySelectorAll('.guestline')].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); }); }, 1000);
+    [...e.log.children, ...e.guestLog.querySelectorAll('.guestline')].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); });
+    [...checks].forEach(([k, c]) => { if (Number(c.box.dataset.at) < limit) { c.box.remove(); checks.delete(k); } }); }, 1000);
 
   window.addEventListener('pagehide', () => { stopSending(); });
 })();

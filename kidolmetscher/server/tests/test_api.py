@@ -22,6 +22,15 @@ def token_of(link):
     return link["path"].split("#t=")[1].split("&")[0]
 
 
+def recv_type(ws, kind, limit=20):
+    """Naechste Nachricht der gewuenschten Art (der Bedienplatz bekommt auch flow-/delivery-Meldungen dazwischen)."""
+    for _ in range(limit):
+        m = ws.receive_json()
+        if m.get("type") == kind:
+            return m
+    raise AssertionError(f"keine Nachricht vom Typ {kind}")
+
+
 def open_operator(client, room_id):
     ws = client.stack.enter_context(client.websocket_connect("/ws/operator"))
     ws.send_json({"type": "hello", "room_id": room_id, "operator_key": KEY})
@@ -102,7 +111,7 @@ def test_audio_wird_an_zuhoerer_der_sprache_geliefert(client):
         assert t["t_audio_in"] <= t["t_asr"] <= t["t_mt"] <= t["t_tts"] <= t["t_out"]
         assert m["audio"]["format"] == "wav" and m["audio"]["data_b64"]
     # Bedienplatz sieht auch den Quelltext
-    got = {op.receive_json()["lang"] for _ in range(2)}
+    got = {recv_type(op, "translation")["lang"] for _ in range(2)}
     assert got == {"uk", "en"}
 
 
@@ -112,7 +121,7 @@ def test_operator_nachricht_hat_quelltext(client):
     l.receive_json()
     op = open_operator(client, rid)
     op.send_bytes(chunk(100)); op.send_bytes(chunk(100))
-    m = op.receive_json()
+    m = recv_type(op, "translation")
     assert m["text_src"].startswith("Dies ist Testsatz") and m["lang"] == "tr"
 
 

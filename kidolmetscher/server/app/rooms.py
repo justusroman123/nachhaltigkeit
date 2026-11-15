@@ -16,7 +16,7 @@ from typing import Callable, Optional
 
 from .config import Settings
 from .messages import SUPPORTED_LANGS, control_message
-from .turns import FREI, TurnManager
+from .turns import FREI, FlowTracker, TurnManager
 
 MODES = ("vortrag", "gespraech")
 
@@ -89,6 +89,8 @@ class Room:
         self.mode = mode
         self._operator_q: asyncio.Queue = asyncio.Queue(200)    # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
         self.turns = TurnManager(on_change=self._turn_changed)  # Sperre im Gespraechsmodus
+        self.flow = FlowTracker(on_change=self._flow_changed)   # Vortrag: nur Anzeige, ob noch etwas laeuft
+        self._delivery: dict[tuple[int, str], dict] = {}        # (seq, sprache) -> wer hat es bekommen/angezeigt/gesprochen (nur Zaehler, keine Inhalte)
         self.settings = settings
         self.langs: tuple[str, ...] = tuple(langs) if langs else tuple(settings.default_langs)
         self._clock = clock
@@ -194,13 +196,20 @@ class Room:
             ring = self._ring.setdefault(lang, deque(maxlen=n))
             ring.append((self._clock(), {**message, "audio": None, "replay": True}))   # ohne Audio
         delivered = 0
+        devices: list[str] = []
         for l in self._listeners.values():
             if l.lang == lang:
                 l.push(message)
                 delivered += 1
-                if self.mode == "gespraech" and isinstance(message.get("seq"), int):
-                    self.turns.expect_playback(message["seq"], f"gast:{l.id}", _audio_seconds(message))   # Geraet muss "fertig" melden
+                if isinstance(message.get("seq"), int):
+                    self.tracker.expect_playback(message["seq"], f"gast:{l.id}", _audio_seconds(message))   # Geraet muss "fertig" melden
+                    devices.append(f"gast:{l.id}")
         self.counters["messages_out"] += delivered
+        if devices and isinstance(message.get("seq"), int):
+            self._delivery[(message["seq"], lang)] = {"exp": set(devices), "shown": set(), "played": set(), "audio": bool(message.get("audio"))}
+            while len(self._delivery) > 100:
+                self._delivery.pop(next(iter(self._delivery)))
+            self._push_delivery(message["seq"], lang)
         return delivered
 
     # --- Gespraechsmodus ---
@@ -210,6 +219,31 @@ class Room:
         self.push_operator(msg)
         for l in self._listeners.values():
             l.push(msg)
+
+    @property
+    def tracker(self):
+        """Gespraech: TurnManager (echte Sperre), Vortrag: FlowTracker (nur Anzeige)."""
+        return self.turns if self.mode == "gespraech" else self.flow
+
+    def _flow_changed(self, snapshot: dict) -> None:
+        self.push_operator(control_message("flow", **snapshot))
+
+    def _push_delivery(self, seq: int, lang: str) -> None:
+        d = self._delivery.get((seq, lang))
+        if d is not None:
+            self.push_operator(control_message("delivery", seq=seq, lang=lang, expected=len(d["exp"]), shown=len(d["shown"]),
+                                                 played=len(d["played"]), audio=d["audio"]))
+
+    def ack(self, device: str, seq: int, kind: str) -> None:
+        """Zuhoerer-Geraet meldet "angezeigt" (shown) oder "fertig gesprochen" (played) fuer eine Nachricht."""
+        for (s, lang), d in list(self._delivery.items()):
+            if s == seq and device in d["exp"]:
+                d["shown"].add(device)
+                if kind == "played":
+                    d["played"].add(device)
+                self._push_delivery(s, lang)
+        if kind == "played":
+            self.tracker.playback_done(seq, device)
 
     def push_operator(self, message: dict) -> None:
         if self.closed:
@@ -238,6 +272,7 @@ class Room:
         self._listeners.clear()
         self._tokens.clear()
         self._ring.clear()
+        self._delivery.clear()
         self.turns.release()
         self.operator_active = False
 
