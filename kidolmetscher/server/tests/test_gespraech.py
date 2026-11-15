@@ -99,7 +99,16 @@ def test_gast_spricht_mitarbeiter_bekommt_deutschen_text(conv):
     m, _ = recv_until(op, lambda m: m["type"] == "guest_message")
     assert m["from_lang"] == "uk" and m["text"].startswith("[de] Dies ist Testsatz")
     assert set(m["t"]) == {"t_audio_in", "t_asr", "t_mt", "t_tts", "t_out"}
-    recv_until(op, lambda m: m["type"] == "turn" and m["state"] == "frei")
+    assert m["audio"] and m["t"]["t_tts"] is not None               # deutsche Vorlesung fuer den Mitarbeiter
+    op.send_json({"type": "played", "seq": m["seq"]})               # Bedienplatz: fertig vorgelesen -> Sperre faellt
+    for _ in range(10):                                             # weitere Abschnitte derselben Aussage ebenfalls quittieren
+        x = recv(op)
+        if x["type"] == "guest_message":
+            op.send_json({"type": "played", "seq": x["seq"]})
+        if x["type"] == "turn" and x["state"] == "frei":
+            break
+    else:
+        raise AssertionError("Sperre wurde nicht frei")
 
 
 def test_gaeste_grenze(conv):

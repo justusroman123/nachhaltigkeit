@@ -18,7 +18,8 @@ FREI, SPRICHT, UEBERSETZT, WIEDERGABE = "frei", "spricht", "uebersetzt", "wieder
 
 @dataclass
 class TurnLimits:
-    speak_max_s: float = 120.0      # laengste Aussage am Stueck (Annahme, messen)
+    speak_max_s: float = 1800.0     # nur Notgrenze gegen haengende Geraete (30 min); kein Redezeit-Limit (Nutzerwunsch 15.11.2026)
+    pickup_s: float = 30.0          # automatisch uebernommene Wortmeldung: so lange darauf warten, dass das Geraet "Sprechen" bestaetigt (Annahme)
     process_max_s: float = 90.0     # laengste Verarbeitung nach dem Sprechen; Vollstaendigkeit geht vor (Annahme, messen)
     play_max_s: float = 15.0        # Mindest-Wartezeit auf "fertig" der Geraete; dazu kommt die Laenge des erwarteten Tons (Annahme)
     grace_s: float = 0.5            # kurze Schonfrist nach "alle fertig", bevor frei gemeldet wird (Annahme)
@@ -38,30 +39,62 @@ class TurnManager:
         self._play_s: dict[str, float] = {}      # je Geraet: Summe der erwarteten Tonlaenge in s
         self._deadline: Optional[float] = None
         self._free_at: Optional[float] = None    # Schonfrist laeuft bis dahin
+        self._pickup = False                     # Wort wurde automatisch uebergeben, Geraet hat noch nicht bestaetigt
+        self.waiting: list[str] = []             # Wortmeldungen in Reihenfolge; wer dran ist, bekommt das Wort automatisch
 
     # ---------- Hilfen ----------
     def _set(self, state: str, who: Optional[str], limit_s: Optional[float], reason: str = "") -> None:
         self.state, self.who = state, who
         self._deadline = self.clock() + limit_s if limit_s else None
         self._free_at = None
+        self._pickup = False
         if state == FREI:
             self.pending = 0
             self.awaiting.clear()
             self._play_s.clear()
+            if self.waiting:                     # naechste Wortmeldung bekommt das Wort sofort (kein Dazwischenfunken)
+                nxt = self.waiting.pop(0)
+                self.state, self.who = SPRICHT, nxt
+                self._deadline = self.clock() + self.limits.pickup_s
+                self._pickup = True
+                reason = "naechster"
         if self.on_change:
             self.on_change(self.snapshot(reason))
 
     def snapshot(self, reason: str = "") -> dict:
-        return {"state": self.state, "who": self.who, "reason": reason}
+        return {"state": self.state, "who": self.who, "reason": reason, "waiting": list(self.waiting)}
 
     # ---------- Ablauf ----------
     def claim(self, who: str) -> tuple[bool, str]:
         """Jemand moechte sprechen. Nur im Zustand frei; wer zuerst kommt, bekommt das Wort."""
         self.tick()
+        if self.state == SPRICHT and self.who == who:         # schon dran (z. B. nach Wortmeldung automatisch uebernommen)
+            if self._pickup:
+                self._pickup = False
+                self._deadline = self.clock() + self.limits.speak_max_s
+            return True, ""
         if self.state != FREI:
             return False, "busy"
         self._set(SPRICHT, who, self.limits.speak_max_s)
         return True, ""
+
+    def request(self, who: str) -> str:
+        """Wortmeldung: "Ich moechte auch sprechen". Ist frei, bekommt man das Wort sofort; sonst wird man vorgemerkt,
+        der Sprechende wird nur benachrichtigt (keine Unterbrechung). Rueckgabe: "dran" | "vorgemerkt" """
+        ok, _ = self.claim(who)
+        if ok:
+            return "dran"
+        if who not in self.waiting:
+            self.waiting.append(who)
+            if self.on_change:
+                self.on_change(self.snapshot("wortmeldung"))
+        return "vorgemerkt"
+
+    def cancel_request(self, who: str) -> None:
+        if who in self.waiting:
+            self.waiting.remove(who)
+            if self.on_change:
+                self.on_change(self.snapshot("wortmeldung_zurueck"))
 
     def end_speaking(self, who: str) -> None:
         """Aussage zu Ende (Pause erkannt, Antippen oder Zeitgrenze)."""
@@ -91,6 +124,7 @@ class TurnManager:
     def device_left(self, device: str) -> None:
         """Geraet getrennt: nicht mehr warten; spricht es gerade, gilt die Aussage als beendet."""
         self.awaiting = {a for a in self.awaiting if a[1] != device}
+        self.cancel_request(device)
         if self.who == device and self.state == SPRICHT:
             self.end_speaking(device)
         self._advance()

@@ -49,7 +49,7 @@ def parse_tts_voices(raw: str) -> dict[str, tuple[str, Optional[int]]]:
             if speaker < 0:
                 raise ConfigError(f"TTS_VOICES: Sprecher-Nummer ungueltig in '{part}'")
         # Stimmenname wird zum Dateinamen: keine Pfadanteile zulassen
-        if not sep or lang not in SUPPORTED_LANGS or not re.fullmatch(r"[A-Za-z0-9_.-]+", voice) or ".." in voice:
+        if not sep or lang not in (*SUPPORTED_LANGS, "de") or not re.fullmatch(r"[A-Za-z0-9_.-]+", voice) or ".." in voice:
             raise ConfigError(f"TTS_VOICES: erwartet 'sprache=stimme[:sprecher]', unzulaessig: '{part}'")
         out[lang] = (voice, speaker)
     return out

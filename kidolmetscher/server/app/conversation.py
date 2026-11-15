@@ -7,9 +7,9 @@ import logging
 from typing import Callable
 
 from .config import Settings
-from .messages import control_message, now_ms
+from .messages import AudioPayload, control_message, now_ms
 from .pipeline.base import AudioChunk, Pipeline
-from .rooms import Listener, Room
+from .rooms import Listener, Room, _audio_seconds
 
 log = logging.getLogger("kidolmetscher")
 
@@ -57,11 +57,26 @@ class GuestPath:
 
     async def _translate(self, seg) -> None:
         try:
-            text = await self.pipeline.mt.translate(seg.text, self.lang, "de")
+            to = self.settings.stage_timeout_s
+            text = await asyncio.wait_for(self.pipeline.mt.translate(seg.text, self.lang, "de"), to)
             t_mt = self._clock()
-            self.room.push_operator(control_message(
-                "guest_message", seq=self.room.next_seq(), from_lang=self.lang, text=text, text_src=seg.text,
-                t={"t_audio_in": seg.t_audio_in, "t_asr": seg.t_asr, "t_mt": t_mt, "t_tts": None, "t_out": self._clock()}))
+            audio, t_tts = None, None
+            if self.settings.tts_enabled:                  # deutsche Stimme (falls eingerichtet): Mitarbeiter muss nicht aufs Geraet schauen
+                try:
+                    res = await asyncio.wait_for(self.pipeline.tts.synthesize(text, "de"), to)
+                    t_tts = self._clock()
+                    if res is not None:
+                        audio = AudioPayload(res.audio, res.sample_rate, res.fmt).to_dict()
+                except Exception as exc:
+                    self.room.counters["tts_errors"] += 1
+                    log.error("gast_tts_fehler typ=%s", self.settings.fehler(exc))
+            seq = self.room.next_seq()
+            msg = control_message(
+                "guest_message", seq=seq, from_lang=self.lang, text=text, text_src=seg.text, audio=audio,
+                t={"t_audio_in": seg.t_audio_in, "t_asr": seg.t_asr, "t_mt": t_mt, "t_tts": t_tts, "t_out": self._clock()})
+            if audio:                                       # der Bedienplatz muss "fertig gesprochen" melden (Sperre wartet darauf)
+                self.room.tracker.expect_playback(seq, "staff", _audio_seconds(msg))
+            self.room.push_operator(msg)
             self.room.counters["guest_messages"] += 1
         except Exception as exc:                # nie Inhalte loggen, nur den Typ
             self.room.counters["pipeline_errors"] += 1

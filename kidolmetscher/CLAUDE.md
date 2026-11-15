@@ -36,4 +36,4 @@ Sagt der Nutzer „Ich möchte die VM wieder einrichten“ (oder Ähnliches), de
 
 ## Betriebsarten (FEST, nicht erweitern ohne Auftrag des Nutzers)
 Es gibt **genau zwei** Betriebsarten: **Vortrag** (durchgehend sprechen, keine Sperre, Sprecher muss nicht aufs Gerät schauen) und **Gespräch** (abwechselnd, Sperre für alle, bis alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben). Details: Protokoll Abschnitt 27. Keine dritte Betriebsart, keine zusätzlichen Schalter.
-
+Innerhalb des Gesprächs (Protokoll Abschnitt 29): kein Redezeit-Limit, Wortmeldung „Ich möchte auch sprechen“ (keine Unterbrechung, automatische Übergabe), deutsche Vorlesung der Gast-Antworten am Bedienplatz (deutsche Stimme noch nicht eingerichtet, Lizenz ungeprüft).

@@ -355,6 +355,13 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             elif room.turns.state == SPRICHT and room.turns.who == "staff":
                                 staff_open = True              # auch ohne Audio abschliessen (Marker erzwingen)
                                 end_staff_utterance()
+                        elif kind == "want" and room.strict:       # Wortmeldung des Mitarbeiters (keine Unterbrechung)
+                            if data_t.get("on"):
+                                room.turns.request("staff")
+                            else:
+                                room.turns.cancel_request("staff")
+                        elif kind == "played" and isinstance(data_t.get("seq"), int) and not isinstance(data_t.get("seq"), bool):
+                            room.ack("staff", data_t["seq"], "played")     # deutsche Vorlesung der Gast-Antwort ist zu Ende
                         elif kind == "release":
                             room.turns.release()               # Notbremse des Mitarbeiters
                     except Exception:
@@ -426,6 +433,13 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             if room.turns.state == SPRICHT and room.turns.who == device:
                 room.turns.end_speaking(device)
 
+        async def ensure_guest() -> None:
+            nonlocal guest
+            if guest is None or guest.lang != listener.lang:
+                if guest is not None:
+                    await guest.close()
+                guest = GuestPath(room, pipeline, settings, listener)
+
         async def drain():             # liest Auswahl-Nachrichten und (Gespraechsmodus) Sprechen/Audio/fertig; erkennt, wenn der Client geht
             nonlocal guest
             while True:
@@ -456,14 +470,17 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if kind == "talk" and data.get("on"):
                         ok, _ = room.turns.claim(device)
                         if ok:
-                            if guest is None or guest.lang != listener.lang:
-                                if guest is not None:
-                                    await guest.close()
-                                guest = GuestPath(room, pipeline, settings, listener)
+                            await ensure_guest()
                         else:
                             listener.push(control_message("busy"))
                     elif kind == "talk":
                         await end_talk()
+                    elif kind == "want":                    # Wortmeldung: vorgemerkt, wird automatisch drankommen
+                        if data.get("on"):
+                            if room.turns.request(device) == "dran":
+                                await ensure_guest()
+                        else:
+                            room.turns.cancel_request(device)
 
         recv_task = asyncio.create_task(drain())
         get_task: Optional[asyncio.Task] = None

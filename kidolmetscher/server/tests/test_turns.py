@@ -75,3 +75,55 @@ def test_fremdes_ende_wird_ignoriert():
     _, _, t = neu()
     t.claim("staff"); t.end_speaking("gast:1")
     assert t.state == SPRICHT
+
+
+def test_wortmeldung_unterbricht_nicht_und_uebernimmt_automatisch():
+    u, ev, t = neu(grace_s=0.5)
+    t.claim("staff")
+    assert t.request("gast:1") == "vorgemerkt"
+    assert t.state == SPRICHT and t.who == "staff"                  # keine Unterbrechung
+    assert ev[-1]["waiting"] == ["gast:1"] and ev[-1]["reason"] == "wortmeldung"
+    t.end_speaking("staff"); u.t += 0.6; t.tick()                    # nichts zu verarbeiten, alles fertig
+    assert t.state == SPRICHT and t.who == "gast:1" and t.waiting == []
+    assert ev[-1]["reason"] == "naechster"
+
+
+def test_wortmeldungen_der_reihe_nach_und_zurueckziehen():
+    u, _, t = neu(grace_s=0.5)
+    t.claim("staff")
+    t.request("gast:1"); t.request("gast:2"); t.request("gast:1")   # doppelt zaehlt einmal
+    assert t.waiting == ["gast:1", "gast:2"]
+    t.cancel_request("gast:1")
+    assert t.waiting == ["gast:2"]
+    t.end_speaking("staff"); u.t += 0.6; t.tick()
+    assert t.who == "gast:2"
+
+
+def test_wortmeldung_bei_frei_gibt_das_wort_sofort():
+    _, _, t = neu()
+    assert t.request("gast:1") == "dran" and t.who == "gast:1"
+    assert t.claim("gast:1")[0]                                      # Bestaetigung vom Geraet bleibt gueltig
+
+
+def test_keine_redezeitgrenze_von_2_minuten_mehr():
+    u, _, t = neu()
+    t.claim("staff")
+    u.t += 600; t.tick()                                             # 10 Minuten am Stueck
+    assert t.state == SPRICHT and t.who == "staff"
+
+
+def test_uebernommenes_wort_ohne_bestaetigung_geht_weiter():
+    u, _, t = neu(grace_s=0.5, pickup_s=30)
+    t.claim("staff"); t.request("gast:1")
+    t.end_speaking("staff"); u.t += 0.6; t.tick()
+    assert t.who == "gast:1"
+    u.t += 31; t.tick()                                              # Geraet meldet sich nicht: nicht ewig blockieren
+    assert t.state != SPRICHT
+    u.t += 1; t.tick(); u.t += 1; t.tick()
+    assert t.state in (WIEDERGABE, FREI)
+
+
+def test_geraet_weg_nimmt_wortmeldung_zurueck():
+    _, _, t = neu()
+    t.claim("staff"); t.request("gast:1"); t.device_left("gast:1")
+    assert t.waiting == []

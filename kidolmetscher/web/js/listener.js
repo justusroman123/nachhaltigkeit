@@ -190,9 +190,9 @@
 
 
   /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ---------- */
-  let mode = 'vortrag', turn = { state: 'frei', who: null }, talking = false, cfg = null;
+  let mode = 'vortrag', turn = { state: 'frei', who: null, waiting: [] }, talking = false, cfg = null, wanting = false, gotTurn = false;
   let micStream = null, micCtx = null, micNode = null, talkMs = 0, quietMs = 0, spoke = false, sentMs = 0, sentQuiet = 0;
-  const NO_SPEECH_MS = 5000;                                 // Annahme: ohne Sprache endet der Versuch nach 5 s
+  let noSpeechMs = 5000;                                     // Annahme: ohne Sprache endet der Versuch nach 5 s (nach automatischer Uebernahme laenger)
   const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
   const dock = $('talkDock'), band = $('turnBand'), sentBar = $('sentBar'), btnTalk = $('btnTalk'), talkNote = $('talkNote');
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -206,18 +206,29 @@
     talkRender();
   }
   function bandSet(kind, text) { band.className = kind; band.textContent = text; }
+  const waitsForMe = () => (turn.waiting || []).includes(myDevice);
+  const othersWait = () => (turn.waiting || []).some((d) => d !== myDevice);
   function talkRender(hint) {
     if (mode !== 'gespraech') return;
     const s = turn.state, me = mine();
-    btnTalk.textContent = me ? '✔ ' + tt('done') : '🎙 ' + tt('speak');
-    btnTalk.disabled = !(s === 'frei' || me);
+    if (me) gotTurn = true; else if (gotTurn) { gotTurn = false; wanting = false; }   // Aussage vorbei: Wortmeldung erledigt
+    btnTalk.textContent = me ? '✔ ' + tt('done') : (s === 'frei' ? '🎙 ' + tt('speak') : (waitsForMe() ? '✖ ' + tt('unwant') : '✋ ' + tt('want')));
+    btnTalk.disabled = false;
     sentBar.hidden = !me;
+    if (me && !talking) autoStart();                          // Wortmeldung: Wort wurde uebergeben, Mikrofon geht automatisch an
     if (hint) return bandSet('stop', hint);
     if (s === 'frei') bandSet('', '● ' + tt('canSpeak'));
-    else if (me) bandSet('', '🎙 ' + tt('youSpeak'));
+    else if (me) bandSet(othersWait() ? 'warn' : '', othersWait() ? '⏳ ' + tt('someoneWaits') : '🎙 ' + tt('youSpeak'));
+    else if (waitsForMe()) bandSet('stop', '⏳ ' + tt('queued'));
     else if (s === 'spricht') bandSet('stop', '■ ' + (turn.who === 'staff' ? tt('waitStaff') : tt('waitGuest')));
     else if (s === 'uebersetzt') bandSet('stop', '■ ' + tt('waitTrans'));
     else bandSet('stop', '■ ' + tt('waitPlay'));
+  }
+  async function autoStart() {                                // nur nach eigener Wortmeldung (Mikrofon-Freigabe wurde beim Antippen erteilt)
+    if (!wanting || talking || !micNode) return;
+    micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; });
+    talking = true; noSpeechMs = 15000; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
+    sendJson({ type: 'talk', on: true });
   }
   async function startMic(rate) {
     if (micNode) { micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; }); return true; }
@@ -247,16 +258,23 @@
     const f = Math.min(1, sentMs / maxMs);
     sentBar.firstElementChild.style.width = Math.round(f * 100) + '%';
     sentBar.className = 'sentbar' + (f >= 0.65 ? ' warn' : '');
-    if (mine()) bandSet(f >= 0.85 ? 'warn' : '', f >= 0.85 ? '⚠ ' + tt('done') + ' …' : '🎙 ' + tt('youSpeak'));
-    if ((spoke && quietMs >= turnEndMs()) || (!spoke && talkMs >= NO_SPEECH_MS)) endTalk();
+    if (mine() && !othersWait()) bandSet(f >= 0.85 ? 'warn' : '', f >= 0.85 ? '⚠ ' + tt('done') + ' …' : '🎙 ' + tt('youSpeak'));
+    if ((spoke && quietMs >= turnEndMs()) || (!spoke && talkMs >= noSpeechMs)) endTalk();
   }
   function endTalk() { if (!talking) return; talking = false; micOff(); sendJson({ type: 'talk', on: false }); }
   btnTalk.addEventListener('click', async () => {
     if (mine()) return endTalk();
-    if (turn.state !== 'frei' || talking) return;
-    if (!(await startMic(16000))) return;
-    talking = true; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
-    sendJson({ type: 'talk', on: true });
+    if (turn.state === 'frei' && !talking) {
+      if (!(await startMic(16000))) return;
+      talking = true; noSpeechMs = 5000; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
+      sendJson({ type: 'talk', on: true });
+      return;
+    }
+    if (turn.state === 'frei') return;
+    if (waitsForMe()) { wanting = false; sendJson({ type: 'want', on: false }); return; }      // Wortmeldung zurueckziehen
+    if (!(await startMic(16000))) return;                     // Mikrofon-Freigabe jetzt (Antippen), damit spaeter alles automatisch geht
+    micOff();
+    wanting = true; sendJson({ type: 'want', on: true }); talkRender();
   });
   window.addEventListener('pagehide', () => { talking = false; if (micStream) micStream.getTracks().forEach((tr) => tr.stop()); });
 

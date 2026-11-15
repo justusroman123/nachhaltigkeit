@@ -80,28 +80,37 @@
 
   /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ---------- */
   const conv = { talking: false, ms: 0, quietMs: 0, spoke: false, sentMs: 0, sentQuiet: 0, turn: { state: 'frei', who: null } };
-  const NO_SPEECH_MS = 5000;                                 // Annahme: ohne Sprache endet der Versuch nach 5 s
+  let noSpeechMs = 5000;                                     // Annahme: ohne Sprache endet der Versuch nach 5 s (nach automatischer Uebernahme 15 s)
   const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null }; convRender(); }
   function convMine() { return conv.turn.state === 'spricht' && conv.turn.who === 'staff'; }
+  const staffWaits = () => (conv.turn.waiting || []).includes('staff');
+  const othersWait = () => (conv.turn.waiting || []).some((d) => d !== 'staff');
   function convRender(hint) {
     const t = conv.turn, mine = convMine();
-    e.btnTalk.disabled = !(t.state === 'frei' || mine);
-    e.btnTalk.textContent = mine ? '✔ Fertig' : '🎙 Sprechen';
+    e.btnTalk.disabled = false;
+    e.btnTalk.textContent = mine ? '✔ Fertig' : (t.state === 'frei' ? '🎙 Sprechen' : (staffWaits() ? '✖ Wortmeldung zurücknehmen' : '✋ Ich möchte auch sprechen'));
     if (hint) return talkShow('stop', '■ STOPP – ' + hint, 1);
     if (t.state === 'frei') talkShow('ok', '● SPRECHEN MÖGLICH', 0);
+    else if (mine && othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', conv.sentMs / (((cfg && cfg.utterance_max_s) || 12) * 1000));
     else if (mine) talkShow('ok', '🎙 SIE SPRECHEN', conv.sentMs / (((cfg && cfg.utterance_max_s) || 12) * 1000));
+    else if (staffWaits()) talkShow('stop', '⏳ Vorgemerkt – Sie sind gleich dran', 1);
     else if (t.state === 'spricht') talkShow('stop', '■ STOPP – ein Gast spricht', 1);
     else if (t.state === 'uebersetzt') talkShow('stop', '■ STOPP – wird übersetzt', 1);
     else talkShow('stop', '■ STOPP – wird vorgelesen', 1);
   }
+  let staffGotTurn = false;
   function convTurn(d) {
     conv.turn = d;
     if (!convMine()) conv.talking = false;
+    if (convMine() && !conv.talking && staffWanted) { staffGotTurn = true; convStart(); noSpeechMs = 15000; }   // Wortmeldung: Wort wurde uebergeben, Mikrofon laeuft automatisch
+    else if (!convMine() && staffGotTurn) { staffGotTurn = false; staffWanted = false; }
     convRender();
   }
+  let staffWanted = false;
   function convStart() {
+    noSpeechMs = 5000;
     conv.talking = true; conv.ms = conv.quietMs = conv.sentMs = conv.sentQuiet = 0; conv.spoke = false;
     sendJson({ type: 'talk', on: true });
   }
@@ -122,27 +131,53 @@
     if (conv.sentQuiet >= quietLimit) conv.sentMs = 0; else if (conv.spoke) conv.sentMs += blockMs;
     if (convMine()) {
       const f = conv.sentMs / maxMs;
-      if (f >= TALK_LATE) talkShow('warn', 'JETZT PAUSE MACHEN', f);
+      if (othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', f);
+      else if (f >= TALK_LATE) talkShow('warn', 'JETZT PAUSE MACHEN', f);
       else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
       else talkShow('ok', '🎙 SIE SPRECHEN', f);
     }
-    if ((conv.spoke && conv.quietMs >= turnEndMs()) || (!conv.spoke && conv.ms >= NO_SPEECH_MS)) convEnd();
+    if ((conv.spoke && conv.quietMs >= turnEndMs()) || (!conv.spoke && conv.ms >= noSpeechMs)) convEnd();
   }
   e.btnTalk.addEventListener('click', () => {
     if (convMine()) return convEnd();
     if (conv.turn.state === 'frei') {
       if (!ws) { wantSending = true; wsRetry = 0; connectOperator(); return; }
-      convStart();
+      return convStart();
     }
+    if (staffWaits()) { staffWanted = false; sendJson({ type: 'want', on: false }); return; }   // Wortmeldung zurueckziehen
+    staffWanted = true; sendJson({ type: 'want', on: true });                                       // vormerken, kein Dazwischenfunken
   });
   e.btnRelease.addEventListener('click', () => sendJson({ type: 'release' }));
   const LANG_DE = { uk: 'Ukrainisch', ar: 'Arabisch', en: 'Englisch', tr: 'Türkisch', fa: 'Persisch' };
+  // Deutsche Vorlesung der Gast-Antworten, strikt in Eingangsreihenfolge (wie beim Zuhoerer)
+  let voiceCtx = null, voiceNext = 0, voiceChain = Promise.resolve();
+  function playGerman(audio) {
+    if (!audio) return Promise.resolve();
+    const job = voiceChain.then(async () => {
+      try {
+        voiceCtx = voiceCtx || new AudioContext(); await voiceCtx.resume();
+        const bin = atob(audio.data_b64), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        const buf = await voiceCtx.decodeAudioData(u.buffer);
+        const src = voiceCtx.createBufferSource(); src.buffer = buf; src.connect(voiceCtx.destination);
+        const at = Math.max(voiceCtx.currentTime + 0.05, voiceNext);
+        const ended = new Promise((r) => { src.onended = r; });
+        src.start(at); voiceNext = at + buf.duration;
+        return Promise.race([ended, new Promise((r) => setTimeout(r, (buf.duration + 2) * 1000 + Math.max(0, (at - voiceCtx.currentTime) * 1000)))]);
+      } catch (_) { return null; }
+    });
+    voiceChain = job.catch(() => {});
+    return job;
+  }
   function showGuest(d) {
     const empty = $('guestEmpty'); if (empty) empty.remove();
     const row = document.createElement('div'); row.className = 'guestline'; row.dataset.at = String(Date.now());
     const who = document.createElement('div'); who.className = 'who'; who.textContent = 'Gast (' + (LANG_DE[d.from_lang] || d.from_lang) + ')';
     const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = d.text;
     row.append(who, txt); e.guestLog.prepend(row);
+    const readMs = Math.min(15000, 800 + d.text.split(/\s+/).length * 300);        // ohne Ton: Lesezeit als "fertig" (Annahme: 200 Woerter/Minute)
+    const voiced = !!d.audio && $('guestVoice').checked;
+    playGerman(voiced ? d.audio : null).then(() => setTimeout(() => sendJson({ type: 'played', seq: d.seq }), voiced ? 0 : readMs));
     while (e.guestLog.querySelectorAll('.guestline').length > 40) e.guestLog.querySelector('.guestline:last-of-type').remove();
   }
 
