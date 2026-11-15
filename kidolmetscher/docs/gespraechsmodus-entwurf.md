@@ -1,6 +1,6 @@
 # Entwurf: Betriebsarten „Vortrag“ und „Gespräch“ (Stand 15.11.2026)
 
-Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Nichts davon außer der Sperrlogik (`server/app/turns.py`, mit Tests) ist gebaut.** Zahlen mit „Annahme“ sind nicht gemessen.
+Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends: Server, Bedienplatz und Gast-Seite sind gebaut (siehe Protokoll Abschnitt 23); offen: Tippen statt Sprechen, Ton am Bedienplatz, GPU-Test.** Zahlen mit „Annahme“ sind nicht gemessen.
 
 ## 0. Vorgaben des Nutzers
 - **Alles per Sprache.** Optional zusätzlich Tippen (z. B. laute Umgebung). Es muss **super einfach** bleiben, wie die bisherige Bedienung.

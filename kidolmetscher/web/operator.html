@@ -25,6 +25,13 @@
     <legend>Welche Sprachen sollen angeboten werden?</legend>
     <div id="langs" class="chips"></div>
   </fieldset>
+  <fieldset>
+    <legend>Betriebsart</legend>
+    <div class="chips">
+      <label class="chip"><input type="radio" name="mode" value="vortrag" checked> Vortrag (einseitig, Sie sprechen)</label>
+      <label class="chip"><input type="radio" name="mode" value="gespraech"> Gespräch (beide Seiten, bis zu 3 Gäste)</label>
+    </div>
+  </fieldset>
   <button id="btnCreate" class="big primary">▶ Sitzung starten</button>
   <p id="roomMsg" role="status"></p>
 </section>
@@ -60,18 +67,32 @@
   <h2><span class="num">3</span> Sprechen</h2>
   <label for="dev">Mikrofon</label>
   <select id="dev"></select>
-  <div class="row">
-    <button id="btnStart" class="big primary">🎙 Senden starten</button>
-    <button id="btnStop" class="big" disabled>⏸ Pause</button>
+  <div id="vortragBox">
+    <div class="row">
+      <button id="btnStart" class="big primary">🎙 Senden starten</button>
+      <button id="btnStop" class="big" disabled>⏸ Pause</button>
+    </div>
+    <div class="row">
+      <button id="btnDemo">▶ Demo ohne Mikrofon (zum Ausprobieren)</button>
+      <span class="muted">Sendet Stille; mit den Attrappen erscheinen Testsätze. Mit echten Modellen nicht sinnvoll.</span>
+    </div>
   </div>
-  <div class="row">
-    <button id="btnDemo">▶ Demo ohne Mikrofon (zum Ausprobieren)</button>
-    <span class="muted">Sendet Stille; mit den Attrappen erscheinen Testsätze. Mit echten Modellen nicht sinnvoll.</span>
+  <div id="convBox" hidden>
+    <div class="row">
+      <button id="btnTalk" class="big primary">🎙 Sprechen</button>
+      <button id="btnRelease" title="Sperre sofort aufheben, falls etwas hängt">Freigeben</button>
+    </div>
+    <p class="muted">Tippen = sprechen. Nach ca. 2 Sekunden Pause endet Ihre Aussage von selbst, oder tippen Sie „Fertig“. Solange jemand spricht, übersetzt wird oder vorgelesen wird, ist das Sprechen für alle gesperrt.</p>
   </div>
   <div class="meter" aria-label="Pegel"><div id="level"></div></div>
   <div class="talk" aria-label="Länge des aktuellen Abschnitts"><div id="talkBar"></div></div>
   <p id="talkMsg" class="talkmsg" role="status" aria-live="polite">Noch nicht gesendet.</p>
   <p id="micMsg" role="status"></p>
+</section>
+
+<section id="stepGuest" class="card" hidden>
+  <h2>Antworten der Gäste <small class="muted">(letzte 2 Minuten, danach gelöscht)</small></h2>
+  <div id="guestLog" aria-live="polite"><p class="muted" id="guestEmpty">Noch keine Antwort.</p></div>
 </section>
 
 <section id="stepLive" class="card" hidden>

@@ -8,3 +8,10 @@ const STRINGS = {
   tr: { last2: 'Son 2 dakika', start: 'Başlamak için dokunun', subsOnly: 'Yalnızca altyazı', ai: 'Bu çeviri yapay zekâ tarafından üretilmiştir ve hatalar içerebilir.', privacy: 'Gizlilik', volume: 'Ses' },
   fa: { last2: '۲ دقیقهٔ اخیر', start: 'برای شروع ضربه بزنید', subsOnly: 'فقط زیرنویس', ai: 'این ترجمه با هوش مصنوعی تولید شده و ممکن است اشتباه داشته باشد.', privacy: 'حریم خصوصی', volume: 'بلندی صدا' },
 };
+
+// Gespraechsmodus (Gast-Tablet). WICHTIG: uk ist nicht von einem Muttersprachler geprueft; ar, tr, fa fehlen noch und
+// fallen auf Englisch zurueck (siehe tt() in listener.js).
+STRINGS.de.talk = { speak: 'Sprechen', done: 'Fertig', canSpeak: 'Sie können sprechen', youSpeak: 'Sie sprechen', waitStaff: 'Bitte warten: Mitarbeiter spricht', waitGuest: 'Bitte warten: ein Gast spricht', waitTrans: 'Bitte warten: es wird übersetzt', waitPlay: 'Bitte warten: wird vorgelesen', consent: 'Ihre Stimme wird zum Übersetzen an den Server gesendet und nicht gespeichert.', micDenied: 'Bitte Zugriff auf das Mikrofon erlauben.', busy: 'Gerade nicht möglich.' };
+STRINGS.en.talk = { speak: 'Speak', done: 'Done', canSpeak: 'You can speak', youSpeak: 'You are speaking', waitStaff: 'Please wait: staff member is speaking', waitGuest: 'Please wait: another guest is speaking', waitTrans: 'Please wait: translating', waitPlay: 'Please wait: reading aloud', consent: 'Your voice is sent to the server for translation and is not stored.', micDenied: 'Please allow access to the microphone.', busy: 'Not possible right now.' };
+STRINGS.uk.talk = { speak: 'Говорити', done: 'Готово', canSpeak: 'Можете говорити', youSpeak: 'Ви говорите', waitStaff: 'Зачекайте: говорить співробітник', waitGuest: 'Зачекайте: говорить інший гість', waitTrans: 'Зачекайте: триває переклад', waitPlay: 'Зачекайте: озвучення', consent: 'Ваш голос надсилається на сервер для перекладу і не зберігається.', micDenied: 'Дозвольте доступ до мікрофона.', busy: 'Зараз неможливо.' };
+

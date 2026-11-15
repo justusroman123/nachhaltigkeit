@@ -388,6 +388,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             return control_message(
                 "ready", lang=listener.lang, langs=list(room.langs),
                 rtl=listener.lang in RTL_LANGS, mode=room.mode, turn=room.turns.snapshot(),
+                device=f"gast:{listener.id}", sample_rate=settings.sample_rate,
                 expires_in_s=max(0, int(listener.expires_at - clock())))
 
         def select(lang: object) -> bool:

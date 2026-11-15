@@ -16,6 +16,7 @@
   let audioCtx = null, gain = null, soundOn = false, nextStart = 0;
 
   const t = () => STRINGS[lang] || STRINGS.de;
+  const tt = (k) => ((STRINGS[lang] || {}).talk || {})[k] || (STRINGS.en.talk || {})[k] || STRINGS.de.talk[k];   // Fallback: Englisch
   function status(text, cls) { statusEl.textContent = text; statusEl.className = cls || 'muted'; }
   function notice(text) {
     subs.replaceChildren();
@@ -79,7 +80,7 @@
     for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return u.buffer;
   }
-  async function play(audio) {
+  async function play(audio) {                       // aufgeloest, wenn der Ton zu Ende ist (oder ausgelassen wurde)
     if (!soundOn || !audioCtx || !audio) return;
     if (nextStart - audioCtx.currentTime > MAX_AUDIO_BACKLOG_S) return;     // zu viel Rueckstau: Ton auslassen
     try {
@@ -87,7 +88,9 @@
       const src = audioCtx.createBufferSource();
       src.buffer = buf; src.connect(gain);
       const at = Math.max(audioCtx.currentTime + 0.05, nextStart);            // Warteschlange: nie ueberlappen
+      const ended = new Promise((resolve) => { src.onended = resolve; });
       src.start(at); nextStart = at + buf.duration;
+      await Promise.race([ended, new Promise((r) => setTimeout(r, (buf.duration + 2) * 1000 + Math.max(0, (at - audioCtx.currentTime) * 1000)))]);
     } catch (_) { /* defektes Audio ueberspringen */ }
   }
   async function enableSound() {
@@ -119,6 +122,7 @@
       let d; try { d = JSON.parse(ev.data); } catch (_) { return; }
       if (d.type === 'ready') {
         retry = 0; offered = d.langs || [];
+        mode = d.mode || 'vortrag'; turn = d.turn || turn; myDevice = d.device || myDevice;
         status('● live', 'ok');
         keepAwake();
         if (!d.lang) { langEl.textContent = '🌐'; notice('…'); showPicker(offered); return; }
@@ -128,13 +132,19 @@
         langEl.textContent = NAMES[lang] || lang;
         document.documentElement.lang = lang;
         applyStrings();
+        setupTalk();
         history.replaceState(null, '', '#t=' + token + '&l=' + lang);
         if (changed) lines.length = 0;
         if (changed || !subs.children.length) notice('🎧  🔇 → 🔊');
         if (!startShown) { startShown = true; startScreen.hidden = false; }   // einmal: "Tippen zum Starten"
       } else if (d.type === 'translation') {
         addLine(d.text, RTL.includes(d.lang), d.age_s);
-        play(d.audio);
+        const p = play(d.audio);
+        if (mode === 'gespraech' && !d.replay && Number.isInteger(d.seq)) p.then(() => sendJson({ type: 'played', seq: d.seq }));   // "fertig": Ton zu Ende oder Text angezeigt
+      } else if (d.type === 'turn') {
+        turn = d; talkRender();
+      } else if (d.type === 'busy') {
+        talking = false; talkRender(tt('busy'));
       } else if (d.type === 'session_end') {
         end('Ende', 'muted', '✔');
       } else if (d.type === 'token_expired') {
@@ -150,6 +160,77 @@
       setTimeout(connect, Math.min(10000, 1000 * 2 ** retry++));
     };
   }
+
+
+  /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ---------- */
+  let mode = 'vortrag', turn = { state: 'frei', who: null }, talking = false, cfg = null;
+  let micStream = null, micCtx = null, micNode = null, talkMs = 0, quietMs = 0, spoke = false, sentMs = 0, sentQuiet = 0;
+  const TURN_END_MS = 2000, NO_SPEECH_MS = 5000;           // Annahmen: Aussage endet nach 2 s Pause, ohne Sprache nach 5 s
+  const dock = $('talkDock'), band = $('turnBand'), sentBar = $('sentBar'), btnTalk = $('btnTalk'), talkNote = $('talkNote');
+  const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  let myDevice = null;                                      // Kennung dieses Geraets (vom Server in "ready")
+  const mine = () => turn.state === 'spricht' && turn.who === myDevice;
+  function setupTalk() {
+    dock.hidden = mode !== 'gespraech';
+    if (mode !== 'gespraech') return;
+    talkNote.textContent = tt('consent'); dock.dir = RTL.includes(lang) ? 'rtl' : 'ltr';
+    if (!cfg) fetch('/api/config', { cache: 'no-store' }).then((r) => r.json()).then((c) => { cfg = c; }).catch(() => {});
+    talkRender();
+  }
+  function bandSet(kind, text) { band.className = kind; band.textContent = text; }
+  function talkRender(hint) {
+    if (mode !== 'gespraech') return;
+    const s = turn.state, me = mine();
+    btnTalk.textContent = me ? '✔ ' + tt('done') : '🎙 ' + tt('speak');
+    btnTalk.disabled = !(s === 'frei' || me);
+    sentBar.hidden = !me;
+    if (hint) return bandSet('stop', hint);
+    if (s === 'frei') bandSet('', '● ' + tt('canSpeak'));
+    else if (me) bandSet('', '🎙 ' + tt('youSpeak'));
+    else if (s === 'spricht') bandSet('stop', '■ ' + (turn.who === 'staff' ? tt('waitStaff') : tt('waitGuest')));
+    else if (s === 'uebersetzt') bandSet('stop', '■ ' + tt('waitTrans'));
+    else bandSet('stop', '■ ' + tt('waitPlay'));
+  }
+  async function startMic(rate) {
+    if (micNode) { micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; }); return true; }
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      micCtx = new AudioContext({ sampleRate: rate || 16000 });
+      await micCtx.audioWorklet.addModule('js/pcm-worklet.js');
+      micNode = new AudioWorkletNode(micCtx, 'pcm-capture');
+      micNode.port.onmessage = (ev) => onMicBlock(ev.data);
+      micCtx.createMediaStreamSource(micStream).connect(micNode);
+      return true;
+    } catch (_) { bandSet('stop', tt('micDenied')); return false; }
+  }
+  function micOff() { if (micStream) micStream.getAudioTracks().forEach((tr) => { tr.enabled = false; }); }   // zwischen den Aussagen stumm
+  function onMicBlock(buf) {
+    if (!talking) return;
+    if (ws && ws.readyState === 1) ws.send(buf);
+    const a = new Int16Array(buf); let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += a[i] * a[i];
+    const rms = Math.sqrt(sum / a.length), blockMs = a.length / (micCtx ? micCtx.sampleRate : 16000) * 1000;
+    const loud = rms >= ((cfg && cfg.vad_rms) || 400), quietLimit = (cfg && cfg.silence_ms) || 700;
+    const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000;
+    talkMs += blockMs;
+    if (loud) { spoke = true; quietMs = 0; } else quietMs += blockMs;
+    sentQuiet = loud ? 0 : sentQuiet + blockMs;
+    if (sentQuiet >= quietLimit) sentMs = 0; else if (spoke) sentMs += blockMs;
+    const f = Math.min(1, sentMs / maxMs);
+    sentBar.firstElementChild.style.width = Math.round(f * 100) + '%';
+    sentBar.className = 'sentbar' + (f >= 0.65 ? ' warn' : '');
+    if (mine()) bandSet(f >= 0.85 ? 'warn' : '', f >= 0.85 ? '⚠ ' + tt('done') + ' …' : '🎙 ' + tt('youSpeak'));
+    if ((spoke && quietMs >= TURN_END_MS) || (!spoke && talkMs >= NO_SPEECH_MS)) endTalk();
+  }
+  function endTalk() { if (!talking) return; talking = false; micOff(); sendJson({ type: 'talk', on: false }); }
+  btnTalk.addEventListener('click', async () => {
+    if (mine()) return endTalk();
+    if (turn.state !== 'frei' || talking) return;
+    if (!(await startMic(16000))) return;
+    talking = true; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
+    sendJson({ type: 'talk', on: true });
+  });
+  window.addEventListener('pagehide', () => { talking = false; if (micStream) micStream.getTracks().forEach((tr) => tr.stop()); });
 
   applyStrings();
   if (location.protocol === 'file:') end('Bitte über den Server öffnen (nicht als Datei)', 'bad', '⚠');

@@ -14,7 +14,9 @@
     level: $('level'), micMsg: $('micMsg'), statTotal: $('statTotal'), statL: $('statL'), lat: $('lat'),
     stages: $('stages'), log: $('log'), singleList: $('singleList'), rtt: $('rtt'), t1: $('t1'),
     backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo'),
-    talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg') };
+    talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg'),
+    vortragBox: $('vortragBox'), convBox: $('convBox'), btnTalk: $('btnTalk'), btnRelease: $('btnRelease'),
+    stepGuest: $('stepGuest'), guestLog: $('guestLog') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
@@ -66,6 +68,67 @@
     else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
     else talkShow('ok', '🎙 SIE SPRECHEN', f);
   }
+
+  /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ---------- */
+  const conv = { talking: false, ms: 0, quietMs: 0, spoke: false, sentMs: 0, sentQuiet: 0, turn: { state: 'frei', who: null } };
+  const TURN_END_MS = 2000, NO_SPEECH_MS = 5000;            // Annahmen: Aussage endet nach 2 s Pause, ohne Sprache nach 5 s
+  const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null }; convRender(); }
+  function convMine() { return conv.turn.state === 'spricht' && conv.turn.who === 'staff'; }
+  function convRender(hint) {
+    const t = conv.turn, mine = convMine();
+    e.btnTalk.disabled = !(t.state === 'frei' || mine);
+    e.btnTalk.textContent = mine ? '✔ Fertig' : '🎙 Sprechen';
+    if (hint) return talkShow('stop', '■ STOPP – ' + hint, 1);
+    if (t.state === 'frei') talkShow('ok', '● SPRECHEN MÖGLICH', 0);
+    else if (mine) talkShow('ok', '🎙 SIE SPRECHEN', conv.sentMs / (((cfg && cfg.utterance_max_s) || 12) * 1000));
+    else if (t.state === 'spricht') talkShow('stop', '■ STOPP – ein Gast spricht', 1);
+    else if (t.state === 'uebersetzt') talkShow('stop', '■ STOPP – wird übersetzt', 1);
+    else talkShow('stop', '■ STOPP – wird vorgelesen', 1);
+  }
+  function convTurn(d) {
+    conv.turn = d;
+    if (!convMine()) conv.talking = false;
+    convRender();
+  }
+  function convStart() {
+    conv.talking = true; conv.ms = conv.quietMs = conv.sentMs = conv.sentQuiet = 0; conv.spoke = false;
+    sendJson({ type: 'talk', on: true });
+  }
+  function convEnd() { if (!conv.talking) return; conv.talking = false; sendJson({ type: 'talk', on: false }); }
+  function convBlock(rmsInt16, blockMs) {
+    if (!conv.talking) return;
+    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), quietLimit = (cfg && cfg.silence_ms) || 700;
+    const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000;
+    conv.ms += blockMs;
+    if (loud) { conv.spoke = true; conv.quietMs = 0; } else conv.quietMs += blockMs;
+    conv.sentQuiet = loud ? 0 : conv.sentQuiet + blockMs;           // Satzlaenge: Pause setzt den Balken zurueck
+    if (conv.sentQuiet >= quietLimit) conv.sentMs = 0; else if (conv.spoke) conv.sentMs += blockMs;
+    if (convMine()) {
+      const f = conv.sentMs / maxMs;
+      if (f >= TALK_LATE) talkShow('warn', 'JETZT PAUSE MACHEN', f);
+      else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
+      else talkShow('ok', '🎙 SIE SPRECHEN', f);
+    }
+    if ((conv.spoke && conv.quietMs >= TURN_END_MS) || (!conv.spoke && conv.ms >= NO_SPEECH_MS)) convEnd();
+  }
+  e.btnTalk.addEventListener('click', () => {
+    if (convMine()) return convEnd();
+    if (conv.turn.state === 'frei') {
+      if (!ws) { wantSending = true; wsRetry = 0; connectOperator(); return; }
+      convStart();
+    }
+  });
+  e.btnRelease.addEventListener('click', () => sendJson({ type: 'release' }));
+  const LANG_DE = { uk: 'Ukrainisch', ar: 'Arabisch', en: 'Englisch', tr: 'Türkisch', fa: 'Persisch' };
+  function showGuest(d) {
+    const empty = $('guestEmpty'); if (empty) empty.remove();
+    const row = document.createElement('div'); row.className = 'guestline'; row.dataset.at = String(Date.now());
+    const who = document.createElement('div'); who.className = 'who'; who.textContent = 'Gast (' + (LANG_DE[d.from_lang] || d.from_lang) + ')';
+    const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = d.text;
+    row.append(who, txt); e.guestLog.prepend(row);
+    while (e.guestLog.querySelectorAll('.guestline').length > 40) e.guestLog.querySelector('.guestline:last-of-type').remove();
+  }
   function talkTranslated() { if (talk.state === 'stop') talk.got = true; }
 
   const api = (method, path, body) => fetch(path, {
@@ -108,7 +171,8 @@
     if (!chosen.length) return say(e.roomMsg, 'Bitte mindestens eine Sprache anhaken.', 'warn');
     if (!key && !(cfg && cfg.key_required === false)) return say(e.roomMsg, 'Bitte den Bedienschlüssel eingeben.', 'warn');
     try {
-      const r = await api('POST', '/api/rooms', { langs: chosen });
+      const mode = (document.querySelector('input[name=mode]:checked') || {}).value || 'vortrag';
+      const r = await api('POST', '/api/rooms', { langs: chosen, mode });
       if (r.status === 401) return say(e.roomMsg, 'Bedienschlüssel falsch.', 'bad');
       if (!r.ok) return say(e.roomMsg, 'Fehler ' + r.status + ' beim Starten.', 'bad');
       room = await r.json();
@@ -116,9 +180,12 @@
     e.key.value = '';
     e.stepStart.hidden = true;
     [e.stepInvite, e.stepMic, e.stepLive].forEach((s) => { s.hidden = false; });
+    const conversation = room.mode === 'gespraech';
+    e.vortragBox.hidden = conversation; e.convBox.hidden = !conversation; e.stepGuest.hidden = !conversation;
     await createInvite();
     renderSingleLinks();
     await listDevices();
+    if (conversation) { convReset(); wantSending = true; wsRetry = 0; connectOperator(); }   // Gespraech: Verbindung steht von Anfang an (Gast-Antworten kommen jederzeit)
     statTimer = setInterval(pollStats, 2000); pollStats();
   });
 
@@ -129,7 +196,8 @@
     if (room) { try { await api('DELETE', '/api/rooms/' + room.room_id); } catch (_) {} }
     room = null; key = '';
     e.log.replaceChildren(); e.statL.replaceChildren(); e.qr.removeAttribute('src'); e.linkText.textContent = '';
-    [e.stepInvite, e.stepMic, e.stepLive].forEach((s) => { s.hidden = true; });
+    [e.stepInvite, e.stepMic, e.stepLive, e.stepGuest].forEach((s) => { s.hidden = true; });
+    e.guestLog.querySelectorAll('.guestline').forEach((n) => n.remove());
     e.stepStart.hidden = false;
     say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt beenden oder pausieren (Kosten laufen sonst weiter) und auf den Tablets den Browserverlauf löschen.', 'ok');
     e.cost.textContent = ''; rtts = [];
@@ -226,11 +294,16 @@
       const d = JSON.parse(ev.data);
       if (d.type === 'ready') {
         wsRetry = 0;
+        if (d.turn) conv.turn = d.turn;
         if (demoMode) { if (!demoTimer) startDemo(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, Demo läuft.', 'ok'); }
-        else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, sendet.', 'ok');
+        else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden.', 'ok');
+        if (room && room.mode === 'gespraech') convRender();
         clearInterval(pingTimer);
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
       } else if (d.type === 'translation') { showMessage(d); talkTranslated(); }
+      else if (d.type === 'turn') convTurn(d);
+      else if (d.type === 'busy') { conv.talking = false; convRender('Gerade spricht jemand oder es wird übersetzt.'); }
+      else if (d.type === 'guest_message') showGuest(d);
       else if (d.type === 'pong') showPing(performance.now() - d.t);
     };
   }
@@ -267,17 +340,19 @@
       node = new AudioWorkletNode(ctx, 'pcm-capture');
       node.port.onmessage = (ev) => {
         const buf = ev.data;
-        if (ws && ws.readyState === 1) ws.send(buf);
+        const inConv = room && room.mode === 'gespraech';
+        if (ws && ws.readyState === 1 && (!inConv || conv.talking)) ws.send(buf);     // Gespraech: nur senden, solange man das Wort hat
         const s = new Int16Array(buf); let sum = 0;
         for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
         const db = 20 * Math.log10(Math.sqrt(sum / s.length) / 32768 + 1e-6);
         e.level.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
-        talkBlock(Math.sqrt(sum / s.length), s.length / (ctx ? ctx.sampleRate : 16000) * 1000);
+        const rmsNow = Math.sqrt(sum / s.length), blockMs = s.length / (ctx ? ctx.sampleRate : 16000) * 1000;
+        if (inConv) convBlock(rmsNow, blockMs); else talkBlock(rmsNow, blockMs);
       };
       ctx.createMediaStreamSource(stream).connect(node);
       e.start.disabled = true; e.stop.disabled = false;
-      talkIdle();
-      say(e.micMsg, '● Sendet.', 'ok');
+      if (room && room.mode === 'gespraech') convRender(); else talkIdle();
+      say(e.micMsg, room && room.mode === 'gespraech' ? '● Mikrofon bereit. Zum Sprechen „Sprechen“ tippen.' : '● Sendet.', 'ok');
     } catch (err) { say(e.micMsg, 'Mikrofon-Fehler: ' + err.name, 'bad'); stopSending(); }
   }
 
@@ -287,7 +362,7 @@
     if (node) { node.disconnect(); node = null; }
     if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
     if (ctx) { ctx.close().catch(() => {}); ctx = null; }
-    e.level.style.width = '0%'; talk.state = 'idle'; talk.ms = 0; talkShow('ok', 'Noch nicht gesendet.', 0);
+    e.level.style.width = '0%'; talk.state = 'idle'; talk.ms = 0; conv.talking = false; talkShow('ok', 'Noch nicht gesendet.', 0);
     e.start.disabled = false; e.stop.disabled = true;
   }
   e.stop.addEventListener('click', () => { stopSending(); say(e.micMsg, 'Pause. Zum Weitermachen „Senden starten“.', ''); });
@@ -348,7 +423,7 @@
 
   // Verlauf im Bedienplatz: Eintraege aelter als 2 Minuten werden geloescht
   setInterval(() => { const limit = Date.now() - 120000;
-    [...e.log.children].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); }); }, 1000);
+    [...e.log.children, ...e.guestLog.querySelectorAll('.guestline')].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); }); }, 1000);
 
   window.addEventListener('pagehide', () => { stopSending(); });
 })();

@@ -299,3 +299,17 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Lizenz-Befund Websuche (15.11.):** Thorsten-Stimme laut Piper-Modellkarte CC0; eine Drittseite behauptet „nur privat/nicht kommerziell“ (Widerspruch, Modellkarte selbst prüfen). eva_k/karlsson: Quelle M-AILABS laut Community-Angabe, Lizenzwortlaut nicht bestätigt.
 - **Nächste Schritte:** siehe Entwurf Abschnitt 8 und 9 (vier offene Fragen an den Nutzer).
 
+## 23. Umgesetzt am 15.11.2026: Gesprächsmodus, 2-Minuten-Verlauf (Stand der Prüfung: Attrappen, noch nicht auf der GPU)
+
+**Entscheidungen des Nutzers (15.11., Nachmittag):** Gäste hören sich **nicht** untereinander; **letzte 2 Minuten** der Texte sichtbar (wegen Lärm), danach gelöscht; Sprechdauer muss **eindeutig** angezeigt werden; „macht alles gut“ = Standardannahmen aus dem Entwurf (Antippen zum Sprechen, Ende nach ca. 2 s Pause, Mitarbeiter liest die Gast-Antwort).
+
+**Gebaut (Code im Repository, 209 Tests grün, zusätzlich Ablauf im echten Chromium mit Attrappen und Fake-Mikrofon durchgespielt):**
+- **Verlauf 2 Minuten:** Zuhörer-Seite behält alle Untertitel der letzten 2 Minuten (scrollbar, Mitscrollen nur wenn man unten ist), ältere werden aus Anzeige und Speicher gelöscht; derselbe Verlauf im Bedienplatz-Protokoll; Server-Ringpuffer mit Zeitgrenze `HISTORY_S=120` und bis zu 40 Einträgen (`RING_BUFFER_SIZE`).
+- **Betriebsarten:** Auswahl beim Sitzungsstart („Vortrag“/„Gespräch“); `POST /api/rooms {mode}`.
+- **Gespräch:** `server/app/turns.py` (Sperre: frei → spricht → übersetzt → wiedergabe → frei, Zeitgrenzen 60/20/15 s, Schonfrist 0,5 s, Notbremse „Freigeben“); `conversation.py` (Gast: Whisper mit seiner Sprache → TranslateGemma → Deutsch → Bedienplatz); Zuhörer melden „fertig“ (`played`), erst wenn alle fertig sind, wird frei; bis zu 3 Gäste (`MAX_GUESTS`); Zustand an alle Geräte (`turn`, `busy`); keine Inhalte in Logs.
+- **Bedienplatz:** großer Knopf „Sprechen/Fertig“, Statusband vom Server (grün „SPRECHEN MÖGLICH“, „SIE SPRECHEN“ mit Balken der Satzlänge, rot „STOPP – <Grund>“), Gast-Antworten als große deutsche Zeilen (2 Minuten).
+- **Gast-Tablet:** Knopf „Sprechen/Fertig“ in Ukrainisch/Englisch/Deutsch (uk ungeprüft; ar/tr/fa fallen auf Englisch zurück), dreifarbiges Band in seiner Sprache, Mikrofon nur nach Tippen aktiv, Einwilligungshinweis, Balken der Satzlänge.
+- **Spracherkennung mit Quellsprache** je Strom (`new_stream(lang)`), Halluzinations-Filter (Abschnitt 20).
+
+**Noch offen / nicht gebaut:** Tippen statt Sprechen; Ton der Gast-Antwort am Bedienplatz (deutsche Stimme, Lizenz der Stimme prüfen); Qualität von Ukrainisch (Spracherkennung und Übersetzung ins Deutsche) **unbekannt**; Messung der Zeitgrenzen und der „fertig“-Meldungen mit echtem Ton auf Tablets; Test mit echter GPU; Muttersprachler-Prüfung der Oberflächentexte; Datenschutz für Behörden (zurückgestellt).
+
