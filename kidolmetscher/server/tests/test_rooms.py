@@ -105,9 +105,9 @@ def test_ringpuffer_aus(clock):
 def test_langsamer_client_verliert_alte_nachrichten(mgr):
     room = mgr.create_room()
     lst = room.attach_listener(room.create_listener_token("uk")[0])
-    for i in range(80):
+    for i in range(600):
         room.publish("uk", {"seq": i})
-    assert lst.queue.qsize() == 50 and lst.dropped == 30
+    assert lst.queue.qsize() == 500 and lst.dropped == 100          # Warteschlange 500: erst darueber gehen alte Nachrichten verloren
 
 
 def test_max_zuhoerer(clock):

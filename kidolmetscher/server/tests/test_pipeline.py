@@ -188,7 +188,7 @@ def test_segmentierung_zwischen_asr_und_uebersetzung():
     orch, room, _ = make_orch(make_settings(segment_max_words=5), langs=("en",), asr=WortAsr())
     msgs = feed(orch, 1)
     assert [m.text_src for m in msgs] == ["eins zwei drei vier fuenf", "sechs sieben acht neun zehn",
-                                           "elf zwoelf dreizehn vierzehn"][:2]
+                                           "elf zwoelf dreizehn vierzehn"]      # auch der Rest ohne Satzzeichen wird ausgegeben
     assert room.counters["partials_skipped"] == 1
 
 

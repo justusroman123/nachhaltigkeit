@@ -68,7 +68,7 @@ def test_abschnitt_nach_pause_mit_vorlauf_und_zeitstempeln():
     assert segs[0].t_audio_in == 1000 + 6 * 50                    # erster lauter Block
     assert segs[0].t_asr >= segs[0].t_audio_in
     dauer, opts = a.calls[0]
-    assert dauer == pytest.approx(0.2 + 0.5 + 0.25)              # 200 ms Vorlauf + Sprache + 250 ms Pause (Rest gekuerzt)
+    assert dauer == pytest.approx(0.2 + 0.5 + 0.3)               # 200 ms Vorlauf + Sprache + Pause (bis 600 ms Nachlauf bleiben erhalten)
     assert opts["language"] == "de" and opts["vad_filter"] is True and opts["condition_on_previous_text"] is False
 
 
@@ -89,7 +89,23 @@ def test_hoechstdauer_schliesst_abschnitt_ohne_pause():
         segs = await feed_all(a.new_stream(), [block(amp=3000) for _ in range(45)])      # 2,25 s durchgehend
         return a, segs
     a, segs = run(go())
-    assert len(segs) == 1 and a.calls[0][0] == pytest.approx(2.0)
+    assert len(segs) == 1 and 1.0 <= a.calls[0][0] <= 2.0         # an einer Stelle der Aufnahme geschnitten, nichts geht verloren
+
+
+def test_hoechstdauer_schneidet_an_leisester_stelle_und_behaelt_den_rest():
+    async def go():
+        a = asr_with_fake_model()
+        st = a.new_stream()
+        # 1,75 s laut, ein leiser Block (Atempause 50 ms, unter der Aus-Schwelle), dann weiter laut; Hoechstdauer 2 s
+        blocks = [block(amp=3000) for _ in range(35)] + [block(amp=100)] + [block(amp=3000) for _ in range(9)]
+        segs = await feed_all(st, blocks)
+        rest = await st.flush()
+        return a, segs, rest
+    a, segs, rest = run(go())
+    first, second = a.calls[0][0], a.calls[1][0]
+    assert len(segs) == 1 and len(rest) == 1
+    assert first == pytest.approx(1.8, abs=0.06)                     # Schnitt hinter dem leisen Block, nicht mitten im Wort
+    assert first + second == pytest.approx(2.25, abs=0.06)           # alle 45 Bloecke wurden erkannt, keiner ging verloren
 
 
 def test_flush_und_close_loeschen_puffer():
@@ -257,12 +273,14 @@ from app.pipeline.mt_real import max_neue_tokens
 
 
 def test_entdoppeln_entfernt_wiederholte_saetze():
-    t, b = entdoppeln("Guten Tag. Guten Tag. Guten Tag. Wir beginnen jetzt.")
+    t, b = entdoppeln("Guten Tag. Guten Tag. Guten Tag. Guten Tag. Guten Tag. Wir beginnen jetzt.")
     assert t == "Guten Tag. Wir beginnen jetzt." and b
+    t, b = entdoppeln("Guten Tag. Guten Tag. Wir beginnen jetzt.")                  # zweimal kann gewollt sein: bleibt
+    assert t == "Guten Tag. Guten Tag. Wir beginnen jetzt." and not b
 
 
 def test_entdoppeln_entfernt_wortfolgen_schleifen():
-    t, b = entdoppeln("wir zeigen Ihnen heute wir zeigen Ihnen heute wir zeigen Ihnen heute eine Uebersetzung")
+    t, b = entdoppeln("wir zeigen Ihnen heute " * 5 + "eine Uebersetzung")
     assert t == "wir zeigen Ihnen heute eine Uebersetzung" and b
 
 
@@ -273,8 +291,10 @@ def test_entdoppeln_laesst_normalen_text_in_ruhe():
 
 
 def test_entdoppeln_einzelwort_ab_vier():
-    t, b = entdoppeln("danke danke danke danke danke")
+    t, b = entdoppeln("danke " * 7)
     assert t == "danke" and b
+    t, b = entdoppeln("danke danke danke danke")                                  # bis 5 gleiche Woerter bleiben
+    assert t == "danke danke danke danke" and not b
 
 
 def test_max_neue_tokens_waechst_mit_dem_satz_und_hat_eine_obergrenze():

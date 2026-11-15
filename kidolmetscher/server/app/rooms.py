@@ -40,6 +40,14 @@ class LanguageError(RoomError):
 END = object()   # Marker in Zuhoererwarteschlange: Sitzung beendet
 
 
+def _audio_seconds(message: dict) -> float:
+    """Ungefaehre Laenge des Tons einer Nachricht in Sekunden (WAV, 16 Bit mono); 0, wenn kein Ton."""
+    a = message.get("audio")
+    if not isinstance(a, dict) or not a.get("data_b64") or not a.get("sample_rate"):
+        return 0.0
+    return max(0.0, (len(a["data_b64"]) * 3 / 4 - 44) / (2 * float(a["sample_rate"])))
+
+
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -54,7 +62,7 @@ class Listener:
     """Ein verbundener Zuhoerer. Langsame Clients verlieren alte Nachrichten, nie der Server."""
     _ids = itertools.count(1)
 
-    def __init__(self, fixed_lang: Optional[str], expires_at: float, maxsize: int = 50):
+    def __init__(self, fixed_lang: Optional[str], expires_at: float, maxsize: int = 500):
         self.id = next(Listener._ids)
         self.fixed_lang = fixed_lang     # Sprache des Links (falls festgelegt)
         self.lang: Optional[str] = fixed_lang   # aktuell gewaehlte Sprache, None bis zur Auswahl
@@ -191,7 +199,7 @@ class Room:
                 l.push(message)
                 delivered += 1
                 if self.mode == "gespraech" and isinstance(message.get("seq"), int):
-                    self.turns.expect_playback(message["seq"], f"gast:{l.id}")   # Geraet muss "fertig" melden
+                    self.turns.expect_playback(message["seq"], f"gast:{l.id}", _audio_seconds(message))   # Geraet muss "fertig" melden
         self.counters["messages_out"] += delivered
         return delivered
 

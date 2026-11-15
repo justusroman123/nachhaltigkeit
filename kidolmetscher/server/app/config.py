@@ -85,8 +85,8 @@ class Settings:
     history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
     segment_max_words: int = 40            # Segmentierer: hoechstens so viele Woerter je Uebersetzung (Saetze werden am Satzende getrennt)
-    lang_queue_max: int = 8                # Warteschlange je Sprache; darueber werden aelteste Segmente verworfen
-    tts_skip_backlog: int = 2              # ab so vielen wartenden Segmenten entfaellt der Ton, Untertitel bleiben
+    lang_queue_max: int = 500              # Warteschlange je Sprache; Vollstaendigkeit geht vor (frueher 8: verwarf Saetze)
+    tts_skip_backlog: int = 100000         # ab so vielen wartenden Segmenten entfaellt der Ton; praktisch aus (frueher 2: Ton fehlte bei Untertiteln)
     server_hourly_eur: float = 0.0         # optional, netto; 0 = unbekannt
     budget_eur: float = 0.0                # optional; 0 = keine Grenze
 
@@ -105,7 +105,7 @@ class Settings:
     mt_model_id: str = ""
     mt_device: str = "auto"                # auto | cuda | cpu
     mt_dtype: str = "auto"                 # auto | bfloat16 | float16 | float32
-    mt_max_new_tokens: int = 256
+    mt_max_new_tokens: int = 1024
     debug_fehler: bool = False             # Testphase: Fehlermeldung (gekuerzt) mitloggen; kann Textteile enthalten, im Betrieb AUS
     mt_prompt_mode: str = "structured"     # structured = Format laut TranslateGemma-Modellkarte | plain = Plan-Prompt als Text
     mt_lang_codes: str = ""                # Sprachcode-Ueberschreibungen, z. B. "ar=ar-SA,uk=uk-UA" (Standard: eigener Code, ISO 639-1)

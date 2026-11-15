@@ -13,7 +13,7 @@ import logging
 from typing import Awaitable, Callable, Optional
 
 from .config import Settings
-from .messages import AudioPayload, Timestamps, TranslationMessage, now_ms
+from .messages import control_message, AudioPayload, Timestamps, TranslationMessage, now_ms
 from .pipeline.base import AsrSegment, AudioChunk, Pipeline
 from .pipeline.segmenter import Segmenter
 from .rooms import Room
@@ -44,7 +44,14 @@ class Orchestrator:
     async def on_audio(self, pcm: bytes) -> None:
         chunk = AudioChunk(pcm=pcm, sample_rate=self.settings.sample_rate, t_audio_in=self._clock())
         self.room.counters["audio_chunks"] += 1
-        self._enqueue(self._segment(await self._stream.feed(chunk)))
+        segs = await self._stream.feed(chunk)
+        out = self._segment(segs)
+        if segs:                                  # Abschnitt zu Ende (Pause): Rest ohne Satzzeichen nicht liegen lassen
+            out += self._segmenter.flush()
+        self._enqueue(out)
+        notice = getattr(self._stream, "pop_notice", lambda: None)()
+        if notice:
+            self.room.push_operator(control_message("problem", what=notice))
 
     async def end_utterance(self) -> None:
         """Aussage beendet (Gespraechsmodus, Antippen/Pause/Zeitgrenze): offenen Abschnitt abschliessen."""
@@ -150,6 +157,7 @@ class Orchestrator:
             except Exception as exc:               # nie Inhalte loggen, nur den Typ
                 self.room.counters["pipeline_errors"] += 1
                 log.error("pipeline_fehler lang=%s typ=%s", lang, self.settings.fehler(exc))
+                self.room.push_operator(control_message("problem", what="uebersetzung", lang=lang))
             finally:
                 q.task_done()
                 self._done_one(seq)

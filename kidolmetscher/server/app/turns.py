@@ -18,9 +18,9 @@ FREI, SPRICHT, UEBERSETZT, WIEDERGABE = "frei", "spricht", "uebersetzt", "wieder
 
 @dataclass
 class TurnLimits:
-    speak_max_s: float = 60.0       # laengste Aussage am Stueck (Annahme, messen)
-    process_max_s: float = 20.0     # laengste Verarbeitung nach dem Sprechen (Annahme, messen)
-    play_max_s: float = 15.0        # laengstes Warten auf "fertig" der Geraete (Annahme, messen)
+    speak_max_s: float = 120.0      # laengste Aussage am Stueck (Annahme, messen)
+    process_max_s: float = 90.0     # laengste Verarbeitung nach dem Sprechen; Vollstaendigkeit geht vor (Annahme, messen)
+    play_max_s: float = 15.0        # Mindest-Wartezeit auf "fertig" der Geraete; dazu kommt die Laenge des erwarteten Tons (Annahme)
     grace_s: float = 0.5            # kurze Schonfrist nach "alle fertig", bevor frei gemeldet wird (Annahme)
 
 
@@ -35,6 +35,7 @@ class TurnManager:
         self.who: Optional[str] = None          # "staff" oder "gast:<kennung>"
         self.pending = 0                         # Abschnitte, die noch verarbeitet werden
         self.awaiting: set[tuple[int, str]] = set()   # (seq, geraet): noch kein "fertig"
+        self._play_s: dict[str, float] = {}      # je Geraet: Summe der erwarteten Tonlaenge in s
         self._deadline: Optional[float] = None
         self._free_at: Optional[float] = None    # Schonfrist laeuft bis dahin
 
@@ -46,6 +47,7 @@ class TurnManager:
         if state == FREI:
             self.pending = 0
             self.awaiting.clear()
+            self._play_s.clear()
         if self.on_change:
             self.on_change(self.snapshot(reason))
 
@@ -76,10 +78,11 @@ class TurnManager:
             self.pending -= 1
         self._advance()
 
-    def expect_playback(self, seq: int, device: str) -> None:
-        """Eine Ausgabe wurde an ein Geraet geschickt; es muss "fertig" melden."""
+    def expect_playback(self, seq: int, device: str, audio_s: float = 0.0) -> None:
+        """Eine Ausgabe wurde an ein Geraet geschickt; es muss "fertig" melden. audio_s: Laenge des Tons (verlaengert die Zeitgrenze)."""
         if self.state != FREI:
             self.awaiting.add((seq, device))
+            self._play_s[device] = self._play_s.get(device, 0.0) + max(0.0, audio_s)
 
     def playback_done(self, seq: int, device: str) -> None:
         self.awaiting.discard((seq, device))
@@ -99,7 +102,8 @@ class TurnManager:
 
     def _advance(self) -> None:
         if self.state == UEBERSETZT and self.pending == 0:
-            self._set(WIEDERGABE, self.who, self.limits.play_max_s)
+            play = max(self._play_s.values(), default=0.0)       # laengster erwarteter Ton eines Geraets
+            self._set(WIEDERGABE, self.who, max(self.limits.play_max_s, play + 8.0))
         if self.state == WIEDERGABE and not self.awaiting and self._free_at is None:
             self._free_at = self.clock() + self.limits.grace_s
 

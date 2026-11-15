@@ -43,7 +43,7 @@ if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe o
 
 HELLO_TIMEOUT_S = 10
 MAX_FRAME_BYTES = 64_000          # ein Audio-Block (PCM16); 50 ms bei 16 kHz sind 1600 Byte
-MAX_AUDIO_QUEUE = 100             # Blocks; bei Rueckstau werden alte verworfen und gezaehlt
+MAX_AUDIO_QUEUE = 3000            # Blocks (150 s); Audio wird praktisch nie verworfen, sonst gingen Woerter verloren
 _END_UTTERANCE = object()         # Marker in der Audio-Warteschlange: Aussage des Mitarbeiters ist zu Ende (Gespraechsmodus)
 REAPER_INTERVAL_S = 30
 
@@ -280,6 +280,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 except Exception as exc:       # nie Inhalte loggen, nur den Typ
                     room.counters["pipeline_errors"] += 1
                     log.error("pipeline_fehler typ=%s", settings.fehler(exc))
+                    room.push_operator(control_message("problem", what="spracherkennung"))
 
         async def pump():
             """Nachrichten an den Bedienplatz (Zustand der Sperre, Gast-Aussagen) senden; Zeitgrenzen der Sperre pruefen."""
@@ -324,6 +325,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if audio_q.full():
                         audio_q.get_nowait()
                         room.counters["audio_dropped"] += 1
+                        room.push_operator(control_message("problem", what="audio_verworfen"))   # nicht still verlieren
                     audio_q.put_nowait(data)
                 elif msg.get("text"):
                     try:

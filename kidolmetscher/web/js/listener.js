@@ -5,7 +5,7 @@
   const RTL = ['ar', 'fa'];
   const HISTORY_S = 120;               // Verlauf: Untertitel aelter als 2 Minuten werden geloescht (Anzeige und Speicher)
   const MAX_LINES = 10;                // und es bleiben hoechstens die letzten 10 Nachrichten (die neueste ist immer sichtbar)
-  const MAX_AUDIO_BACKLOG_S = 6;      // Rueckstau: mehr wartender Ton wird verworfen, Untertitel laufen weiter
+  const MAX_AUDIO_BACKLOG_S = 3600;   // Ton wird nie ausgelassen (Vollstaendigkeit geht vor); frueher 6 s: dann fehlte der Ton bei vorhandenen Untertiteln
   const $ = (id) => document.getElementById(id);
   const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker'),
         startScreen = $('startScreen'), vol = $('vol');

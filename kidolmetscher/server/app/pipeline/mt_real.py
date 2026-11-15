@@ -80,10 +80,16 @@ class RealMt:
         messages = self.build_messages(text, src, tgt)
         inputs = self._proc.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, return_dict=True,
                                                 return_tensors="pt").to(self._device)
-        with torch.inference_mode():
-            out = self._model.generate(**inputs, max_new_tokens=max_neue_tokens(text, self._s.mt_max_new_tokens),
-                                       do_sample=False)
-        new = out[0][inputs["input_ids"].shape[1]:]
+        limit = max_neue_tokens(text, self._s.mt_max_new_tokens)
+        n_in = inputs["input_ids"].shape[1]
+        for versuch in range(3):                             # Abbruch durch zu kleine Grenze erkennen und wiederholen
+            with torch.inference_mode():
+                out = self._model.generate(**inputs, max_new_tokens=limit, do_sample=False)
+            new = out[0][n_in:]
+            if len(new) < limit or limit >= self._s.mt_max_new_tokens:
+                break                                        # Satzende erreicht (oder groesste Grenze)
+            log.info("mt_abgeschnitten_wiederholt versuch=%d", versuch + 1)
+            limit = min(self._s.mt_max_new_tokens, limit * 2)
         text_out, bereinigt = entdoppeln(self._proc.decode(new, skip_special_tokens=True).strip())
         if bereinigt:
             log.info("mt_wiederholung_entfernt")             # nur ein Hinweis, kein Inhalt

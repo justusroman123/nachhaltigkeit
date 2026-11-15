@@ -24,8 +24,8 @@ from .base import AsrSegment, AsrStream, AudioChunk
 from .text_clean import entdoppeln, entferne_floskeln
 log = logging.getLogger("kidolmetscher.pipeline")
 PEGEL_ALLE_BLOECKE = 100     # Pegel-Logzeile etwa alle 5 s (nur Zahlen, keine Inhalte)
-TAIL_KEEP_MS = 250        # so viel Stille bleibt hinter dem letzten lauten Block erhalten
-REPEAT_WINDOW_MS = 4000    # gleicher Text kurz nach dem vorigen Abschnitt gilt als Wiederholung (Whisper-Schleife)
+TAIL_KEEP_MS = 600        # so viel Stille bleibt hinter dem letzten lauten Block erhalten (leise Wortenden nicht abschneiden)
+VAD_OFF_FACTOR = 0.6      # innerhalb einer Aussage zaehlt ab 60 % der Start-Schwelle noch als Sprache (Hysterese, Annahme)
 PREROLL_MS = 200          # Audio vor dem ersten lauten Block, damit der Wortanfang nicht fehlt
 
 
@@ -41,6 +41,11 @@ def pcm16_rms(pcm: bytes) -> float:
 
 
 class RealAsrStream:
+    """Sammelt je Sprecher den Abschnitt (pausenbasiert). Nichts wird stillschweigend verworfen:
+    - Beginn mit Vorlauf, Ende erst nach laengerer Pause (Schwellen mit Hysterese: leise Wortenden zaehlen noch als Sprache);
+    - ist die Hoechstlaenge erreicht, wird an der leisesten Stelle geschnitten, der Rest bleibt fuer den naechsten Abschnitt;
+    - nicht erkannte Abschnitte werden gemeldet (pop_notice)."""
+
     def __init__(self, owner: "RealAsr", clock: Callable[[], int], lang: Optional[str] = None):
         self._o = owner
         self._lang = lang
@@ -48,11 +53,14 @@ class RealAsrStream:
         self._pre: deque[AudioChunk] = deque()
         self._pre_ms = 0.0
         self._n = self._laut_n = self._rms_max = 0
-        self._last_norm, self._last_t = "", 0
+        self._notice: Optional[str] = None
         self._reset()
 
     def _reset(self) -> None:
         self._buf: list[bytes] = []
+        self._rmsl: list[float] = []              # Pegel je Block (zum Finden der leisesten Schnittstelle)
+        self._msl: list[float] = []               # Dauer je Block in ms
+        self._tin: list[int] = []                 # Eingangszeit je Block
         self._rate = 16000
         self._speech_ms = 0.0
         self._silence_ms = 0.0
@@ -60,24 +68,53 @@ class RealAsrStream:
         self._first_in: Optional[int] = None
         self._active = False
 
-    async def _finish(self) -> list[AsrSegment]:
-        pcm, first_in, speech_ms, rate = b"".join(self._buf), self._first_in, self._speech_ms, self._rate
-        ueberhang_ms = self._silence_ms - TAIL_KEEP_MS       # Stille am Ende kuerzen: dort halluziniert Whisper gern
+    def pop_notice(self) -> Optional[str]:
+        n, self._notice = self._notice, None
+        return n
+
+    def _quiet_split(self) -> int:
+        """Index des ersten Blocks NACH der leisesten Stelle im hinteren Teil des Puffers (letztes Viertel, 0,5 bis 3 s).
+        Bei gleich lauten Stellen gewinnt die spaeteste (der Abschnitt wird nicht unnoetig kurz)."""
+        n = len(self._buf)
+        if n < 4:
+            return n
+        window_ms, acc, start = min(3000.0, max(500.0, self._total_ms / 4)), 0.0, n - 1
+        while start > 1 and acc < window_ms:
+            acc += self._msl[start]
+            start -= 1
+        best = min(range(start, n - 1), key=lambda i: (self._rmsl[i], -i), default=n - 2)
+        return best + 1
+
+    async def _finish(self, keep_from: Optional[int] = None) -> list[AsrSegment]:
+        s = self._o.settings
+        head = self._buf[:keep_from] if keep_from is not None else self._buf
+        tail = (self._buf[keep_from:], self._rmsl[keep_from:], self._msl[keep_from:], self._tin[keep_from:]) if keep_from is not None else None
+        pcm, first_in, rate = b"".join(head), self._first_in, self._rate
+        speech_ms = sum(m for m, r in zip(self._msl[:len(head)], self._rmsl[:len(head)]) if r >= s.asr_vad_rms * VAD_OFF_FACTOR)
+        silence_tail = 0.0
+        for m, r in zip(reversed(self._msl[:len(head)]), reversed(self._rmsl[:len(head)])):
+            if r >= s.asr_vad_rms * VAD_OFF_FACTOR:
+                break
+            silence_tail += m
+        ueberhang_ms = silence_tail - TAIL_KEEP_MS          # Stille am Ende kuerzen (dort halluziniert Whisper gern), Wortende bleibt
         self._reset()
+        if tail is not None:                                # Rest des Puffers beginnt den naechsten Abschnitt
+            self._buf, self._rmsl, self._msl, self._tin = (list(x) for x in tail)
+            self._active = bool(self._buf)
+            self._total_ms = sum(self._msl)
+            self._speech_ms = sum(m for m, r in zip(self._msl, self._rmsl) if r >= s.asr_vad_rms * VAD_OFF_FACTOR)
+            self._first_in = self._tin[0] if self._tin else None
+            self._rate = rate
         if ueberhang_ms > 0:
             pcm = pcm[: max(0, len(pcm) - int(rate * ueberhang_ms / 1000) * 2)]
-        if not pcm or speech_ms < self._o.settings.asr_min_speech_ms:
+        if not pcm or speech_ms < s.asr_min_speech_ms:
             return []
         text = await self._o.transcribe(pcm, rate, self._lang)
-        text, bereinigt = entdoppeln(text)                   # Whisper wiederholt manchmal denselben Satz
-        norm = " ".join(text.casefold().split())
-        jetzt = self._clock()
-        gleich_wie_zuletzt = bool(norm) and norm == self._last_norm and jetzt - self._last_t < REPEAT_WINDOW_MS
-        log.info("asr_abschnitt sprach_ms=%d erkannt=%s bereinigt=%s doppelt=%s", speech_ms, bool(text), bereinigt,
-                 gleich_wie_zuletzt)
-        if not text or gleich_wie_zuletzt:
+        text, bereinigt = entdoppeln(text)
+        log.info("asr_abschnitt sprach_ms=%d erkannt=%s bereinigt=%s", speech_ms, bool(text), bereinigt)
+        if not text:
+            self._notice = "nicht_erkannt"                   # Sprache war da, es kam aber kein Text heraus: dem Sprecher melden
             return []
-        self._last_norm, self._last_t = norm, jetzt
         return [AsrSegment(text=text, final=True, t_audio_in=first_in if first_in is not None else self._clock(),
                            t_asr=self._clock())]
 
@@ -86,7 +123,8 @@ class RealAsrStream:
         ms = chunk.duration_s * 1000
         self._rate = chunk.sample_rate
         rms = pcm16_rms(chunk.pcm)
-        loud = rms >= s.asr_vad_rms
+        on = s.asr_vad_rms
+        loud = rms >= (on * VAD_OFF_FACTOR if self._active else on)     # Hysterese: leise Wortenden gehoeren noch zur Sprache
         self._n += 1
         self._laut_n += loud
         self._rms_max = max(self._rms_max, int(rms))
@@ -104,19 +142,21 @@ class RealAsrStream:
             self._active = True
             self._first_in = chunk.t_audio_in
             for c in self._pre:
-                self._buf.append(c.pcm)
+                self._buf.append(c.pcm); self._rmsl.append(0.0); self._msl.append(c.duration_s * 1000); self._tin.append(c.t_audio_in)
                 self._total_ms += c.duration_s * 1000
             self._pre.clear()
             self._pre_ms = 0.0
-        self._buf.append(chunk.pcm)
+        self._buf.append(chunk.pcm); self._rmsl.append(rms); self._msl.append(ms); self._tin.append(chunk.t_audio_in)
         self._total_ms += ms
         if loud:
             self._speech_ms += ms
             self._silence_ms = 0.0
         else:
             self._silence_ms += ms
-        if self._silence_ms >= s.asr_silence_ms or self._total_ms >= s.asr_max_utterance_s * 1000:
+        if self._silence_ms >= s.asr_silence_ms:
             return await self._finish()
+        if self._total_ms >= s.asr_max_utterance_s * 1000:
+            return await self._finish(keep_from=self._quiet_split())      # nicht mitten im Wort schneiden
         return []
 
     async def flush(self) -> list[AsrSegment]:
@@ -159,14 +199,13 @@ class RealAsr:
             raise ValueError("ASR erwartet 16 kHz")
         segments, _ = self._model.transcribe(
             audio, language=lang or self.settings.source_lang, beam_size=self.settings.asr_beam_size,
-            vad_filter=True, condition_on_previous_text=False,
-            no_speech_threshold=0.6, log_prob_threshold=-1.0, compression_ratio_threshold=2.4)
+            vad_filter=True, vad_parameters={"threshold": 0.3, "min_silence_duration_ms": 1500, "speech_pad_ms": 600},
+            condition_on_previous_text=False,
+            no_speech_threshold=0.8, log_prob_threshold=-1.5, compression_ratio_threshold=3.0)
         teile = []
         for seg in segments:
-            if getattr(seg, "no_speech_prob", 0.0) > 0.6 and getattr(seg, "avg_logprob", 0.0) < -1.0:
-                continue                                      # wahrscheinlich keine Sprache
-            if getattr(seg, "compression_ratio", 0.0) > 2.4:
-                continue                                      # Wiederholungsschleife
+            if getattr(seg, "no_speech_prob", 0.0) > 0.85 and getattr(seg, "avg_logprob", 0.0) < -1.5:
+                continue                                      # sehr wahrscheinlich keine Sprache (nur dann verwerfen)
             t = entferne_floskeln(seg.text.strip())
             if t:
                 teile.append(t)

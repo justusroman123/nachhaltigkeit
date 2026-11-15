@@ -11,25 +11,31 @@ def _norm(s: str) -> str:
     return _NICHT_WORT.sub(" ", s.casefold()).strip()
 
 
+SATZ_MINDEST = 4          # gleicher Satz mindestens so oft hintereinander gilt als Schleife (3 mal kann gewollt sein)
+
+
 def _doppelte_saetze(text: str) -> str:
     teile = [t for t in _SATZ_ENDE.split(text.strip()) if t]
     out: list[str] = []
-    for t in teile:
-        if out and _norm(t) and _norm(t) == _norm(out[-1]):
-            continue
-        out.append(t)
+    i = 0
+    while i < len(teile):
+        j = i
+        while j + 1 < len(teile) and _norm(teile[j + 1]) and _norm(teile[j + 1]) == _norm(teile[i]):
+            j += 1
+        out.extend(teile[i:i + 1] if j - i + 1 >= SATZ_MINDEST else teile[i:j + 1])
+        i = j + 1
     return " ".join(out)
 
 
 def _wortschleifen(text: str) -> str:
     """Gleiche Wortfolge (1 bis 12 Woerter) mehrfach direkt hintereinander: auf eine Folge kuerzen.
-    Einzelwoerter erst ab 4 Wiederholungen, Folgen ab 2 (sonst werden absichtliche Doppelungen wie "sehr sehr" zerstoert)."""
+    Einzelwoerter erst ab 6 Wiederholungen, Folgen ab 4 (sonst werden gewollte Wiederholungen zerstoert; im Zweifel bleibt Text stehen)."""
     w = text.split()
     changed = True
     while changed:
         changed = False
         for n in range(12, 0, -1):
-            mindest = 4 if n == 1 else 2
+            mindest = 6 if n == 1 else 4
             i = 0
             while i + n * mindest <= len(w):
                 blk = [_norm(x) for x in w[i:i + n]]
