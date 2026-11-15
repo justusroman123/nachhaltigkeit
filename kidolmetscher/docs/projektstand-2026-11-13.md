@@ -292,3 +292,10 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 **Offene Entscheidungen des Nutzers:** Sprechen per Taste oder automatisch? Soll die Rückübersetzung nur der Mitarbeiter hören/lesen oder auch der Gast sehen (Text seiner eigenen Aussage)? Wie viele Gäste gleichzeitig (Annahme: einer)? Welche Sprachen zuerst (Vorschlag: Ukrainisch und Englisch)? Datenschutz bei Behörden (Auftragsverarbeitung, Folgenabschätzung): zurückgestellt, vor Echtbetrieb klären.
 
+## 22. Entscheidungen und Fortschritt zum Gesprächsmodus (15.11.2026)
+
+- **Antworten des Nutzers:** alles per Sprache, optional Tippen; super einfach; keine Anzeige der eigenen Aussagen beim Gast; Sperre für alle, solange gesprochen, übersetzt oder vorgelesen wird; zunächst bis zu 3 Gäste, Ukrainisch und Englisch; keine Lizenzkosten; alles protokollieren.
+- **Ergebnis:** vollständiger Entwurf in `docs/gespraechsmodus-entwurf.md` (Betriebsarten, Bedienung, Zustandsautomat, Protokoll, Randfälle, Datenschutz, Lizenzen, Bauplan, offene Punkte). **Gebaut und getestet (Attrappen-Ebene): Sperrlogik `server/app/turns.py` mit 8 Tests (202 Tests gesamt grün).** Noch nicht in Server und Oberflächen eingebunden.
+- **Lizenz-Befund Websuche (15.11.):** Thorsten-Stimme laut Piper-Modellkarte CC0; eine Drittseite behauptet „nur privat/nicht kommerziell“ (Widerspruch, Modellkarte selbst prüfen). eva_k/karlsson: Quelle M-AILABS laut Community-Angabe, Lizenzwortlaut nicht bestätigt.
+- **Nächste Schritte:** siehe Entwurf Abschnitt 8 und 9 (vier offene Fragen an den Nutzer).
+
