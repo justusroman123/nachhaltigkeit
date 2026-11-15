@@ -257,7 +257,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 await ws.send_json(obj)
 
         async def sink(m) -> None:
-            await to_operator(m.to_dict(for_listener=False))
+            # nicht blockieren: ein langsamer Bedienplatz darf die Uebersetzung nicht aufhalten; Ton braucht der Bedienplatz nicht
+            d = m.to_dict(for_listener=False)
+            d["audio"] = None
+            room.push_operator(d)
 
         orch = Orchestrator(room, pipeline, settings, sink=sink)
         audio_q: asyncio.Queue = asyncio.Queue(MAX_AUDIO_QUEUE)
@@ -284,7 +287,14 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
         async def pump():
             """Nachrichten an den Bedienplatz (Zustand der Sperre, Gast-Aussagen) senden; Zeitgrenzen der Sperre pruefen."""
+            last_log = time.monotonic()
             while True:
+                if time.monotonic() - last_log >= 10:        # Staulog: nur Zaehler, nie Inhalte
+                    last_log = time.monotonic()
+                    snap = room.flow.snapshot()
+                    log.info("stau audio_q=%d op_q=%d offen=%s segmente=%d uebersetzungen=%d fehler=%d",
+                             audio_q.qsize(), room._operator_q.qsize(), snap.get("pending"),
+                             room.counters["segments"], room.counters["translations"], room.counters["pipeline_errors"])
                 item = await room.next_operator_message(0.2)
                 if item is not None:
                     try:

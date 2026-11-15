@@ -47,7 +47,6 @@ Sagt der Nutzer „Ich möchte die VM wieder einrichten“ (oder Ähnliches), de
 Es gibt **genau zwei** Betriebsarten: **Vortrag** (durchgehend sprechen, keine Sperre, Sprecher muss nicht aufs Gerät schauen) und **Gespräch** (abwechselnd, Sperre für alle, bis alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben). Details: Protokoll Abschnitt 27. Keine dritte Betriebsart, keine zusätzlichen Schalter.
 
 
-
 # ===== Datei: docs/projektstand-2026-11-13.md =====
 
 # KI-Dolmetscher (KI-SCHUB): Projektstand und Protokoll (Stand 13.11.2026)
@@ -420,10 +419,28 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 | Gäste | hören/lesen nur | bis zu 3, sprechen in ihrer Sprache, der Mitarbeiter liest den deutschen Text; sie hören sich nicht untereinander |
 | Kontrolle | aufklappbar: erkannter Text, Übersetzung je Sprache, „angezeigt x/y · gesprochen x/y“ | dito, zusätzlich Gast-Antworten (letzte 2 Minuten) |
 
-**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (Abschnitt 25); Verlauf = letzte 10 Nachrichten und höchstens 2 Minuten, neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
+**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (Abschnitt 25); Verlauf: seit Abschnitt 28 **ohne Zeitgrenze** (Zuhörer: letzte 60 Nachrichten, nur im Browser), neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
 
 **Ausdrücklich NICHT mehr vorhanden:** eine dritte Betriebsart „Dolmetschen“ (aus Abschnitt 26 entfernt; ihre Wirkung, „erst weiter, wenn alles angekommen ist“, gehört jetzt zum **Gespräch**), Dolmetscher-Schalter, getrennte Vorträge mit Sperre. Auswahl beim Sitzungsstart: zwei Optionen, Vorauswahl **Vortrag**.
 
+
+
+## 28. Vortrag stockt, leere Anzeige, falsche Tonreihenfolge (Rückmeldung 15.11.2026, abends) – Ursachen und Maßnahmen
+
+**Beobachtung des Nutzers (Vortrag):** nach längerem Sprechen nimmt das System keinen Text mehr an, alle Anzeigen leer, erster Satz wird nicht übersetzt; im Kontrollfeld war Satz #26 schon „gesprochen 1/1“, während #25 noch „gesprochen 0/1“ stand.
+
+**Ursachen (Stand: aus dem Code abgeleitet, auf der GPU noch NICHT gemessen):**
+1. **Tonreihenfolge (sicher, im Code belegt):** Der Browser hat den Ton erst dekodiert und danach die Abspielzeit festgelegt. Ein langer Satz (#25) braucht länger zum Dekodieren als ein kurzer (#26); dieser bekam dann den früheren Platz und wurde zuerst gesprochen. Server und Textreihenfolge waren richtig. **Behoben:** Ton wird in Eingangsreihenfolge eingeplant (`playChain` in `web/js/listener.js`), Simulation: Reihenfolge 25, 26.
+2. **Leere Anzeige:** Die 2-Minuten-Löschung leerte die Anzeige nach jeder Sprechpause von 2 Minuten. **Entfernt** (Nutzerwunsch „zeig eben mal alles an“): Zuhörer zeigen die letzten 60 Nachrichten, Bedienplatz die letzten 30 Kontrollsätze; kein Zeitlimit mehr; Hinweis „Letzte 2 Minuten“ entfällt.
+3. **Verzögerung/Stau (wahrscheinlich, nicht gemessen):** Meine Änderung auf 1200 ms Pause / 20 s Höchstlänge ließ die Erkennung erst spät anlaufen. **Zurückgenommen:** `ASR_SILENCE_MS=800`, `ASR_MAX_UTTERANCE_S=8` (Schnitt an der leisesten Stelle bleibt). Der sofortige Ausgabe-Zwang für Reste ohne Satzzeichen wurde durch eine **Haltezeit** ersetzt (`SEGMENT_TAIL_HOLD_MS=2200`): ein Satzrest wartet bis zu 2,2 s auf die Fortsetzung, dann wird er trotzdem übersetzt (nichts geht verloren).
+4. **Blockade durch den Bedienplatz (möglich):** Die Übersetzung wartete, bis der Bedienplatz die Nachricht samt Ton (Base64) angenommen hatte; ein langsames Netz (Hotspot) bremste dann alle Sprachen. **Geändert:** Nachrichten gehen ohne Ton über eine Warteschlange (2000) an den Bedienplatz, die Übersetzung wartet nicht mehr.
+5. **Hängende Stufe (möglich):** MT/TTS haben jetzt eine Zeitgrenze `STAGE_TIMEOUT_S=60`: bei MT-Zeitüberschreitung Meldung „Problem“ und der Satz zählt als erledigt (Vortrag läuft weiter); bei TTS fehlt nur der Ton, der Untertitel kommt.
+
+**Neu: Staulog** alle 10 s (nur Zähler, keine Inhalte): `stau audio_q=… op_q=… offen=… segmente=… uebersetzungen=… fehler=…`. Abruf auf der VM: `journalctl -u kidolmetscher --no-pager | grep stau | tail -20`. Damit lässt sich beim nächsten Test **messen**, ob sich Audio in der Warteschlange staut (Erkennung zu langsam), Sätze offen bleiben (Übersetzung zu langsam) oder nichts hängt.
+
+**Tests:** 212 bestanden, 4 übersprungen, 1 fehlgeschlagen (`test_mt_laden_faellt_auf_bild_text_modell_zurueck`: braucht `torch`, das in dieser Entwicklungsumgebung nicht installiert ist; schlägt auch ohne meine Änderungen fehl). Neuer Test: Satzrest wartet auf Fortsetzung und wird danach ausgegeben. Browsertest Vortrag mit Mock: keine Fehler, Anzeige „Läuft – einfach sprechen · n Satz in Arbeit“.
+
+**Offen / unbekannt:** Ob die Übersetzung auf der A4000 bei durchgehendem Sprechen mit zwei Sprachen schritthält (TranslateGemma 4B und Whisper teilen die GPU; 16 GB Speicher, Reserve unbekannt). Messpunkt: Staulog über ≥ 5 Minuten Vortrag, dazu `nvidia-smi` während des Sprechens.
 
 
 # ===== Datei: docs/vm-neu-einrichten.md =====

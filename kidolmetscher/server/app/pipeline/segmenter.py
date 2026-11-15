@@ -51,6 +51,9 @@ class Segmenter:
                 out.append(self._emit(self._cut_index()))
         return out
 
+    def has_tail(self) -> bool:
+        return bool(self._words)
+
     def flush(self) -> list[AsrSegment]:
         return [self._emit(len(self._words))] if self._words else []
 

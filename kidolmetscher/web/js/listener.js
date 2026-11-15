@@ -3,8 +3,8 @@
   'use strict';
   const NAMES = { uk: 'Українська', ar: 'العربية', en: 'English', tr: 'Türkçe', fa: 'فارسی' };
   const RTL = ['ar', 'fa'];
-  const HISTORY_S = 120;               // Verlauf: Untertitel aelter als 2 Minuten werden geloescht (Anzeige und Speicher)
-  const MAX_LINES = 10;                // und es bleiben hoechstens die letzten 10 Nachrichten (die neueste ist immer sichtbar)
+  const HISTORY_S = 0;                 // 0 = keine Zeitgrenze: Untertitel bleiben stehen, solange die Seite offen ist (Nutzerwunsch: alles anzeigen)
+  const MAX_LINES = 60;                // es bleiben hoechstens die letzten 60 Nachrichten (nur im Browser, die neueste ist immer sichtbar)
   const MAX_AUDIO_BACKLOG_S = 3600;   // Ton wird nie ausgelassen (Vollstaendigkeit geht vor); frueher 6 s: dann fehlte der Ton bei vorhandenen Untertiteln
   const $ = (id) => document.getElementById(id);
   const subs = $('subs'), statusEl = $('status'), langEl = $('lang'), btnSound = $('btnSound'), picker = $('picker'),
@@ -27,7 +27,7 @@
   /* ---------- Hinweis (KI) und Texte in der gewaehlten Sprache ---------- */
   function applyStrings() {
     const s = t(), dir = RTL.includes(lang) ? 'rtl' : 'ltr';
-    $('aiText').textContent = s.ai; $('privacyLink').textContent = s.privacy; $('histNote').textContent = s.last2 || '';
+    $('aiText').textContent = s.ai; $('privacyLink').textContent = s.privacy; $('histNote').textContent = '';   // Hinweis "letzte 2 Minuten" entfaellt (Verlauf ohne Zeitgrenze)
     $('notice').dir = dir;
     $('btnStartSound').textContent = '🔊  ' + s.start; $('btnSubsOnly').textContent = s.subsOnly;
     $('startAi').textContent = s.ai; startScreen.dir = dir;
@@ -74,6 +74,7 @@
     return true;
   }
   function purgeHistory() {
+    if (!HISTORY_S) return;
     const limit = Date.now() - HISTORY_S * 1000;
     while (lines.length && lines[0].at < limit) { const l = lines.shift(); if (l.el.parentNode) l.el.remove(); }
   }
@@ -91,9 +92,16 @@
     for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return u.buffer;
   }
-  async function play(audio) {                       // aufgeloest, wenn der Ton zu Ende ist (oder ausgelassen wurde)
-    if (!soundOn || !audioCtx || !audio) return;
-    if (nextStart - audioCtx.currentTime > MAX_AUDIO_BACKLOG_S) return;     // zu viel Rueckstau: Ton auslassen
+  // Ton strikt in Eingangsreihenfolge einplanen: Laden/Dekodieren darf sich nicht ueberholen (langer Satz vor kurzem Satz)
+  let playChain = Promise.resolve();
+  function play(audio) {                             // aufgeloest, wenn der Ton zu Ende ist (oder ausgelassen wurde)
+    if (!soundOn || !audioCtx || !audio) return Promise.resolve();
+    const job = playChain.then(() => schedule(audio));
+    playChain = job.catch(() => {});
+    return job.then((h) => (h ? h.done : undefined)).catch(() => {});
+  }
+  async function schedule(audio) {                   // liefert {done}, sobald der Ton eingeplant ist (nicht erst nach dem Abspielen)
+    if (nextStart - audioCtx.currentTime > MAX_AUDIO_BACKLOG_S) return null;     // zu viel Rueckstau: Ton auslassen
     try {
       const buf = await audioCtx.decodeAudioData(b64ToBuf(audio.data_b64));
       const src = audioCtx.createBufferSource();
@@ -101,8 +109,9 @@
       const at = Math.max(audioCtx.currentTime + 0.05, nextStart);            // Warteschlange: nie ueberlappen
       const ended = new Promise((resolve) => { src.onended = resolve; });
       src.start(at); nextStart = at + buf.duration;
-      await Promise.race([ended, new Promise((r) => setTimeout(r, (buf.duration + 2) * 1000 + Math.max(0, (at - audioCtx.currentTime) * 1000)))]);
-    } catch (_) { /* defektes Audio ueberspringen */ }
+      const wait = (buf.duration + 2) * 1000 + Math.max(0, (at - audioCtx.currentTime) * 1000);
+      return { done: Promise.race([ended, new Promise((r) => setTimeout(r, wait))]) };
+    } catch (_) { return null; }                     // defektes Audio ueberspringen
   }
   async function enableSound() {
     audioCtx = audioCtx || new AudioContext();    // erst nach Tipp erlaubt (Autoplay-Regeln der Tablets)

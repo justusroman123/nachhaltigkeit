@@ -185,11 +185,42 @@ def test_segmentierung_zwischen_asr_und_uebersetzung():
                 async def close(self): ...
             return S()
 
-    orch, room, _ = make_orch(make_settings(segment_max_words=5), langs=("en",), asr=WortAsr())
+    orch, room, _ = make_orch(make_settings(segment_max_words=5, segment_tail_hold_ms=0), langs=("en",), asr=WortAsr())
     msgs = feed(orch, 1)
     assert [m.text_src for m in msgs] == ["eins zwei drei vier fuenf", "sechs sieben acht neun zehn",
                                            "elf zwoelf dreizehn vierzehn"]      # auch der Rest ohne Satzzeichen wird ausgegeben
     assert room.counters["partials_skipped"] == 1
+
+
+def test_rest_ohne_satzzeichen_wartet_kurz_auf_fortsetzung_und_wird_dann_ausgegeben():
+    from app.pipeline.base import AsrSegment
+
+    class RestAsr:
+        async def load(self): ...
+        def new_stream(self):
+            class S:
+                done = False
+                async def feed(self, c):
+                    if S.done:
+                        return []
+                    S.done = True
+                    return [AsrSegment("Ich habe gestern", True, c.t_audio_in, c.t_audio_in + 1)]
+                async def flush(self): return []
+                async def close(self): ...
+            return S()
+
+    orch, room, _ = make_orch(make_settings(segment_tail_hold_ms=300), langs=("en",), asr=RestAsr())
+
+    async def go():
+        await orch.on_audio(chunk(100))
+        sofort = len(orch._queues) and orch._queues["en"].qsize() + 0
+        await asyncio.sleep(0.4)
+        await orch.on_audio(chunk(100))                    # naechster Block: Haltezeit ist um, Rest geht trotzdem raus
+        return sofort, await orch.drain()
+
+    sofort, msgs = run(go())
+    assert not sofort                                          # nicht sofort ausgegeben
+    assert [m.text_src for m in msgs] == ["Ich habe gestern"]
 
 
 class _LangsamMt:

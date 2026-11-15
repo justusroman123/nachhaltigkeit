@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Awaitable, Callable, Optional
 
 from .config import Settings
@@ -39,6 +40,7 @@ class Orchestrator:
         self._workers: dict[str, asyncio.Task] = {}
         self._flow = room.tracker                         # Gespraech: echte Sperre, Vortrag: Anzeige, ob noch etwas laeuft
         self._open: dict[int, int] = {}                  # seq -> noch offene Sprachen
+        self._tail_since = 0.0                           # Zeit (monotonic), seit der ein Rest ohne Satzzeichen wartet
 
     # ---------- Eingang ----------
     async def on_audio(self, pcm: bytes) -> None:
@@ -46,8 +48,12 @@ class Orchestrator:
         self.room.counters["audio_chunks"] += 1
         segs = await self._stream.feed(chunk)
         out = self._segment(segs)
-        if segs:                                  # Abschnitt zu Ende (Pause): Rest ohne Satzzeichen nicht liegen lassen
-            out += self._segmenter.flush()
+        if segs:
+            self._tail_since = time.monotonic()
+        if self._segmenter.has_tail():            # Rest ohne Satzzeichen: kurz auf die Fortsetzung warten, dann trotzdem ausgeben
+            hold = self.settings.segment_tail_hold_ms / 1000.0
+            if time.monotonic() - self._tail_since >= hold:
+                out += self._segmenter.flush()
         self._enqueue(out)
         notice = getattr(self._stream, "pop_notice", lambda: None)()
         if notice:
@@ -162,11 +168,17 @@ class Orchestrator:
                 self._done_one(seq)
 
     async def _process(self, seq: int, seg: AsrSegment, lang: str, skip_audio: bool) -> TranslationMessage:
-        text = await self.pipeline.mt.translate(seg.text, self.settings.source_lang, lang)
+        to = self.settings.stage_timeout_s
+        text = await asyncio.wait_for(self.pipeline.mt.translate(seg.text, self.settings.source_lang, lang), to)
         t_mt = self._clock()
         audio, t_tts = None, None
         if self.settings.tts_enabled and not skip_audio:
-            res = await self.pipeline.tts.synthesize(text, lang)
+            try:
+                res = await asyncio.wait_for(self.pipeline.tts.synthesize(text, lang), to)
+            except asyncio.TimeoutError:               # Ton fehlt, Untertitel kommen trotzdem
+                res = None
+                self.room.counters["tts_timeouts"] += 1
+                self.room.push_operator(control_message("problem", what="uebersetzung", lang=lang))
             t_tts = self._clock()
             if res is not None:
                 audio = AudioPayload(res.audio, res.sample_rate, res.fmt)

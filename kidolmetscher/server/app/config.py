@@ -85,6 +85,8 @@ class Settings:
     history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
     segment_max_words: int = 40            # Segmentierer: hoechstens so viele Woerter je Uebersetzung (Saetze werden am Satzende getrennt)
+    segment_tail_hold_ms: int = 2200       # Rest ohne Satzzeichen so lange auf die Fortsetzung warten, dann trotzdem uebersetzen (0 = sofort)
+    stage_timeout_s: float = 60.0          # eine MT-/TTS-Stufe laenger als das: Satz als Problem melden statt alles zu blockieren
     lang_queue_max: int = 500              # Warteschlange je Sprache; Vollstaendigkeit geht vor (frueher 8: verwarf Saetze)
     tts_skip_backlog: int = 100000         # ab so vielen wartenden Segmenten entfaellt der Ton; praktisch aus (frueher 2: Ton fehlte bei Untertiteln)
     server_hourly_eur: float = 0.0         # optional, netto; 0 = unbekannt
@@ -98,8 +100,8 @@ class Settings:
     asr_device: str = "auto"               # auto | cuda | cpu
     asr_compute_type: str = "default"      # z. B. float16 (GPU), int8 (CPU)
     asr_beam_size: int = 5
-    asr_silence_ms: int = 1200             # Pause, nach der ein Abschnitt als beendet gilt: kurze Atempausen schneiden nicht ab (Annahme, messen)
-    asr_max_utterance_s: float = 20.0      # laengster Abschnitt ohne Pause; Balken der Satzlaenge zeigt dagegen (Annahme, messen)
+    asr_silence_ms: int = 800              # Pause, nach der ein Abschnitt an die Erkennung geht (Annahme, messen); Satzteile werden spaeter im Segmentierer zusammengehalten
+    asr_max_utterance_s: float = 8.0       # laengster Abschnitt ohne Pause, danach Schnitt an der leisesten Stelle (Annahme, messen)
     asr_min_speech_ms: int = 300           # kuerzere Abschnitte werden verworfen
     asr_vad_rms: int = 400                 # Lautstaerke-Schwelle (RMS, 16-Bit-Skala) fuer "es wird gesprochen" (Annahme, messen)
     mt_model_id: str = ""
@@ -194,6 +196,8 @@ class Settings:
                 history_s=float(get("HISTORY_S", d.history_s)),
                 max_guests=int(get("MAX_GUESTS", d.max_guests)),
                 segment_max_words=int(get("SEGMENT_MAX_WORDS", d.segment_max_words)),
+                segment_tail_hold_ms=int(get("SEGMENT_TAIL_HOLD_MS", d.segment_tail_hold_ms)),
+                stage_timeout_s=float(get("STAGE_TIMEOUT_S", d.stage_timeout_s)),
                 lang_queue_max=int(get("LANG_QUEUE_MAX", d.lang_queue_max)),
                 tts_skip_backlog=int(get("TTS_SKIP_BACKLOG", d.tts_skip_backlog)),
                 server_hourly_eur=float(get("SERVER_HOURLY_EUR", d.server_hourly_eur)),

@@ -88,7 +88,7 @@ class Room:
         self.id = room_id
         self.mode = mode
         self.strict = mode == "gespraech"                        # echte Sperre: erst weitersprechen, wenn alles angekommen ist
-        self._operator_q: asyncio.Queue = asyncio.Queue(200)    # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
+        self._operator_q: asyncio.Queue = asyncio.Queue(2000)   # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
         self.turns = TurnManager(on_change=self._turn_changed)  # Sperre im Gespraechsmodus
         self.flow = FlowTracker(on_change=self._flow_changed)   # Vortrag: nur Anzeige, ob noch etwas laeuft
         self._delivery: dict[tuple[int, str], dict] = {}        # (seq, sprache) -> wer hat es bekommen/angezeigt/gesprochen (nur Zaehler, keine Inhalte)

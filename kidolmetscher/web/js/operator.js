@@ -147,7 +147,7 @@
   }
 
   /* ---------- Kontrolle: erkannter Text, Uebersetzung je Sprache, Zustellung (angezeigt/gesprochen) ---------- */
-  const CHECK_MAX = 10, checks = new Map();
+  const CHECK_MAX = 30, checks = new Map();
   function checkEntry(seq, src) {
     let c = checks.get(seq);
     if (!c) {
@@ -483,8 +483,9 @@
     } catch (_) {}
   }
 
-  // Verlauf im Bedienplatz: Eintraege aelter als 2 Minuten werden geloescht
-  setInterval(() => { const limit = Date.now() - 120000;
+  // Verlauf im Bedienplatz: keine Zeitgrenze mehr (Nutzerwunsch), nur Anzahl begrenzt (CHECK_MAX, 20 Zeilen)
+  const HISTORY_MS = 0;
+  setInterval(() => { if (!HISTORY_MS) return; const limit = Date.now() - HISTORY_MS;
     [...e.log.children, ...e.guestLog.querySelectorAll('.guestline')].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); });
     [...checks].forEach(([k, c]) => { if (Number(c.box.dataset.at) < limit) { c.box.remove(); checks.delete(k); } }); }, 1000);
 
