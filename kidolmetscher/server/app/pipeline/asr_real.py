@@ -21,9 +21,10 @@ from ..config import ConfigError, Settings
 from ..messages import now_ms
 from .base import AsrSegment, AsrStream, AudioChunk
 
-from .text_clean import entdoppeln
+from .text_clean import entdoppeln, entferne_floskeln
 log = logging.getLogger("kidolmetscher.pipeline")
 PEGEL_ALLE_BLOECKE = 100     # Pegel-Logzeile etwa alle 5 s (nur Zahlen, keine Inhalte)
+TAIL_KEEP_MS = 250        # so viel Stille bleibt hinter dem letzten lauten Block erhalten
 REPEAT_WINDOW_MS = 4000    # gleicher Text kurz nach dem vorigen Abschnitt gilt als Wiederholung (Whisper-Schleife)
 PREROLL_MS = 200          # Audio vor dem ersten lauten Block, damit der Wortanfang nicht fehlt
 
@@ -60,7 +61,10 @@ class RealAsrStream:
 
     async def _finish(self) -> list[AsrSegment]:
         pcm, first_in, speech_ms, rate = b"".join(self._buf), self._first_in, self._speech_ms, self._rate
+        ueberhang_ms = self._silence_ms - TAIL_KEEP_MS       # Stille am Ende kuerzen: dort halluziniert Whisper gern
         self._reset()
+        if ueberhang_ms > 0:
+            pcm = pcm[: max(0, len(pcm) - int(rate * ueberhang_ms / 1000) * 2)]
         if not pcm or speech_ms < self._o.settings.asr_min_speech_ms:
             return []
         text = await self._o.transcribe(pcm, rate)
@@ -154,8 +158,18 @@ class RealAsr:
             raise ValueError("ASR erwartet 16 kHz")
         segments, _ = self._model.transcribe(
             audio, language=self.settings.source_lang, beam_size=self.settings.asr_beam_size,
-            vad_filter=True, condition_on_previous_text=False)
-        return " ".join(seg.text.strip() for seg in segments).strip()
+            vad_filter=True, condition_on_previous_text=False,
+            no_speech_threshold=0.6, log_prob_threshold=-1.0, compression_ratio_threshold=2.4)
+        teile = []
+        for seg in segments:
+            if getattr(seg, "no_speech_prob", 0.0) > 0.6 and getattr(seg, "avg_logprob", 0.0) < -1.0:
+                continue                                      # wahrscheinlich keine Sprache
+            if getattr(seg, "compression_ratio", 0.0) > 2.4:
+                continue                                      # Wiederholungsschleife
+            t = entferne_floskeln(seg.text.strip())
+            if t:
+                teile.append(t)
+        return " ".join(teile).strip()
 
     async def transcribe(self, pcm: bytes, rate: int) -> str:
         assert self._lock is not None

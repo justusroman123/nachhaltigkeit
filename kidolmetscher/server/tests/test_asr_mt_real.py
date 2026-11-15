@@ -68,7 +68,7 @@ def test_abschnitt_nach_pause_mit_vorlauf_und_zeitstempeln():
     assert segs[0].t_audio_in == 1000 + 6 * 50                    # erster lauter Block
     assert segs[0].t_asr >= segs[0].t_audio_in
     dauer, opts = a.calls[0]
-    assert dauer == pytest.approx(0.2 + 0.5 + 0.3)               # 200 ms Vorlauf + Sprache + Pause
+    assert dauer == pytest.approx(0.2 + 0.5 + 0.25)              # 200 ms Vorlauf + Sprache + 250 ms Pause (Rest gekuerzt)
     assert opts["language"] == "de" and opts["vad_filter"] is True and opts["condition_on_previous_text"] is False
 
 
@@ -282,3 +282,18 @@ def test_max_neue_tokens_waechst_mit_dem_satz_und_hat_eine_obergrenze():
     assert max_neue_tokens(" ".join(["wort"] * 12), 256) == 96
     assert max_neue_tokens(" ".join(["wort"] * 100), 256) == 256
     assert max_neue_tokens("Hallo", 20) == 20
+
+
+from app.pipeline.text_clean import entferne_floskeln
+
+
+def test_floskeln_werden_entfernt_normaler_text_nicht():
+    assert entferne_floskeln("Untertitelung des BR 2018 Ich spreche einfach mal.") == "Ich spreche einfach mal."
+    assert entferne_floskeln("Untertitel im Auftrag des ZDF, 2017 Hallo zusammen.") == "Hallo zusammen."
+    assert entferne_floskeln("Untertitelung. BR 2018 Okay, machen wir das.") == "Okay, machen wir das."
+    assert entferne_floskeln("Untertitel der Amara.org-Community") == ""
+    assert entferne_floskeln("Untertitelung.") == ""
+    assert entferne_floskeln("ZDF 2020") == ""
+    for ok in ("Die Untertitel erscheinen auf dem Handy.", "Wir sehen beim ZDF und beim BR gute Beispiele.",
+               "Im Jahr 2018 war das anders.", "Das Gerät kommt über Funk."):
+        assert entferne_floskeln(ok) == ok

@@ -52,3 +52,20 @@ def entdoppeln(text: str) -> Tuple[str, bool]:
         return text, False
     neu = _wortschleifen(_doppelte_saetze(text))
     return neu, neu != text.strip()
+
+
+# Whisper erfindet bei Stille/Rauschen oft Abspann-Zeilen aus Untertitel-Trainingsdaten ("Untertitelung des BR 2018").
+_SENDER = r"(?:ZDF|SWR|BR|WDR|NDR|MDR|ORF|SRF|RBB|HR)"
+_FLOSKEL_UNTERTITEL = re.compile(
+    r"(?i:untertitel(?:ung|ungen)?)[.:]?\s*(?:(?i:im auftrag|der|des|von|aufgrund der)\s+)?[^.!?]{0,60}?"
+    r"(?:(?i:amara\.org)(?:-Community)?|\b" + _SENDER + r"\b)[^.!?\d]{0,20}(?:20\d\d)?[.:]?")
+_FLOSKEL_SENDER_JAHR = re.compile(r"\b" + _SENDER + r"\s*,?\s*20\d\d\b[.:]?")
+_NUR_UNTERTITEL = re.compile(r"^\s*(?i:untertitel(?:ung|ungen)?)[.!]?\s*$")
+
+
+def entferne_floskeln(text: str) -> str:
+    """Entfernt typische erfundene Abspann-Zeilen der Spracherkennung. Normaler Text bleibt unveraendert."""
+    if not text or _NUR_UNTERTITEL.match(text):
+        return ""
+    neu = _FLOSKEL_SENDER_JAHR.sub(" ", _FLOSKEL_UNTERTITEL.sub(" ", text))
+    return " ".join(neu.split())
