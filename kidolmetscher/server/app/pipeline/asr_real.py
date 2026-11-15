@@ -41,8 +41,9 @@ def pcm16_rms(pcm: bytes) -> float:
 
 
 class RealAsrStream:
-    def __init__(self, owner: "RealAsr", clock: Callable[[], int]):
+    def __init__(self, owner: "RealAsr", clock: Callable[[], int], lang: Optional[str] = None):
         self._o = owner
+        self._lang = lang
         self._clock = clock
         self._pre: deque[AudioChunk] = deque()
         self._pre_ms = 0.0
@@ -67,7 +68,7 @@ class RealAsrStream:
             pcm = pcm[: max(0, len(pcm) - int(rate * ueberhang_ms / 1000) * 2)]
         if not pcm or speech_ms < self._o.settings.asr_min_speech_ms:
             return []
-        text = await self._o.transcribe(pcm, rate)
+        text = await self._o.transcribe(pcm, rate, self._lang)
         text, bereinigt = entdoppeln(text)                   # Whisper wiederholt manchmal denselben Satz
         norm = " ".join(text.casefold().split())
         jetzt = self._clock()
@@ -147,17 +148,17 @@ class RealAsr:
             lambda: WhisperModel(s.asr_model, device=s.asr_device, compute_type=s.asr_compute_type))
         self._lock = asyncio.Lock()
 
-    def new_stream(self) -> AsrStream:
+    def new_stream(self, lang: Optional[str] = None) -> AsrStream:
         if self._model is None:
             raise ConfigError("RealAsr.load() wurde nicht aufgerufen")
-        return RealAsrStream(self, self._clock)
+        return RealAsrStream(self, self._clock, lang)
 
-    def _run(self, pcm: bytes, rate: int) -> str:
+    def _run(self, pcm: bytes, rate: int, lang: Optional[str] = None) -> str:
         audio = self._np.frombuffer(pcm, dtype=self._np.int16).astype(self._np.float32) / 32768.0
         if rate != 16000:
             raise ValueError("ASR erwartet 16 kHz")
         segments, _ = self._model.transcribe(
-            audio, language=self.settings.source_lang, beam_size=self.settings.asr_beam_size,
+            audio, language=lang or self.settings.source_lang, beam_size=self.settings.asr_beam_size,
             vad_filter=True, condition_on_previous_text=False,
             no_speech_threshold=0.6, log_prob_threshold=-1.0, compression_ratio_threshold=2.4)
         teile = []
@@ -171,7 +172,7 @@ class RealAsr:
                 teile.append(t)
         return " ".join(teile).strip()
 
-    async def transcribe(self, pcm: bytes, rate: int) -> str:
+    async def transcribe(self, pcm: bytes, rate: int, lang: Optional[str] = None) -> str:
         assert self._lock is not None
         async with self._lock:                               # ein Modell, eine Erkennung gleichzeitig
-            return await asyncio.to_thread(self._run, pcm, rate)
+            return await asyncio.to_thread(self._run, pcm, rate, lang)

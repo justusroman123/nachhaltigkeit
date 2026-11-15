@@ -15,7 +15,10 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from .config import Settings
-from .messages import SUPPORTED_LANGS
+from .messages import SUPPORTED_LANGS, control_message
+from .turns import FREI, TurnManager
+
+MODES = ("vortrag", "gespraech")
 
 
 class RoomError(Exception):
@@ -71,8 +74,13 @@ class Listener:
 
 class Room:
     def __init__(self, room_id: str, settings: Settings, clock: Callable[[], float],
-                 langs: Optional[tuple] = None):
+                 langs: Optional[tuple] = None, mode: str = "vortrag"):
+        if mode not in MODES:
+            raise RoomError(f"Betriebsart unbekannt: {mode}")
         self.id = room_id
+        self.mode = mode
+        self._operator_q: asyncio.Queue = asyncio.Queue(200)    # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
+        self.turns = TurnManager(on_change=self._turn_changed)  # Sperre im Gespraechsmodus
         self.settings = settings
         self.langs: tuple[str, ...] = tuple(langs) if langs else tuple(settings.default_langs)
         self._clock = clock
@@ -126,6 +134,8 @@ class Room:
         info = self._resolve(token)
         if len(self._listeners) >= self.settings.max_listeners_per_room:
             raise RoomFullError("Zu viele Zuhoerer")
+        if self.mode == "gespraech" and len(self._listeners) >= self.settings.max_guests:
+            raise RoomFullError("Zu viele Gaeste")
         lst = Listener(info.lang, info.expires_at)
         self._listeners[lst.id] = lst
         self.counters["listeners_total"] += 1
@@ -180,8 +190,34 @@ class Room:
             if l.lang == lang:
                 l.push(message)
                 delivered += 1
+                if self.mode == "gespraech" and isinstance(message.get("seq"), int):
+                    self.turns.expect_playback(message["seq"], f"gast:{l.id}")   # Geraet muss "fertig" melden
         self.counters["messages_out"] += delivered
         return delivered
+
+    # --- Gespraechsmodus ---
+    def _turn_changed(self, snapshot: dict) -> None:
+        """Zustand der Sperre an alle Geraete verteilen (nur Zustand und Rolle, keine Inhalte)."""
+        msg = control_message("turn", **snapshot)
+        self.push_operator(msg)
+        for l in self._listeners.values():
+            l.push(msg)
+
+    def push_operator(self, message: dict) -> None:
+        if self.closed:
+            return
+        if self._operator_q.full():
+            try:
+                self._operator_q.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+        self._operator_q.put_nowait(message)
+
+    async def next_operator_message(self, timeout: float) -> Optional[dict]:
+        try:
+            return await asyncio.wait_for(self._operator_q.get(), timeout)
+        except asyncio.TimeoutError:
+            return None
 
     # --- Lebenszyklus ---
     def close(self) -> None:
@@ -194,6 +230,7 @@ class Room:
         self._listeners.clear()
         self._tokens.clear()
         self._ring.clear()
+        self.turns.release()
         self.operator_active = False
 
     def _ensure_open(self) -> None:
@@ -204,6 +241,8 @@ class Room:
         return {
             "room_open": not self.closed,
             "langs": list(self.langs),
+            "mode": self.mode,
+            "turn": self.turns.snapshot(),
             "listeners_connected": len(self._listeners),
             "operator_active": self.operator_active,
             "listeners": self.listener_counts(),
@@ -217,12 +256,12 @@ class RoomManager:
         self._clock = clock
         self._rooms: dict[str, Room] = {}
 
-    def create_room(self, langs: Optional[list] = None) -> Room:
+    def create_room(self, langs: Optional[list] = None, mode: Optional[str] = None) -> Room:
         if langs is not None:
             bad = [l for l in langs if l not in self.settings.target_langs]
             if bad or not langs:
                 raise LanguageError(f"Sprachen nicht erlaubt oder leer: {bad or langs}")
-        room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs)
+        room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs, mode or "vortrag")
         self._rooms[room.id] = room
         return room
 

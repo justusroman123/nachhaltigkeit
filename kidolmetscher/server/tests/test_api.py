@@ -80,8 +80,8 @@ def test_csp_hash_nur_fuer_mic_test(client):
 def test_stats_enthaelt_nur_zaehler(client):
     rid = new_room(client)
     s = client.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
-    assert set(s) == {"room_open", "langs", "listeners_connected", "operator_active", "listeners", "counters",
-                      "server_uptime_s", "server_hourly_eur", "budget_eur"}
+    assert set(s) == {"room_open", "langs", "mode", "turn", "listeners_connected", "operator_active", "listeners",
+                      "counters", "server_uptime_s", "server_hourly_eur", "budget_eur"}
 
 
 # ---------- WebSocket Ende-zu-Ende ----------

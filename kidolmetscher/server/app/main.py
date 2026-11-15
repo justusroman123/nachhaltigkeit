@@ -26,10 +26,12 @@ from pydantic import BaseModel
 from .config import Settings
 from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FULL,
                        WS_NOT_FOUND, WS_UNAUTHORIZED, control_message)
+from .conversation import GuestPath
 from .orchestrator import Orchestrator
 from .pipeline import build_pipeline
 from .pipeline.base import Pipeline
 from .rooms import END, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
+from .turns import SPRICHT
 from .security import BASE_HEADERS, build_csp, collect_page_hashes
 
 log = logging.getLogger("kidolmetscher")
@@ -42,11 +44,13 @@ if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe o
 HELLO_TIMEOUT_S = 10
 MAX_FRAME_BYTES = 64_000          # ein Audio-Block (PCM16); 50 ms bei 16 kHz sind 1600 Byte
 MAX_AUDIO_QUEUE = 100             # Blocks; bei Rueckstau werden alte verworfen und gezaehlt
+_END_UTTERANCE = object()         # Marker in der Audio-Warteschlange: Aussage des Mitarbeiters ist zu Ende (Gespraechsmodus)
 REAPER_INTERVAL_S = 30
 
 
 class RoomRequest(BaseModel):
     langs: Optional[list[str]] = None      # angebotene Sprachen; leer = alle aus TARGET_LANGS
+    mode: Optional[str] = None             # "vortrag" (Standard) oder "gespraech"
 
 
 class LinkRequest(BaseModel):
@@ -156,10 +160,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                           x_operator_key: Optional[str] = Header(default=None)):
         require_operator(x_operator_key)
         try:
-            room = rooms.create_room(body.langs if body else None)
-        except LanguageError as exc:
+            room = rooms.create_room(body.langs if body else None, body.mode if body else None)
+        except (LanguageError, RoomError) as exc:
             raise HTTPException(400, str(exc))
-        return {"room_id": room.id, "langs": list(room.langs),
+        return {"room_id": room.id, "langs": list(room.langs), "mode": room.mode,
                 "expires_in_s": settings.room_ttl_s, "sample_rate": settings.sample_rate,
                 "listener_ttl_s": settings.listener_ttl_s,
                 "min_listener_ttl_s": settings.min_listener_ttl_s,
@@ -263,16 +267,46 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 pcm = await audio_q.get()
                 if pcm is None:
                     return
+                if pcm is _END_UTTERANCE:      # Aussage des Mitarbeiters zu Ende: Abschnitt abschliessen, dann Sperre weitergeben
+                    try:
+                        await orch.end_utterance()
+                    except Exception as exc:
+                        room.counters["pipeline_errors"] += 1
+                        log.error("pipeline_fehler typ=%s", settings.fehler(exc))
+                    room.turns.end_speaking("staff")
+                    continue
                 try:
                     await orch.on_audio(pcm)
                 except Exception as exc:       # nie Inhalte loggen, nur den Typ
                     room.counters["pipeline_errors"] += 1
                     log.error("pipeline_fehler typ=%s", settings.fehler(exc))
 
+        async def pump():
+            """Nachrichten an den Bedienplatz (Zustand der Sperre, Gast-Aussagen) senden; Zeitgrenzen der Sperre pruefen."""
+            while True:
+                item = await room.next_operator_message(0.2)
+                if item is not None:
+                    try:
+                        await to_operator(item)
+                    except Exception:
+                        return
+                room.turns.tick()
+
         worker_task = asyncio.create_task(worker())
+        pump_task = asyncio.create_task(pump())
+        staff_open = False                      # es wurde Audio des Mitarbeiters angenommen, Aussage noch nicht abgeschlossen
+
+        def end_staff_utterance() -> None:
+            nonlocal staff_open
+            if staff_open:
+                staff_open = False
+                if audio_q.full():
+                    audio_q.get_nowait()
+                audio_q.put_nowait(_END_UTTERANCE)
+
         try:
-            await to_operator(control_message("ready", langs=list(room.langs),
-                                              sample_rate=settings.sample_rate))
+            await to_operator(control_message("ready", langs=list(room.langs), sample_rate=settings.sample_rate,
+                                              mode=room.mode, turn=room.turns.snapshot()))
             while not room.closed:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
@@ -282,6 +316,11 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if len(data) > MAX_FRAME_BYTES or len(data) % 2:
                         room.counters["bad_frames"] += 1
                         continue
+                    if room.mode == "gespraech":
+                        if not (room.turns.state == SPRICHT and room.turns.who == "staff"):
+                            end_staff_utterance()          # Zeitgrenze oder Sperre: Rest abschliessen, weitere Audioblocks verwerfen
+                            continue
+                        staff_open = True
                     if audio_q.full():
                         audio_q.get_nowait()
                         room.counters["audio_dropped"] += 1
@@ -294,6 +333,16 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             break
                         if kind == "ping" and isinstance(data_t.get("t"), (int, float)):
                             await to_operator(control_message("pong", t=data_t["t"]))   # Netz-Laufzeit-Messung
+                        elif kind == "talk" and room.mode == "gespraech":
+                            if data_t.get("on"):
+                                ok, _ = room.turns.claim("staff")
+                                if not ok:
+                                    await to_operator(control_message("busy"))
+                            elif room.turns.state == SPRICHT and room.turns.who == "staff":
+                                staff_open = True              # auch ohne Audio abschliessen (Marker erzwingen)
+                                end_staff_utterance()
+                        elif kind == "release":
+                            room.turns.release()               # Notbremse des Mitarbeiters
                     except Exception:
                         room.counters["bad_frames"] += 1
         finally:
@@ -310,6 +359,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
             finally:
                 # Auch wenn das Aufraeumen abgebrochen wird (z. B. Serverstopp): Bedienplatz wieder freigeben
                 worker_task.cancel()
+                pump_task.cancel()
+                room.turns.release()
                 orch.cancel_workers()
                 room.operator_active = False
 
@@ -336,7 +387,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         def ready_message() -> dict:
             return control_message(
                 "ready", lang=listener.lang, langs=list(room.langs),
-                rtl=listener.lang in RTL_LANGS,
+                rtl=listener.lang in RTL_LANGS, mode=room.mode, turn=room.turns.snapshot(),
                 expires_in_s=max(0, int(listener.expires_at - clock())))
 
         def select(lang: object) -> bool:
@@ -351,17 +402,53 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 listener.push(m)
             return True
 
-        async def drain():             # liest Auswahl-Nachrichten, erkennt, wenn der Client geht
+        device = f"gast:{listener.id}"
+        guest: Optional[GuestPath] = None
+
+        async def end_talk() -> None:
+            if guest is not None and guest.open:
+                await guest.finish()
+            if room.turns.state == SPRICHT and room.turns.who == device:
+                room.turns.end_speaking(device)
+
+        async def drain():             # liest Auswahl-Nachrichten und (Gespraechsmodus) Sprechen/Audio/fertig; erkennt, wenn der Client geht
+            nonlocal guest
             while True:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
                     return
+                raw = msg.get("bytes")
+                if raw is not None:                         # Audio des Gastes (nur wenn er das Wort hat)
+                    if room.mode != "gespraech" or guest is None or len(raw) > MAX_FRAME_BYTES or len(raw) % 2:
+                        continue
+                    if room.turns.state == SPRICHT and room.turns.who == device:
+                        await guest.on_audio(raw)
+                    elif guest.open:
+                        await end_talk()                    # Zeitgrenze erreicht: Rest abschliessen
+                    continue
                 try:
                     data = json.loads(msg.get("text") or "")
                 except ValueError:
                     continue
-                if isinstance(data, dict) and data.get("type") == "select":
+                if not isinstance(data, dict):
+                    continue
+                kind = data.get("type")
+                if kind == "select":
                     select(data.get("lang"))
+                elif room.mode == "gespraech" and listener.lang is not None:
+                    if kind == "talk" and data.get("on"):
+                        ok, _ = room.turns.claim(device)
+                        if ok:
+                            if guest is None or guest.lang != listener.lang:
+                                if guest is not None:
+                                    await guest.close()
+                                guest = GuestPath(room, pipeline, settings, listener)
+                        else:
+                            listener.push(control_message("busy"))
+                    elif kind == "talk":
+                        await end_talk()
+                    elif kind == "played" and isinstance(data.get("seq"), int) and not isinstance(data.get("seq"), bool):
+                        room.turns.playback_done(data["seq"], device)
 
         recv_task = asyncio.create_task(drain())
         get_task: Optional[asyncio.Task] = None
@@ -399,6 +486,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 if t is not None:
                     t.cancel()
             room.detach_listener(listener)
+            room.turns.device_left(device)
+            if guest is not None:
+                with contextlib.suppress(Exception):
+                    await guest.close()
 
     # ---------- Statische Dateien (alles lokal) ----------
     @app.get("/", include_in_schema=False)

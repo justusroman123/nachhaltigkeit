@@ -47,7 +47,7 @@ class AsrStream(Protocol):
 @runtime_checkable
 class AsrStage(Protocol):
     async def load(self) -> None: ...
-    def new_stream(self) -> AsrStream: ...
+    def new_stream(self, lang: Optional[str] = None) -> AsrStream: ...    # lang: Sprache des Sprechers (None = Standard)
 
 
 @runtime_checkable

@@ -37,12 +37,29 @@ class Orchestrator:
         self._segmenter = Segmenter(settings.segment_max_words)
         self._queues: dict[str, asyncio.Queue] = {}
         self._workers: dict[str, asyncio.Task] = {}
+        self._conv = room.mode == "gespraech"             # Gespraechsmodus: Sperre muss auf alle Sprachen warten
+        self._open: dict[int, int] = {}                  # seq -> noch offene Sprachen
 
     # ---------- Eingang ----------
     async def on_audio(self, pcm: bytes) -> None:
         chunk = AudioChunk(pcm=pcm, sample_rate=self.settings.sample_rate, t_audio_in=self._clock())
         self.room.counters["audio_chunks"] += 1
         self._enqueue(self._segment(await self._stream.feed(chunk)))
+
+    async def end_utterance(self) -> None:
+        """Aussage beendet (Gespraechsmodus, Antippen/Pause/Zeitgrenze): offenen Abschnitt abschliessen."""
+        rest = self._segment(await self._stream.flush())
+        rest += self._segmenter.flush()
+        self._enqueue(rest)
+
+    def _done_one(self, seq: int) -> None:
+        """Eine Sprache eines Abschnitts ist fertig (oder verworfen); sind alle fertig, ist der Abschnitt erledigt."""
+        if not self._conv or seq not in self._open:
+            return
+        self._open[seq] -= 1
+        if self._open[seq] <= 0:
+            del self._open[seq]
+            self.room.turns.segment_done()
 
     async def finish(self) -> list[TranslationMessage]:
         """Rest ausgeben, Warteschlangen leeren, ASR-Puffer loeschen, Arbeiter beenden."""
@@ -96,11 +113,15 @@ class Orchestrator:
                 self.room.counters["segments_no_listener"] += 1
                 continue
             seq = self.room.next_seq()
+            if self._conv:
+                self.room.turns.segment_started()
+                self._open[seq] = len(langs)
             for lang in langs:
                 q = self._queue(lang)
                 if q.full():                       # Rueckstau: aeltestes Segment dieser Sprache verwerfen
-                    q.get_nowait()
+                    old_seq, _ = q.get_nowait()
                     q.task_done()
+                    self._done_one(old_seq)
                     self.room.counters["segments_dropped_backpressure"] += 1
                 q.put_nowait((seq, seg))
 
@@ -131,6 +152,7 @@ class Orchestrator:
                 log.error("pipeline_fehler lang=%s typ=%s", lang, self.settings.fehler(exc))
             finally:
                 q.task_done()
+                self._done_one(seq)
 
     async def _process(self, seq: int, seg: AsrSegment, lang: str, skip_audio: bool) -> TranslationMessage:
         text = await self.pipeline.mt.translate(seg.text, self.settings.source_lang, lang)

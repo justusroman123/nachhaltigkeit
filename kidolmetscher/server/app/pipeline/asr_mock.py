@@ -53,5 +53,5 @@ class MockAsr:
     async def load(self) -> None:
         return None
 
-    def new_stream(self) -> AsrStream:
+    def new_stream(self, lang: Optional[str] = None) -> AsrStream:
         return MockAsrStream(self._segment_s, self._delay_ms, self._clock)
