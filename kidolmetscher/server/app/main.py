@@ -146,7 +146,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "public_url": settings.public_url,
                 "listener_ttl_s": settings.listener_ttl_s,
                 "min_listener_ttl_s": settings.min_listener_ttl_s,
-                "max_listener_ttl_s": settings.max_listener_ttl_s}
+                "max_listener_ttl_s": settings.max_listener_ttl_s,
+                # Zahlen fuer die Sprech-Anzeige am Bedienplatz (Abschnittsgrenzen der Spracherkennung)
+                "utterance_max_s": settings.asr_max_utterance_s, "silence_ms": settings.asr_silence_ms,
+                "vad_rms": settings.asr_vad_rms}
 
     @app.post("/api/rooms")
     async def create_room(body: Optional[RoomRequest] = None,

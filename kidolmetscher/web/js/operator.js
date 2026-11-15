@@ -13,10 +13,46 @@
     newLink: $('btnNewLink'), base: $('base'), linkInfo: $('linkInfo'), dev: $('dev'), start: $('btnStart'), stop: $('btnStop'),
     level: $('level'), micMsg: $('micMsg'), statTotal: $('statTotal'), statL: $('statL'), lat: $('lat'),
     stages: $('stages'), log: $('log'), singleList: $('singleList'), rtt: $('rtt'), t1: $('t1'),
-    backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo') };
+    backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo'),
+    talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
+
+  /* ---------- Sprech-Anzeige: Laenge des laufenden Abschnitts gegen die Grenzen der Spracherkennung ----------
+     Zustaende: idle (bereit) -> speaking (Balken waechst) -> translating (Pause erkannt, Uebersetzung laeuft) -> idle.
+     Rein am Bedienplatz berechnet aus dem Pegel; Grenzen kommen vom Server (/api/config). Keine Inhalte. */
+  const talk = { state: 'idle', ms: 0, quietMs: 0, pendingSince: 0 };
+  const TALK_WARN = 0.65, TALK_STOP = 0.85;
+  function talkShow(cls, text, frac) {
+    e.talk.className = 'talk' + (cls === 'ok' ? '' : ' ' + cls);
+    e.talkBar.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+    say(e.talkMsg, text, cls);
+  }
+  function talkReset(text) { talk.state = 'idle'; talk.ms = 0; talk.quietMs = 0; talkShow('', text || 'Bereit. Sie können sprechen.', 0); }
+  function talkBlock(rmsInt16, blockMs) {
+    const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000, quietLimit = (cfg && cfg.silence_ms) || 700;
+    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400);
+    if (talk.state === 'translating' && !loud && performance.now() - talk.pendingSince > 15000) return talkReset();
+    if (loud) {
+      if (talk.state !== 'speaking') { talk.state = 'speaking'; talk.ms = 0; }
+      talk.quietMs = 0;
+    } else if (talk.state === 'speaking') {
+      talk.quietMs += blockMs;
+      if (talk.quietMs >= quietLimit) {              // Pause lang genug: der Server schliesst den Abschnitt ab
+        talk.state = 'translating'; talk.pendingSince = performance.now();
+        return talkShow('ok', '⏳ Wird übersetzt … Sie können weitersprechen, wenn Sie möchten.', 0);
+      }
+    }
+    if (talk.state !== 'speaking') return;
+    talk.ms += blockMs;
+    const f = talk.ms / maxMs;
+    if (f >= 1) { talk.ms = 0; return talkShow('bad', 'Abschnitt zu lang, wurde geteilt. Bitte kurz Pause machen.', 1); }
+    if (f >= TALK_STOP) talkShow('bad', '⛔ Jetzt eine kurze Pause machen!', f);
+    else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
+    else talkShow('ok', '🎙 Sie sprechen', f);
+  }
+  function talkTranslated() { if (talk.state === 'translating') talkReset('✔ Übersetzt. Sie können weitersprechen.'); }
 
   const api = (method, path, body) => fetch(path, {
     method, headers: { 'X-Operator-Key': key, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -180,7 +216,7 @@
         else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, sendet.', 'ok');
         clearInterval(pingTimer);
         pingTimer = setInterval(() => { if (sock.readyState === 1) sock.send(JSON.stringify({ type: 'ping', t: performance.now() })); }, 2000);
-      } else if (d.type === 'translation') showMessage(d);
+      } else if (d.type === 'translation') { showMessage(d); talkTranslated(); }
       else if (d.type === 'pong') showPing(performance.now() - d.t);
     };
   }
@@ -222,9 +258,11 @@
         for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
         const db = 20 * Math.log10(Math.sqrt(sum / s.length) / 32768 + 1e-6);
         e.level.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
+        talkBlock(Math.sqrt(sum / s.length), s.length / (ctx ? ctx.sampleRate : 16000) * 1000);
       };
       ctx.createMediaStreamSource(stream).connect(node);
       e.start.disabled = true; e.stop.disabled = false;
+      talkReset();
       say(e.micMsg, '● Sendet. Bitte sprechen.', 'ok');
     } catch (err) { say(e.micMsg, 'Mikrofon-Fehler: ' + err.name, 'bad'); stopSending(); }
   }
@@ -235,7 +273,7 @@
     if (node) { node.disconnect(); node = null; }
     if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
     if (ctx) { ctx.close().catch(() => {}); ctx = null; }
-    e.level.style.width = '0%';
+    e.level.style.width = '0%'; talk.state = 'idle'; talk.ms = 0; talkShow('', 'Noch nicht gesendet.', 0);
     e.start.disabled = false; e.stop.disabled = true;
   }
   e.stop.addEventListener('click', () => { stopSending(); say(e.micMsg, 'Pause. Zum Weitermachen „Senden starten“.', ''); });

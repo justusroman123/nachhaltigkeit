@@ -408,3 +408,9 @@ def test_bedienplatz_kann_nach_abbruch_neu_verbinden(client):
     op2 = open_operator(client, rid)                           # kein 4409, Raum ist wieder frei
     op2.send_json({"type": "ping", "t": 1})
     assert op2.receive_json()["type"] == "pong"
+
+
+def test_config_liefert_zahlen_fuer_die_sprech_anzeige(client):
+    d = client.get("/api/config").json()
+    assert d["utterance_max_s"] >= 2 and d["silence_ms"] >= 100 and d["vad_rms"] > 0
+
