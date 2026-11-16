@@ -423,3 +423,14 @@ Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Absc
 5. **Sonstiges:** Geräte-Kennungen der Zuhörer sind jetzt **zufällig** (`secrets.token_hex(4)`) statt eines globalen Zählers (verriet Reihenfolge und Gesamtzahl der Zuhörer an andere Räume); Gast-Audio und Abschluss laufen unter einem Lock (kein gleichzeitiges Füttern und Leeren desselben Erkennungsstroms).
 
 **Weiter offen/unbekannt:** Ob 120 s Stille sinnvoll sind (Messpunkt: Test mit bewusster Denkpause); Ton-Reihenfolge und Wortmeldung auf echten Tablets; Verhalten des Mikrofon-Wiederstarts nach automatischer Übergabe auf iOS/Safari (Autoplay-Regeln, ungetestet); Rückkopplung zwischen Lautsprecher und Mikrofon des Bedienplatzes ist nur durch die Sperre vermieden (Mikrofon des Mitarbeiters sendet nur, solange er das Wort hat; Test mit echtem Lautsprecher offen).
+
+
+## 31. Hürde „Dauer-Raten des Bedienschlüssels“ beseitigt (16.11.2026, Commit 5dc0f1a)
+
+**Ausgangslage (belegt aus `docs/architektur.md` und `docs/datenschutz-nachweis.md`):** Der Bedienschlüssel (≥ 16 Zeichen, zeitkonstanter Vergleich) schützte den Bedienplatz, aber **nichts bremste wiederholtes Raten**. Bei einem aus dem Internet erreichbaren Server ist das für Behörden eine typische Beanstandung (Zugriffsschutz, Art. 32 DSGVO).
+
+**Umgesetzt:** `FailureLimiter` (`server/app/security.py`): **10 falsche Schlüssel innerhalb von 10 Minuten → 15 Minuten Sperre** je Absender (`AUTH_MAX_FAILS`, `AUTH_WINDOW_S`, `AUTH_BLOCK_S`; Zahlen sind Annahmen). Während der Sperre wird auch der **richtige** Schlüssel abgewiesen (HTTP 429 mit `Retry-After`, WebSocket-Code 4430), damit Raten nichts bringt; ein richtiger Schlüssel zählt nie als Fehler. **Datenschutz:** Absender werden nur als HMAC-Hash mit zufälligem, beim Start neu gewürfeltem Salz im Arbeitsspeicher geführt (keine IP-Adresse im Klartext, nichts gespeichert, nichts geloggt außer „Sperre nach n Fehlversuchen“). Hinter Caddy gilt `X-Forwarded-For` nur, wenn die Verbindung vom eigenen Rechner kommt (kein Fälschen von außen). Der Bedienplatz versucht bei falschem/gesperrtem Schlüssel nicht mehr endlos neu (das hätte sich sonst selbst gesperrt) und zeigt eine Meldung.
+
+**Tests (8 neu):** Sperre und Ablauf, Verfall alter Fehlversuche, Zurücksetzen durch Erfolg, keine Klartext-Adressen im Speicher, Vertrauen in `X-Forwarded-For` nur von loopback, HTTP 429 auch mit richtigem Schlüssel, richtiger Schlüssel nie gesperrt, WebSocket-Sperre, öffentliche Konfiguration bleibt erreichbar. Gesamt 236 bestanden/3 übersprungen.
+
+**Weiter offen (Hürden, nicht umgesetzt):** ein gemeinsamer Schlüssel für alle Mitarbeitenden (kein Rollen-/Benutzermodell, kein Audit-Log, keine Mehrfaktor-Anmeldung); Abhängigkeiten nicht gepinnt; Pentest; VM-Härtung. Einzelheiten: Dokument „Behördentauglichkeit“ (Drive, 03 Entscheidungen und Lizenzen).
