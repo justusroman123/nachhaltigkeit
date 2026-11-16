@@ -78,65 +78,58 @@
     else talkShow('ok', '🎙 SIE SPRECHEN', f);
   }
 
-  /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ---------- */
-  const conv = { talking: false, ms: 0, quietMs: 0, spoke: false, sentMs: 0, sentQuiet: 0, turn: { state: 'frei', who: null } };
-  let noSpeechMs = 5000;                                     // Annahme: ohne Sprache endet der Versuch nach 5 s (nach automatischer Uebernahme 15 s)
-  const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
+  /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ----------
+     Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig", durch "Stopp" des Mitarbeiters (bei einem Gast) oder
+     nach langer Stille (Server, idle_s). Der Mitarbeiter hat Vorrang: er kann jeden Gast sofort stoppen und selbst sprechen.
+     Gaeste koennen niemanden stoppen, nur sich melden (der Sprechende wird benachrichtigt, nicht unterbrochen). */
+  const conv = { talking: false, hintMs: 0, turn: { state: 'frei', who: null, waiting: [] } };
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-  function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null }; convRender(); }
+  function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null, waiting: [] }; convRender(); }
   function convMine() { return conv.turn.state === 'spricht' && conv.turn.who === 'staff'; }
   const staffWaits = () => (conv.turn.waiting || []).includes('staff');
   const othersWait = () => (conv.turn.waiting || []).some((d) => d !== 'staff');
-  function convRender(hint) {
-    const t = conv.turn, mine = convMine();
+  const guestPhase = () => conv.turn.state !== 'frei' && conv.turn.who !== 'staff' && conv.turn.who != null;   // ein Gast spricht, wird uebersetzt oder vorgelesen
+  function convRender(hint, kind) {
+    const t = conv.turn, mine = convMine(), gp = guestPhase();
     e.btnTalk.disabled = false;
-    e.btnTalk.textContent = mine ? '✔ Fertig' : (t.state === 'frei' ? '🎙 Sprechen' : (staffWaits() ? '✖ Wortmeldung zurücknehmen' : '✋ Ich möchte auch sprechen'));
-    if (hint) return talkShow('stop', '■ STOPP – ' + hint, 1);
+    e.btnTalk.classList.toggle('stopbtn', gp);
+    if (mine) e.btnTalk.textContent = '✔ Fertig';
+    else if (t.state === 'frei') e.btnTalk.textContent = '🎙 Sprechen';
+    else if (gp) e.btnTalk.textContent = '■ Stopp – ich spreche jetzt';
+    else e.btnTalk.textContent = staffWaits() ? '✖ Wortmeldung zurücknehmen' : '✋ Als Nächstes sprechen';
+    if (hint) return talkShow(kind || 'stop', hint, 1);
     if (t.state === 'frei') talkShow('ok', '● SPRECHEN MÖGLICH', 0);
-    else if (mine && othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', conv.sentMs / (((cfg && cfg.utterance_max_s) || 12) * 1000));
-    else if (mine) talkShow('ok', '🎙 SIE SPRECHEN', conv.sentMs / (((cfg && cfg.utterance_max_s) || 12) * 1000));
+    else if (mine && othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', 0);
+    else if (mine) talkShow('ok', '🎙 SIE SPRECHEN – so lange Sie möchten; „Fertig“ tippen, wenn Sie fertig sind', 0);
     else if (staffWaits()) talkShow('stop', '⏳ Vorgemerkt – Sie sind gleich dran', 1);
-    else if (t.state === 'spricht') talkShow('stop', '■ STOPP – ein Gast spricht', 1);
+    else if (gp && t.state === 'spricht') talkShow('warn', '🗣 Ein Gast spricht. Zum Unterbrechen „Stopp – ich spreche jetzt“ tippen', 1);
+    else if (gp && t.state === 'uebersetzt') talkShow('warn', '🗣 Gast fertig, wird übersetzt. „Stopp“ übernimmt sofort', 1);
+    else if (gp) talkShow('warn', '🗣 Wird vorgelesen. „Stopp“ übernimmt sofort', 1);
     else if (t.state === 'uebersetzt') talkShow('stop', '■ STOPP – wird übersetzt', 1);
-    else talkShow('stop', '■ STOPP – wird vorgelesen', 1);
+    else talkShow('stop', '■ STOPP – wird bei den Gästen ausgegeben', 1);
   }
-  let staffGotTurn = false;
+  let staffGotTurn = false, staffWanted = false;
   function convTurn(d) {
     conv.turn = d;
     if (!convMine()) conv.talking = false;
-    if (convMine() && !conv.talking && staffWanted) { staffGotTurn = true; convStart(); noSpeechMs = 15000; }   // Wortmeldung: Wort wurde uebergeben, Mikrofon laeuft automatisch
+    if (convMine()) stopGerman();                               // wer spricht, hoert keine Vorlesung mehr
+    if (convMine() && !conv.talking && staffWanted) { staffGotTurn = true; convStart(); }   // Wortmeldung: Wort wurde uebergeben, Mikrofon laeuft automatisch
     else if (!convMine() && staffGotTurn) { staffGotTurn = false; staffWanted = false; }
     convRender();
   }
-  let staffWanted = false;
-  function convStart() {
-    noSpeechMs = 5000;
-    conv.talking = true; conv.ms = conv.quietMs = conv.sentMs = conv.sentQuiet = 0; conv.spoke = false;
-    sendJson({ type: 'talk', on: true });
-  }
+  function convStart() { conv.talking = true; conv.hintMs = 0; sendJson({ type: 'talk', on: true }); }
+  function convTakeover() { stopGerman(); conv.talking = true; conv.hintMs = 0; sendJson({ type: 'takeover' }); }      // Vorrang: Gast wird sofort abgeschnitten
   function convEnd() { if (!conv.talking) return; conv.talking = false; sendJson({ type: 'talk', on: false }); }
   function convBlock(rmsInt16, blockMs) {
-    if (!conv.talking) {                                          // gesperrt: wer trotzdem spricht, wird gewarnt (die Worte gehen nicht verloren, sondern werden gar nicht erst gesendet)
-      if (conv.turn.state !== 'frei' && !convMine() && rmsInt16 >= ((cfg && cfg.vad_rms) || 400)) {
-        conv.hintMs = (conv.hintMs || 0) + blockMs;
-        if (conv.hintMs >= 400) convRender('bitte warten – Ihre Worte werden jetzt NICHT übersetzt');
-      } else conv.hintMs = 0;
-      return;
-    }
-    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400), quietLimit = (cfg && cfg.silence_ms) || 700;
-    const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000;
-    conv.ms += blockMs;
-    if (loud) { conv.spoke = true; conv.quietMs = 0; } else conv.quietMs += blockMs;
-    conv.sentQuiet = loud ? 0 : conv.sentQuiet + blockMs;           // Satzlaenge: Pause setzt den Balken zurueck
-    if (conv.sentQuiet >= quietLimit) conv.sentMs = 0; else if (conv.spoke) conv.sentMs += blockMs;
-    if (convMine()) {
-      const f = conv.sentMs / maxMs;
-      if (othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', f);
-      else if (f >= TALK_LATE) talkShow('warn', 'JETZT PAUSE MACHEN', f);
-      else if (f >= TALK_WARN) talkShow('warn', 'Bald Pause machen …', f);
-      else talkShow('ok', '🎙 SIE SPRECHEN', f);
-    }
-    if ((conv.spoke && conv.quietMs >= turnEndMs()) || (!conv.spoke && conv.ms >= noSpeechMs)) convEnd();
+    if (conv.talking) return;                                    // es wird gesendet; die Anzeige kommt vom Server-Zustand
+    // Kein Wort: wer trotzdem spricht, wird gewarnt (diese Worte werden nicht gesendet und nicht uebersetzt)
+    if (conv.turn.state !== 'frei' && !convMine() && rmsInt16 >= ((cfg && cfg.vad_rms) || 400)) {
+      conv.hintMs = (conv.hintMs || 0) + blockMs;
+      if (conv.hintMs >= 400) {
+        if (guestPhase()) convRender('⚠ Ihre Worte werden NICHT übersetzt – „Stopp – ich spreche jetzt“ tippen', 'warn');
+        else convRender('bitte warten – Ihre Worte werden jetzt NICHT übersetzt');
+      }
+    } else conv.hintMs = 0;
   }
   e.btnTalk.addEventListener('click', () => {
     if (convMine()) return convEnd();
@@ -144,25 +137,35 @@
       if (!ws) { wantSending = true; wsRetry = 0; connectOperator(); return; }
       return convStart();
     }
+    if (guestPhase()) return convTakeover();                      // Mitarbeiter hat Vorrang
     if (staffWaits()) { staffWanted = false; sendJson({ type: 'want', on: false }); return; }   // Wortmeldung zurueckziehen
-    staffWanted = true; sendJson({ type: 'want', on: true });                                       // vormerken, kein Dazwischenfunken
+    staffWanted = true; sendJson({ type: 'want', on: true });                                       // eigene Aussage wird noch verteilt: vormerken
   });
   e.btnRelease.addEventListener('click', () => sendJson({ type: 'release' }));
   const LANG_DE = { uk: 'Ukrainisch', ar: 'Arabisch', en: 'Englisch', tr: 'Türkisch', fa: 'Persisch' };
-  // Deutsche Vorlesung der Gast-Antworten, strikt in Eingangsreihenfolge (wie beim Zuhoerer)
-  let voiceCtx = null, voiceNext = 0, voiceChain = Promise.resolve();
+  // Deutsche Vorlesung der Gast-Antworten, strikt in Eingangsreihenfolge (wie beim Zuhoerer); abbrechbar (Mitarbeiter spricht jetzt)
+  let voiceCtx = null, voiceNext = 0, voiceChain = Promise.resolve(), voiceGen = 0;
+  const voiceSources = new Set();
+  function stopGerman() {
+    voiceGen++;
+    voiceSources.forEach((src) => { try { src.stop(); } catch (_) {} });
+    voiceSources.clear(); voiceNext = 0;
+  }
   function playGerman(audio) {
     if (!audio) return Promise.resolve();
+    const gen = voiceGen;
     const job = voiceChain.then(async () => {
+      if (gen !== voiceGen) return null;                          // inzwischen abgebrochen
       try {
         voiceCtx = voiceCtx || new AudioContext(); await voiceCtx.resume();
         const bin = atob(audio.data_b64), u = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
         const buf = await voiceCtx.decodeAudioData(u.buffer);
+        if (gen !== voiceGen) return null;
         const src = voiceCtx.createBufferSource(); src.buffer = buf; src.connect(voiceCtx.destination);
         const at = Math.max(voiceCtx.currentTime + 0.05, voiceNext);
-        const ended = new Promise((r) => { src.onended = r; });
-        src.start(at); voiceNext = at + buf.duration;
+        const ended = new Promise((r) => { src.onended = () => { voiceSources.delete(src); r(); }; });
+        voiceSources.add(src); src.start(at); voiceNext = at + buf.duration;
         return Promise.race([ended, new Promise((r) => setTimeout(r, (buf.duration + 2) * 1000 + Math.max(0, (at - voiceCtx.currentTime) * 1000)))]);
       } catch (_) { return null; }
     });
@@ -176,7 +179,7 @@
     const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = d.text;
     row.append(who, txt); e.guestLog.prepend(row);
     const readMs = Math.min(15000, 800 + d.text.split(/\s+/).length * 300);        // ohne Ton: Lesezeit als "fertig" (Annahme: 200 Woerter/Minute)
-    const voiced = !!d.audio && $('guestVoice').checked;
+    const voiced = !!d.audio && $('guestVoice').checked && !convMine();     // spricht der Mitarbeiter gerade, nur Text
     playGerman(voiced ? d.audio : null).then(() => setTimeout(() => sendJson({ type: 'played', seq: d.seq }), voiced ? 0 : readMs));
     while (e.guestLog.querySelectorAll('.guestline').length > 40) e.guestLog.querySelector('.guestline:last-of-type').remove();
   }

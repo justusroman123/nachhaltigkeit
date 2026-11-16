@@ -179,3 +179,54 @@ def test_nur_zwei_betriebsarten(conv):
     assert conv.post("/api/rooms", headers=hdr(), json={"mode": "dolmetschen"}).status_code == 400
     for mode in ("vortrag", "gespraech"):
         assert conv.post("/api/rooms", headers=hdr(), json={"mode": mode}).status_code == 200
+
+
+def test_mitarbeiter_stoppt_sprechenden_gast_sofort_und_nichts_geht_verloren(conv):
+    """Vorrang des Mitarbeiters: der Gast wird sofort abgeschnitten, bereits Gesagtes wird trotzdem uebersetzt (nur Text, kein Vorlesen)."""
+    rid = new_conv_room(conv)
+    op = open_operator(conv, rid)
+    uk = open_listener(conv, link(conv, rid, "uk"))
+    recv(uk)
+    uk.send_json({"type": "talk", "on": True})
+    recv_until(op, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"].startswith("gast:"))
+    for _ in range(3):
+        uk.send_bytes(chunk(100))                                   # Gast spricht ...
+    op.send_json({"type": "takeover"})                              # ... und der Mitarbeiter stoppt ihn
+    t, _ = recv_until(uk, lambda m: m["type"] == "turn" and m["who"] == "staff")
+    assert t["state"] == "spricht" and t["reason"] == "unterbrochen"       # der Gast erfaehrt, dass er abgeschnitten wurde
+    t2, _ = recv_until(op, lambda m: m["type"] == "turn" and m["who"] == "staff")
+    assert t2["state"] == "spricht"
+    for _ in range(3):
+        uk.send_bytes(chunk(100))                                   # weitere Blocks des Gastes werden nicht mehr angenommen
+    m, _ = recv_until(op, lambda m: m["type"] == "guest_message")
+    assert m["text"].startswith("[de] Dies ist Testsatz")           # Gesagtes vor dem Stopp wurde uebersetzt
+    assert m["audio"] is None                                       # der Mitarbeiter spricht: kein Vorlesen, nur Text
+
+
+def test_gast_kann_weder_stoppen_noch_freigeben(conv):
+    rid = new_conv_room(conv)
+    op = open_operator(conv, rid)
+    uk = open_listener(conv, link(conv, rid, "uk"))
+    recv(uk)
+    op.send_json({"type": "talk", "on": True})
+    recv_until(uk, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == "staff")
+    uk.send_json({"type": "takeover"})                              # Gast versucht, den Mitarbeiter zu stoppen
+    uk.send_json({"type": "release"})                               # ... oder die Sperre aufzuheben
+    uk.send_json({"type": "talk", "on": True})                      # ... oder einfach zu sprechen
+    recv_until(uk, lambda m: m["type"] == "busy")
+    op.send_json({"type": "ping", "t": 5})
+    recv_until(op, lambda m: m["type"] == "pong")
+    for _ in range(2):
+        op.send_bytes(chunk(100))
+    op.send_json({"type": "talk", "on": False})
+    seen = []
+    for _ in range(40):
+        m = recv(uk)
+        seen.append(m)
+        if m["type"] == "translation":
+            uk.send_json({"type": "played", "seq": m["seq"]})
+        if m["type"] == "turn" and m["state"] == "frei":
+            break
+    whos = {m["who"] for m in seen if m["type"] == "turn" and m["state"] == "spricht"}
+    assert whos <= {"staff"}                                        # nie hat der Gast das Wort bekommen
+    assert not any(m["type"] == "turn" and m.get("reason") == "unterbrochen" for m in seen)

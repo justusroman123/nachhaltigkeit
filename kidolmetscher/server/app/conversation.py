@@ -10,6 +10,7 @@ from .config import Settings
 from .messages import AudioPayload, control_message, now_ms
 from .pipeline.base import AudioChunk, Pipeline
 from .rooms import Listener, Room, _audio_seconds
+from .turns import SPRICHT
 
 log = logging.getLogger("kidolmetscher")
 
@@ -23,21 +24,24 @@ class GuestPath:
         self._listener = listener
         self._stream = pipeline.asr.new_stream(self.lang)
         self._tasks: set[asyncio.Task] = set()
+        self._lock = asyncio.Lock()             # Audio und Abschluss nie gleichzeitig in denselben Erkennungsstrom
         self.open = False                       # es wurde Audio angenommen, Abschnitt noch nicht abgeschlossen
 
     async def on_audio(self, pcm: bytes) -> None:
-        self.open = True
-        chunk = AudioChunk(pcm=pcm, sample_rate=self.settings.sample_rate, t_audio_in=self._clock())
-        self.room.counters["guest_audio_chunks"] += 1
-        self._handle(await self._stream.feed(chunk))
-        self._notice()
+        async with self._lock:
+            self.open = True
+            chunk = AudioChunk(pcm=pcm, sample_rate=self.settings.sample_rate, t_audio_in=self._clock())
+            self.room.counters["guest_audio_chunks"] += 1
+            self._handle(await self._stream.feed(chunk))
+            self._notice()
 
     async def finish(self) -> None:
         """Aussage beendet: offenen Abschnitt abschliessen und uebersetzen lassen."""
-        if self.open:
-            self.open = False
-            self._handle(await self._stream.flush())
-            self._notice()
+        async with self._lock:
+            if self.open:
+                self.open = False
+                self._handle(await self._stream.flush())
+                self._notice()
 
     def _notice(self) -> None:
         """Nicht erkannte Aussage: dem Gast (und dem Mitarbeiter) sagen, dass er wiederholen soll."""
@@ -61,7 +65,8 @@ class GuestPath:
             text = await asyncio.wait_for(self.pipeline.mt.translate(seg.text, self.lang, "de"), to)
             t_mt = self._clock()
             audio, t_tts = None, None
-            if self.settings.tts_enabled:                  # deutsche Stimme (falls eingerichtet): Mitarbeiter muss nicht aufs Geraet schauen
+            staff_speaks = self.room.turns.state == SPRICHT and self.room.turns.who == "staff"
+            if self.settings.tts_enabled and not staff_speaks:     # deutsche Stimme (falls eingerichtet); nicht, wenn der Mitarbeiter gerade spricht (nur Text)
                 try:
                     res = await asyncio.wait_for(self.pipeline.tts.synthesize(text, "de"), to)
                     t_tts = self._clock()

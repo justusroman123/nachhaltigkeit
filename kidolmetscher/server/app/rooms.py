@@ -60,10 +60,8 @@ class TokenInfo:
 
 class Listener:
     """Ein verbundener Zuhoerer. Langsame Clients verlieren alte Nachrichten, nie der Server."""
-    _ids = itertools.count(1)
-
     def __init__(self, fixed_lang: Optional[str], expires_at: float, maxsize: int = 500):
-        self.id = next(Listener._ids)
+        self.id = secrets.token_hex(4)          # zufaellig (kein globaler Zaehler): verraet weder Reihenfolge noch Anzahl
         self.fixed_lang = fixed_lang     # Sprache des Links (falls festgelegt)
         self.lang: Optional[str] = fixed_lang   # aktuell gewaehlte Sprache, None bis zur Auswahl
         self.expires_at = expires_at
@@ -148,6 +146,8 @@ class Room:
         if self.mode == "gespraech" and len(self._listeners) >= self.settings.max_guests:
             raise RoomFullError("Zu viele Gaeste")
         lst = Listener(info.lang, info.expires_at)
+        while lst.id in self._listeners:           # Kennung ist zufaellig: bei (sehr unwahrscheinlicher) Doppelung neu ziehen
+            lst = Listener(info.lang, info.expires_at)
         self._listeners[lst.id] = lst
         self.counters["listeners_total"] += 1
         self.counters["listeners_peak"] = max(self.counters["listeners_peak"], len(self._listeners))

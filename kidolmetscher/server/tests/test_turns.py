@@ -40,9 +40,9 @@ def test_kurze_schonfrist_nach_alle_fertig():
 
 
 def test_zeitgrenzen_verhindern_dauerhafte_sperre():
-    u, _, t = neu(speak_max_s=5, process_max_s=4, play_max_s=3)
+    u, ev, t = neu(idle_s=5, process_max_s=4, play_max_s=3)
     t.claim("gast:1"); t.segment_started(); t.segment_started(); u.t += 5.1; t.tick()
-    assert t.state == UEBERSETZT                          # Sprechen zu lang: beendet, 2 Abschnitte offen
+    assert t.state == UEBERSETZT and ev[-1]["reason"] == "inaktiv"     # lange Stille: beendet, 2 Abschnitte offen
     u.t += 4.1; t.tick(); assert t.state == WIEDERGABE   # Verarbeitung haengt: weiter
     t.expect_playback(1, "gast:9")
     u.t += 3.1; t.tick(); assert t.state == FREI         # Geraet meldet nie "fertig": frei
@@ -105,11 +105,29 @@ def test_wortmeldung_bei_frei_gibt_das_wort_sofort():
     assert t.claim("gast:1")[0]                                      # Bestaetigung vom Geraet bleibt gueltig
 
 
-def test_keine_redezeitgrenze_von_2_minuten_mehr():
-    u, _, t = neu()
+def test_keine_redezeitgrenze_solange_gesprochen_wird():
+    u, _, t = neu(idle_s=120)
     t.claim("staff")
-    u.t += 600; t.tick()                                             # 10 Minuten am Stueck
-    assert t.state == SPRICHT and t.who == "staff"
+    for _ in range(40):                                              # 40 Minuten am Stueck, alle 30 s hoerbare Sprache
+        u.t += 60; t.touch("staff"); t.tick()
+        assert t.state == SPRICHT and t.who == "staff"
+
+
+def test_nur_lange_stille_gibt_das_wort_frei():
+    u, ev, t = neu(idle_s=120, grace_s=0.5)
+    t.claim("staff")
+    u.t += 119; t.tick(); assert t.state == SPRICHT                  # fast 2 Minuten Stille: noch dran
+    t.touch("staff"); u.t += 119; t.tick(); assert t.state == SPRICHT   # Sprache setzt die Frist zurueck
+    u.t += 2; t.tick()
+    assert t.state in (UEBERSETZT, WIEDERGABE) and ev[-2]["reason"] == "inaktiv"
+
+
+def test_aktivitaet_anderer_personen_verlaengert_nichts():
+    u, _, t = neu(idle_s=10)
+    t.claim("staff")
+    u.t += 6; t.touch("gast:1")                                      # Geraeusche eines Gastes zaehlen nicht
+    u.t += 5; t.tick()
+    assert t.state != SPRICHT
 
 
 def test_uebernommenes_wort_ohne_bestaetigung_geht_weiter():
@@ -127,3 +145,39 @@ def test_geraet_weg_nimmt_wortmeldung_zurueck():
     _, _, t = neu()
     t.claim("staff"); t.request("gast:1"); t.device_left("gast:1")
     assert t.waiting == []
+
+
+def test_mitarbeiter_stoppt_sprechenden_gast_sofort():
+    u, ev, t = neu(grace_s=0.5)
+    t.claim("gast:1")
+    t.segment_started()                                              # ein Abschnitt des Gastes ist noch in Arbeit
+    t.expect_playback(7, "staff", 3.0)                               # dem Mitarbeiter sollte noch vorgelesen werden
+    ok, prev = t.take_over("staff")
+    assert ok and prev == "gast:1"
+    assert t.state == SPRICHT and t.who == "staff" and ev[-1]["reason"] == "unterbrochen"
+    assert (7, "staff") not in t.awaiting                            # Vorlesen entfaellt
+    assert t.pending == 1                                            # Verarbeitung des Gesagten laeuft weiter, nichts geht verloren
+    t.segment_done()
+    t.end_speaking("staff"); u.t += 0.6; t.tick()
+    assert t.state == FREI
+
+
+def test_mitarbeiter_uebernimmt_waehrend_uebersetzt_und_vorgelesen_wird():
+    u, _, t = neu()
+    t.claim("gast:1"); t.segment_started(); t.end_speaking("gast:1")
+    assert t.state == UEBERSETZT
+    ok, prev = t.take_over("staff")
+    assert ok and prev == "gast:1" and t.who == "staff" and t.state == SPRICHT
+    t.segment_done()
+    t.end_speaking("staff"); t.expect_playback(2, "gast:1")
+    ok2, why = t.take_over("staff")                                  # eigene Aussage wird gerade verteilt: nicht abbrechen
+    assert t.state == WIEDERGABE and not ok2 and why == "eigene_aussage"
+
+
+def test_gast_kann_niemanden_stoppen_nur_melden():
+    _, _, t = neu()
+    t.claim("staff")
+    assert t.take_over("gast:1") == (False, "nicht_erlaubt")         # Vorrang nur fuer den Mitarbeiter
+    assert t.state == SPRICHT and t.who == "staff"
+    assert t.request("gast:1") == "vorgemerkt"                       # Gast kann sich nur melden: kein Abbruch
+    assert t.state == SPRICHT and t.who == "staff" and t.waiting == ["gast:1"]

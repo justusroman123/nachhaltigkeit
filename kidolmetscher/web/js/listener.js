@@ -167,7 +167,14 @@
           play(d.audio).then(() => setTimeout(() => sendJson({ type: 'played', seq: d.seq }), readMs));
         } else play(d.audio);
       } else if (d.type === 'turn') {
-        turn = d; talkRender();
+        const wasTalking = talking;
+        turn = d;
+        if (wasTalking && !mine()) {                                  // dem Gast wurde das Wort genommen (Stopp des Mitarbeiters) oder lange Stille
+          talking = false; micOff(); wanting = false;
+          cutHint = d.reason === 'unterbrochen' ? tt('cutByStaff') : tt('ended');
+          clearTimeout(cutTimer); cutTimer = setTimeout(() => { cutHint = ''; talkRender(); }, 6000);
+        }
+        talkRender();
       } else if (d.type === 'busy') {
         talking = false; talkRender(tt('busy'));
       } else if (d.type === 'problem') {
@@ -191,9 +198,10 @@
 
   /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ---------- */
   let mode = 'vortrag', turn = { state: 'frei', who: null, waiting: [] }, talking = false, cfg = null, wanting = false, gotTurn = false;
-  let micStream = null, micCtx = null, micNode = null, talkMs = 0, quietMs = 0, spoke = false, sentMs = 0, sentQuiet = 0;
-  let noSpeechMs = 5000;                                     // Annahme: ohne Sprache endet der Versuch nach 5 s (nach automatischer Uebernahme laenger)
-  const turnEndMs = () => Math.max(2000, ((cfg && cfg.silence_ms) || 700) + 800);   // Aussage endet etwas nach der Abschnitts-Pause (Annahme)
+  let micStream = null, micCtx = null, micNode = null;
+  // Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig", wenn der Mitarbeiter das Wort uebernimmt (Stopp) oder
+  // nach langer Stille (Server). Gaeste koennen niemanden stoppen, nur sich melden.
+  let cutHint = '', cutTimer = 0;
   const dock = $('talkDock'), band = $('turnBand'), sentBar = $('sentBar'), btnTalk = $('btnTalk'), talkNote = $('talkNote');
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   let myDevice = null;                                      // Kennung dieses Geraets (vom Server in "ready")
@@ -217,6 +225,7 @@
     sentBar.hidden = !me;
     if (me && !talking) autoStart();                          // Wortmeldung: Wort wurde uebergeben, Mikrofon geht automatisch an
     if (hint) return bandSet('stop', hint);
+    if (cutHint && !me) return bandSet('warn', '⚠ ' + cutHint);       // Aussage wurde beendet (Mitarbeiter hat das Wort / lange Stille)
     if (s === 'frei') bandSet('', '● ' + tt('canSpeak'));
     else if (me) bandSet(othersWait() ? 'warn' : '', othersWait() ? '⏳ ' + tt('someoneWaits') : '🎙 ' + tt('youSpeak'));
     else if (waitsForMe()) bandSet('stop', '⏳ ' + tt('queued'));
@@ -227,7 +236,7 @@
   async function autoStart() {                                // nur nach eigener Wortmeldung (Mikrofon-Freigabe wurde beim Antippen erteilt)
     if (!wanting || talking || !micNode) return;
     micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; });
-    talking = true; noSpeechMs = 15000; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
+    talking = true;
     sendJson({ type: 'talk', on: true });
   }
   async function startMic(rate) {
@@ -248,25 +257,16 @@
     if (ws && ws.readyState === 1) ws.send(buf);
     const a = new Int16Array(buf); let sum = 0;
     for (let i = 0; i < a.length; i++) sum += a[i] * a[i];
-    const rms = Math.sqrt(sum / a.length), blockMs = a.length / (micCtx ? micCtx.sampleRate : 16000) * 1000;
-    const loud = rms >= ((cfg && cfg.vad_rms) || 400), quietLimit = (cfg && cfg.silence_ms) || 700;
-    const maxMs = ((cfg && cfg.utterance_max_s) || 12) * 1000;
-    talkMs += blockMs;
-    if (loud) { spoke = true; quietMs = 0; } else quietMs += blockMs;
-    sentQuiet = loud ? 0 : sentQuiet + blockMs;
-    if (sentQuiet >= quietLimit) sentMs = 0; else if (spoke) sentMs += blockMs;
-    const f = Math.min(1, sentMs / maxMs);
+    const rms = Math.sqrt(sum / a.length);
+    const f = Math.min(1, rms / 3000);                         // Pegelanzeige: das Mikrofon hoert zu (keine Laengenbegrenzung)
     sentBar.firstElementChild.style.width = Math.round(f * 100) + '%';
-    sentBar.className = 'sentbar' + (f >= 0.65 ? ' warn' : '');
-    if (mine() && !othersWait()) bandSet(f >= 0.85 ? 'warn' : '', f >= 0.85 ? '⚠ ' + tt('done') + ' …' : '🎙 ' + tt('youSpeak'));
-    if ((spoke && quietMs >= turnEndMs()) || (!spoke && talkMs >= noSpeechMs)) endTalk();
   }
   function endTalk() { if (!talking) return; talking = false; micOff(); sendJson({ type: 'talk', on: false }); }
   btnTalk.addEventListener('click', async () => {
     if (mine()) return endTalk();
     if (turn.state === 'frei' && !talking) {
       if (!(await startMic(16000))) return;
-      talking = true; noSpeechMs = 5000; talkMs = quietMs = sentMs = sentQuiet = 0; spoke = false;
+      talking = true;
       sendJson({ type: 'talk', on: true });
       return;
     }

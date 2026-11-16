@@ -53,7 +53,7 @@ say "5. Modelle (vor dem Termin laden)"
 if [ "${SKIP_MODELS:-0}" != "1" ]; then
   PY="$DIR/.venv/bin/python"
   "$PY" "$APP/scripts/fetch_models.py" Systran/faster-whisper-large-v3 "$DIR/models/whisper-large-v3"
-  "$PY" "$APP/scripts/fetch_voices.py" "$DIR/models/voices" uk_UA-ukrainian_tts-medium en_GB-alba-medium
+  "$PY" "$APP/scripts/fetch_voices.py" "$DIR/models/voices" uk_UA-ukrainian_tts-medium en_GB-alba-medium de_DE-thorsten-medium
   if [ -n "${HF_TOKEN:-}" ]; then
     "$PY" "$APP/scripts/fetch_models.py" "${MT_REPO:-google/translategemma-12b-it}" "$DIR/models/translategemma" \
       || echo "HINWEIS: TranslateGemma nicht geladen. Freigabe auf Hugging Face (Gemma-Bedingungen) und Token pruefen."
@@ -81,7 +81,7 @@ MT_MODEL_ID=$DIR/models/translategemma
 MT_DEVICE=cuda
 MT_DTYPE=bfloat16
 TTS_VOICE_DIR=$DIR/models/voices
-TTS_VOICES=uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium
+TTS_VOICES=uk=uk_UA-ukrainian_tts-medium:0,en=en_GB-alba-medium,de=de_DE-thorsten-medium
 TARGET_LANGS=uk,ar,en,tr
 DEFAULT_LANGS=uk,en
 SERVER_HOURLY_EUR=1.24

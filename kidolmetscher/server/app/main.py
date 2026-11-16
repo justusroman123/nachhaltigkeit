@@ -13,7 +13,10 @@ import hmac
 import io
 import json
 import logging
+import math
+import sys
 import time
+from array import array
 from typing import Callable, Optional
 from urllib.parse import urlparse
 
@@ -40,6 +43,18 @@ if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe o
     _h.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
     log.addHandler(_h)
     log.setLevel(logging.INFO)
+
+def pcm_rms(pcm: bytes) -> float:
+    """Effektivwert eines PCM16-Blocks (Little Endian). Dient nur der Pruefung "es wird gehoert" (Stille-Frist), nichts wird behalten."""
+    n = len(pcm) // 2
+    if n == 0:
+        return 0.0
+    a = array("h")
+    a.frombytes(pcm[: n * 2])
+    if sys.byteorder == "big":
+        a.byteswap()
+    return math.sqrt(sum(x * x for x in a) / n)
+
 
 HELLO_TIMEOUT_S = 10
 MAX_FRAME_BYTES = 64_000          # ein Audio-Block (PCM16); 50 ms bei 16 kHz sind 1600 Byte
@@ -334,6 +349,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             end_staff_utterance()          # Zeitgrenze oder Sperre: Rest abschliessen, weitere Audioblocks verwerfen
                             continue
                         staff_open = True
+                        if pcm_rms(data) >= settings.asr_vad_rms * 0.5:       # hoerbare Sprache: Stille-Frist zuruecksetzen
+                            room.turns.touch("staff")
                     if audio_q.full():
                         audio_q.get_nowait()
                         room.counters["audio_dropped"] += 1
@@ -355,6 +372,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                             elif room.turns.state == SPRICHT and room.turns.who == "staff":
                                 staff_open = True              # auch ohne Audio abschliessen (Marker erzwingen)
                                 end_staff_utterance()
+                        elif kind == "takeover" and room.strict:   # Vorrang: Mitarbeiter stoppt die andere Person und spricht jetzt
+                            ok, why = room.turns.take_over("staff")
+                            if not ok and why == "eigene_aussage":
+                                room.turns.request("staff")        # eigene Aussage wird noch verteilt: vormerken statt abbrechen
                         elif kind == "want" and room.strict:       # Wortmeldung des Mitarbeiters (keine Unterbrechung)
                             if data_t.get("on"):
                                 room.turns.request("staff")
@@ -451,6 +472,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if room.mode != "gespraech" or guest is None or len(raw) > MAX_FRAME_BYTES or len(raw) % 2:
                         continue
                     if room.turns.state == SPRICHT and room.turns.who == device:
+                        if pcm_rms(raw) >= settings.asr_vad_rms * 0.5:
+                            room.turns.touch(device)
                         await guest.on_audio(raw)
                     elif guest.open:
                         await end_talk()                    # Zeitgrenze erreicht: Rest abschliessen
@@ -484,6 +507,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
         recv_task = asyncio.create_task(drain())
         get_task: Optional[asyncio.Task] = None
+        cut_tasks: set = set()
         try:
             if listener.lang is None and isinstance(hello.get("lang"), str):
                 if not select(hello["lang"]):       # z. B. nach Neuladen, Sprache nicht mehr angeboten
@@ -511,6 +535,12 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                         await safe_close(ws, 1000)
                         break
                     await ws.send_json(item)
+                    if (isinstance(item, dict) and item.get("type") == "turn" and guest is not None and guest.open
+                            and not (item.get("state") == SPRICHT and item.get("who") == device)):
+                        # Mitarbeiter hat das Wort uebernommen (oder lange Stille): bereits Gesagtes abschliessen und uebersetzen
+                        cut_task = asyncio.create_task(end_talk())
+                        cut_tasks.add(cut_task)
+                        cut_task.add_done_callback(cut_tasks.discard)
         except Exception:
             pass                        # Verbindung weg; Aufraeumen unten
         finally:

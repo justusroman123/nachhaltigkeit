@@ -32,3 +32,4 @@
 
 ## Test-Empfehlung vor dem nächsten GPU-Einsatz
 Skript `vm-einrichten.ps1` **einmal auf einer billigen Nicht-GPU-VM** (centron „Optimiertes Cloud Computing“) ausprobieren: Zustellung per SSH, Ports 80/443, Zertifikat. Die GPU-spezifischen Schritte (Treiber, Whisper, Modell) bleiben dabei ungeprüft.
+- **Deutsche Stimme** (Vorlesen der Gast-Antworten am Bedienplatz) auf einer schon laufenden VM nachrüsten: `bash /root/kidolmetscher/src/kidolmetscher/scripts/stimme_de_einrichten.sh` (lädt `de_DE-thorsten-medium`, Lizenz CC0 laut Modellkarte, trägt `de=` in `TTS_VOICES` ein, prüft die Stimme, startet den Dienst neu). Neue VMs bekommen die Stimme schon durch `server_setup.sh`.
