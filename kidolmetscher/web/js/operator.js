@@ -270,6 +270,7 @@
       const mode = (document.querySelector('input[name=mode]:checked') || {}).value || 'vortrag';
       const r = await api('POST', '/api/rooms', { langs: chosen, mode });
       if (r.status === 401) return say(e.roomMsg, 'Bedienschlüssel falsch.', 'bad');
+      if (r.status === 429) return say(e.roomMsg, 'Zu viele Fehlversuche mit dem Bedienschlüssel. Aus Sicherheitsgründen bitte einige Minuten warten.', 'bad');
       if (!r.ok) return say(e.roomMsg, 'Fehler ' + r.status + ' beim Starten.', 'bad');
       room = await r.json();
     } catch (_) { return say(e.roomMsg, 'Server nicht erreichbar.', 'bad'); }
@@ -378,10 +379,13 @@
     ws = sock;
     sock.binaryType = 'arraybuffer';
     sock.onopen = () => sock.send(JSON.stringify({ type: 'hello', room_id: room.room_id, operator_key: key }));
-    sock.onclose = () => {
+    sock.onclose = (ev) => {
       clearInterval(pingTimer);
       if (ws !== sock) return;                       // bewusst beendet
       ws = null;
+      if (ev && (ev.code === 4401 || ev.code === 4430)) {   // Schluessel falsch bzw. gesperrt: nicht in Endlosschleife neu versuchen
+        stopSending(); say(e.micMsg, ev.code === 4430 ? 'Zu viele Fehlversuche, vorübergehend gesperrt. Bitte einige Minuten warten.' : 'Bedienschlüssel wurde abgelehnt.', 'bad'); return;
+      }
       if (wantSending && room) {
         say(e.micMsg, 'Verbindung zum Server weg, neuer Versuch … (Mikrofon läuft weiter)', 'warn');
         setTimeout(() => { if (wantSending && room && !ws) connectOperator(); }, Math.min(8000, 1000 * 2 ** wsRetry++));

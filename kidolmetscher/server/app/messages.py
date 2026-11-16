@@ -25,6 +25,7 @@ WS_NOT_FOUND = 4404
 WS_EXPIRED = 4408
 WS_CONFLICT = 4409
 WS_FULL = 4429
+WS_RATE_LIMITED = 4430      # zu viele falsche Schluessel: Absender vorübergehend gesperrt
 
 
 def now_ms() -> int:

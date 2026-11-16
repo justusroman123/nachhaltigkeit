@@ -8,8 +8,12 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import re
+import secrets
+from collections import deque
 from pathlib import Path
+from typing import Callable
 
 _SCRIPT = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.S | re.I)
 _STYLE = re.compile(r"<style[^>]*>(.*?)</style>", re.S | re.I)
@@ -60,3 +64,65 @@ BASE_HEADERS = {
     "Cross-Origin-Resource-Policy": "same-origin",
     "X-Frame-Options": "DENY",
 }
+
+
+def client_of(conn) -> str:
+    """Absender einer Anfrage/Verbindung. Hinter dem Reverse Proxy (Caddy, gleicher Rechner) steht die echte Adresse in
+    X-Forwarded-For; dem Header wird NUR vertraut, wenn die Verbindung von diesem Rechner (loopback) kommt."""
+    host = conn.client.host if getattr(conn, "client", None) else ""
+    if host in ("127.0.0.1", "::1"):
+        xff = conn.headers.get("x-forwarded-for", "")
+        if xff:
+            return xff.split(",")[0].strip()
+    return host
+
+
+class FailureLimiter:
+    """Bremst das Raten des Bedienschluessels: Nach `max_fails` Fehlversuchen innerhalb von `window_s` Sekunden ist der
+    Absender fuer `block_s` Sekunden gesperrt (auch mit richtigem Schluessel, damit Raten nichts bringt).
+    Datenschutz (Regel 1): Absender werden nur als HMAC-Hash mit zufaelligem Salz gefuehrt, das beim Start neu gewuerfelt wird
+    (keine IP-Adressen im Klartext, nichts wird gespeichert oder geloggt, alles nur im Arbeitsspeicher und kurzlebig)."""
+
+    def __init__(self, max_fails: int, window_s: float, block_s: float, clock: Callable[[], float]):
+        self.max_fails, self.window_s, self.block_s, self._clock = max_fails, window_s, block_s, clock
+        self._salt = secrets.token_bytes(16)
+        self._fails: dict[str, deque] = {}
+        self._blocked: dict[str, float] = {}
+
+    def _id(self, client: str) -> str:
+        return hmac.new(self._salt, client.encode("utf-8"), "sha256").hexdigest()[:16]
+
+    def blocked_for(self, client: str) -> int:
+        """Restliche Sperrzeit in Sekunden (0 = nicht gesperrt)."""
+        i, now = self._id(client), self._clock()
+        until = self._blocked.get(i)
+        if until is None:
+            return 0
+        if now >= until:
+            self._blocked.pop(i, None)
+            self._fails.pop(i, None)
+            return 0
+        return int(until - now) + 1
+
+    def failure(self, client: str) -> bool:
+        """Fehlversuch melden; True, wenn der Absender dadurch gesperrt wurde."""
+        i, now = self._id(client), self._clock()
+        q = self._fails.setdefault(i, deque())
+        q.append(now)
+        while q and now - q[0] > self.window_s:
+            q.popleft()
+        if len(q) >= self.max_fails:
+            self._blocked[i] = now + self.block_s
+            q.clear()
+            return True
+        return False
+
+    def success(self, client: str) -> None:
+        self._fails.pop(self._id(client), None)
+
+    def purge(self) -> None:
+        now = self._clock()
+        for i in [k for k, t in self._blocked.items() if now >= t]:
+            self._blocked.pop(i, None)
+        for i in [k for k, q in self._fails.items() if not q or now - q[-1] > self.window_s]:
+            self._fails.pop(i, None)

@@ -202,3 +202,12 @@ def test_verlauf_aelter_als_history_s_wird_geloescht(clock):
     clock.advance(200)
     assert room.replay("uk") == []
 
+
+
+def test_stille_frist_des_gespraechs_ist_einstellbar_und_geprueft():
+    from app.config import ConfigError
+    s = make_settings(turn_idle_s=45)
+    room = RoomManager(s).create_room(mode="gespraech")
+    assert room.turns.limits.idle_s == 45
+    with pytest.raises(ConfigError):
+        make_settings(turn_idle_s=3)

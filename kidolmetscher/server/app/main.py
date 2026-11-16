@@ -20,22 +20,22 @@ from array import array
 from typing import Callable, Optional
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, Header, HTTPException, WebSocket
+from fastapi import FastAPI, Header, HTTPException, Request, WebSocket
 from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 import segno
 from pydantic import BaseModel
 
 from .config import Settings
-from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FULL,
-                       WS_NOT_FOUND, WS_UNAUTHORIZED, control_message)
+from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FULL, WS_NOT_FOUND,
+                       WS_RATE_LIMITED, WS_UNAUTHORIZED, control_message)
 from .conversation import GuestPath
 from .orchestrator import Orchestrator
 from .pipeline import build_pipeline
 from .pipeline.base import Pipeline
 from .rooms import END, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
 from .turns import SPRICHT
-from .security import BASE_HEADERS, build_csp, collect_page_hashes
+from .security import BASE_HEADERS, FailureLimiter, build_csp, client_of, collect_page_hashes
 
 log = logging.getLogger("kidolmetscher")
 if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe orchestrator.py)
@@ -89,6 +89,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     rooms = RoomManager(settings, clock)
     page_hashes = collect_page_hashes(settings.web_dir)
     started_at = clock()
+    limiter = FailureLimiter(settings.auth_max_fails, settings.auth_window_s, settings.auth_block_s, clock)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -97,6 +98,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         async def reaper():
             while True:
                 await asyncio.sleep(REAPER_INTERVAL_S)
+                limiter.purge()
                 n = rooms.purge_expired()
                 if n:
                     log.info("raeume_abgelaufen=%d", n)
@@ -123,8 +125,23 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         return resp
 
     # ---------- Hilfen ----------
-    def require_operator(key: Optional[str]) -> None:
-        if not key_ok(key):
+    def check_key(key: Optional[str], who: str) -> str:
+        """Prueft den Bedienschluessel mit Schutz gegen Raten. Rueckgabe: "ok" | "falsch" | "gesperrt"."""
+        if limiter.blocked_for(who):
+            return "gesperrt"                 # gesperrte Absender zaehlen nicht weiter und bekommen keine Aussage zum Schluessel
+        if key_ok(key):
+            limiter.success(who)
+            return "ok"
+        if limiter.failure(who):
+            log.warning("bedienschluessel_sperre fehlversuche=%d dauer_s=%d", settings.auth_max_fails, int(settings.auth_block_s))
+        return "falsch"
+
+    def require_operator(key: Optional[str], request: Request) -> None:
+        res = check_key(key, client_of(request))
+        if res == "gesperrt":
+            raise HTTPException(status_code=429, detail="Zu viele Fehlversuche, bitte spaeter erneut versuchen",
+                                headers={"Retry-After": str(limiter.blocked_for(client_of(request)))})
+        if res != "ok":
             raise HTTPException(status_code=401, detail="Bedienschluessel falsch")
 
     def key_ok(key: Optional[str]) -> bool:
@@ -171,9 +188,9 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "vad_rms": settings.asr_vad_rms}
 
     @app.post("/api/rooms")
-    async def create_room(body: Optional[RoomRequest] = None,
+    async def create_room(request: Request, body: Optional[RoomRequest] = None,
                           x_operator_key: Optional[str] = Header(default=None)):
-        require_operator(x_operator_key)
+        require_operator(x_operator_key, request)
         try:
             room = rooms.create_room(body.langs if body else None, body.mode if body else None)
         except (LanguageError, RoomError) as exc:
@@ -195,18 +212,18 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "expires_in_s": max(0, int(expires_at - clock()))}
 
     @app.post("/api/rooms/{room_id}/listener-links")
-    async def create_link(room_id: str, body: LinkRequest, x_operator_key: Optional[str] = Header(default=None)):
-        require_operator(x_operator_key)
+    async def create_link(request: Request, room_id: str, body: LinkRequest, x_operator_key: Optional[str] = Header(default=None)):
+        require_operator(x_operator_key, request)
         room = rooms.get(room_id)
         if room is None:
             raise HTTPException(404, "Raum unbekannt")
         return make_link(room, body.lang, body.ttl_s)
 
     @app.post("/api/session")
-    async def create_session(body: Optional[SessionRequest] = None,
+    async def create_session(request: Request, body: Optional[SessionRequest] = None,
                              x_operator_key: Optional[str] = Header(default=None)):
         """Plan, Phase 3: erstellt eine Sitzung und gibt Sammel-Link sowie Links je Sprache zurueck."""
-        require_operator(x_operator_key)
+        require_operator(x_operator_key, request)
         body = body or SessionRequest()
         try:
             room = rooms.create_room(body.langs)
@@ -217,9 +234,9 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "links": {l: make_link(room, l, body.ttl_s) for l in room.langs}}
 
     @app.post("/api/qr")
-    async def qr_code(body: QrRequest, x_operator_key: Optional[str] = Header(default=None)):
+    async def qr_code(request: Request, body: QrRequest, x_operator_key: Optional[str] = Header(default=None)):
         """QR-Code als SVG. Die Adresse wird nicht gespeichert."""
-        require_operator(x_operator_key)
+        require_operator(x_operator_key, request)
         if len(body.url) > 400 or not body.url.startswith(("http://", "https://")):
             raise HTTPException(400, "Ungueltige Adresse")
         buf = io.BytesIO()
@@ -228,8 +245,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         return Response(content=buf.getvalue(), media_type="image/svg+xml")
 
     @app.get("/api/rooms/{room_id}/stats")
-    async def stats(room_id: str, x_operator_key: Optional[str] = Header(default=None)):
-        require_operator(x_operator_key)
+    async def stats(request: Request, room_id: str, x_operator_key: Optional[str] = Header(default=None)):
+        require_operator(x_operator_key, request)
         room = rooms.get(room_id)
         if room is None:
             raise HTTPException(404, "Raum unbekannt")
@@ -240,8 +257,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         return s
 
     @app.delete("/api/rooms/{room_id}")
-    async def delete_room(room_id: str, x_operator_key: Optional[str] = Header(default=None)):
-        require_operator(x_operator_key)
+    async def delete_room(request: Request, room_id: str, x_operator_key: Optional[str] = Header(default=None)):
+        require_operator(x_operator_key, request)
         if not rooms.close_room(room_id):
             raise HTTPException(404, "Raum unbekannt")
         return {"closed": True}
@@ -256,7 +273,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         hello = await read_hello(ws)
         if hello is None:
             return await safe_close(ws, WS_BAD_REQUEST)
-        if not key_ok(hello.get("operator_key")):
+        res = check_key(hello.get("operator_key"), client_of(ws))
+        if res == "gesperrt":
+            return await safe_close(ws, WS_RATE_LIMITED)
+        if res != "ok":
             return await safe_close(ws, WS_UNAUTHORIZED)
         room = rooms.get(str(hello.get("room_id", "")))
         if room is None:

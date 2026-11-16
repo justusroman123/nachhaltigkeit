@@ -81,6 +81,10 @@ class Settings:
     room_ttl_s: int = 43200
     max_listeners_per_room: int = 100      # Platzhalter, nicht gemessen
     max_guests: int = 3                    # Gespraechsmodus: so viele Gaeste gleichzeitig (Vorgabe des Nutzers)
+    auth_max_fails: int = 10               # falsche Bedienschluessel je Absender, dann Sperre (Schutz gegen Raten; Annahme)
+    auth_window_s: float = 600.0           # ... innerhalb dieser Zeit
+    auth_block_s: float = 900.0            # Dauer der Sperre
+    turn_idle_s: float = 120.0             # Gespraech: so lange ohne hoerbare Sprache, dann endet die Aussage von selbst; Redezeit ist NICHT begrenzt (Annahme, im Test pruefen)
     ring_buffer_size: int = 40             # letzte Untertitel fuer spaet verbundene Zuhoerer (nur Text, ohne Ton)
     history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
@@ -139,6 +143,10 @@ class Settings:
             raise ConfigError("DEFAULT_LANGS muss nicht leer und Teilmenge von TARGET_LANGS sein")
         if not (1 <= self.min_listener_ttl_s <= self.listener_ttl_s <= self.max_listener_ttl_s):
             raise ConfigError("Es muss gelten: MIN_LISTENER_TTL_S <= LISTENER_TTL_S <= MAX_LISTENER_TTL_S")
+        if self.auth_max_fails < 1 or self.auth_window_s <= 0 or self.auth_block_s <= 0:
+            raise ConfigError("AUTH_MAX_FAILS, AUTH_WINDOW_S und AUTH_BLOCK_S muessen positiv sein")
+        if not (10 <= self.turn_idle_s <= 3600):
+            raise ConfigError("TURN_IDLE_S muss zwischen 10 und 3600 Sekunden liegen")
         if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0 or self.history_s <= 0 or self.max_guests < 1:
             raise ConfigError("ROOM_TTL_S, MAX_LISTENERS_PER_ROOM oder RING_BUFFER_SIZE ungueltig")
         if self.segment_max_words < 1 or self.lang_queue_max < 1 or self.tts_skip_backlog < 1:
@@ -194,6 +202,10 @@ class Settings:
                 max_listeners_per_room=int(get("MAX_LISTENERS_PER_ROOM", d.max_listeners_per_room)),
                 ring_buffer_size=int(get("RING_BUFFER_SIZE", d.ring_buffer_size)),
                 history_s=float(get("HISTORY_S", d.history_s)),
+                turn_idle_s=float(get("TURN_IDLE_S", d.turn_idle_s)),
+                auth_max_fails=int(get("AUTH_MAX_FAILS", d.auth_max_fails)),
+                auth_window_s=float(get("AUTH_WINDOW_S", d.auth_window_s)),
+                auth_block_s=float(get("AUTH_BLOCK_S", d.auth_block_s)),
                 max_guests=int(get("MAX_GUESTS", d.max_guests)),
                 segment_max_words=int(get("SEGMENT_MAX_WORDS", d.segment_max_words)),
                 segment_tail_hold_ms=int(get("SEGMENT_TAIL_HOLD_MS", d.segment_tail_hold_ms)),
