@@ -226,8 +226,25 @@ def test_herkunftspruefung_laesst_sich_fuer_vorschau_abschalten():
             assert ws.receive_json()["code"] == "token_invalid"      # Verbindung wurde angenommen
 
 
-def test_demo_ohne_schluessel():
+def test_demo_ohne_schluessel_nur_mit_host_namen_dieses_rechners():
+    """Schutz gegen DNS-Rebinding: im schluessellosen Demo-Modus werden nur Anfragen an localhost/127.0.0.1 bedient."""
     s = make_settings(operator_key="", allow_no_key=True)
+    with app_client(s) as c:
+        assert c.get("/api/config", headers={"host": "boese.example"}).status_code == 421
+        assert c.post("/api/rooms", headers={"host": "boese.example"}).status_code == 421
+        assert c.get("/api/config", headers={"host": "localhost:8000"}).status_code == 200
+        assert c.get("/api/config", headers={"host": "127.0.0.1:8000"}).status_code == 200
+        assert c.get("/api/config", headers={"host": "[::1]:8000"}).status_code == 200
+        with pytest.raises(Exception):                            # WebSocket mit fremdem Host-Namen wird abgewiesen
+            with c.websocket_connect("/ws/operator", headers={"host": "boese.example", "origin": "http://boese.example"}) as ws:
+                ws.send_json({"type": "hello", "room_id": "x", "operator_key": ""})
+                ws.receive_json()
+    with app_client(make_settings(operator_key=KEY)) as c:         # mit Schluessel keine Host-Pruefung noetig
+        assert c.get("/api/config", headers={"host": "boese.example"}).status_code == 200
+
+
+def test_demo_ohne_schluessel():
+    s = make_settings(operator_key="", allow_no_key=True, host_check=False)
     with app_client(s) as c:
         assert c.get("/api/config").json()["key_required"] is False
         r = c.post("/api/rooms")                                  # ohne Header

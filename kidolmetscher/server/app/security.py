@@ -9,11 +9,13 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import ipaddress
 import re
 import secrets
+import time
 from collections import deque
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 
 _SCRIPT = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", re.S | re.I)
 _STYLE = re.compile(r"<style[^>]*>(.*?)</style>", re.S | re.I)
@@ -66,15 +68,119 @@ BASE_HEADERS = {
 }
 
 
-def client_of(conn) -> str:
-    """Absender einer Anfrage/Verbindung. Hinter dem Reverse Proxy (Caddy, gleicher Rechner) steht die echte Adresse in
-    X-Forwarded-For; dem Header wird NUR vertraut, wenn die Verbindung von diesem Rechner (loopback) kommt."""
+def _nets(trusted: Iterable[str]) -> list:
+    out = []
+    for t in trusted:
+        try:
+            out.append(ipaddress.ip_network(t, strict=False))
+        except ValueError:
+            continue
+    return out
+
+
+def _is_trusted(host: str, nets: list) -> bool:
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return any(ip in n for n in nets)
+
+
+def normalize_client(host: str) -> str:
+    """Absender-Kennung: IPv4 ganz, IPv6 auf das /64-Praefix gekuerzt (ein Angreifer mit einem Praefix hat sonst unzaehlige Adressen)."""
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return host[:64]
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped:
+            return str(ip.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False).network_address) + "/64"
+    return str(ip)
+
+
+def client_of(conn, trusted: Iterable[str] = ("127.0.0.1", "::1")) -> str:
+    """Absender einer Anfrage/Verbindung. Hinter dem Reverse Proxy (Caddy) steht die echte Adresse in X-Forwarded-For;
+    dem Header wird NUR vertraut, wenn die Verbindung von einem vertrauenswuerdigen Proxy kommt (Standard: dieser Rechner),
+    und er wird von RECHTS gelesen: der letzte Eintrag, der nicht selbst ein vertrauenswuerdiger Proxy ist. Was ein Absender
+    selbst links anhaengt, zaehlt nicht (sonst koennte er seine Kennung frei waehlen)."""
     host = conn.client.host if getattr(conn, "client", None) else ""
-    if host in ("127.0.0.1", "::1"):
-        xff = conn.headers.get("x-forwarded-for", "")
+    nets = _nets(trusted)
+    if _is_trusted(host, nets):
+        xff = [x.strip() for x in conn.headers.get("x-forwarded-for", "").split(",") if x.strip()]
+        for entry in reversed(xff):
+            if not _is_trusted(entry, nets):
+                return normalize_client(entry)
         if xff:
-            return xff.split(",")[0].strip()
-    return host
+            return normalize_client(xff[0])
+    return normalize_client(host)
+
+
+class RateBucket:
+    """Token-Bucket (nur Arbeitsspeicher): `capacity` Einheiten Vorrat, `per_s` Einheiten Nachschub je Sekunde.
+    Dient der Begrenzung von Steuernachrichten und Audio-Zufluss je Verbindung."""
+
+    def __init__(self, capacity: float, per_s: float, clock: Callable[[], float] = time.monotonic):
+        self.capacity, self.per_s, self._clock = float(capacity), float(per_s), clock
+        self._level, self._at = float(capacity), clock()
+
+    def allow(self, cost: float = 1.0) -> bool:
+        now = self._clock()
+        self._level = min(self.capacity, self._level + (now - self._at) * self.per_s)
+        self._at = now
+        if self._level >= cost:
+            self._level -= cost
+            return True
+        return False
+
+
+class BodyLimitMiddleware:
+    """Reine ASGI-Schranke: HTTP-Koerper groesser als `max_bytes` werden mit 413 abgewiesen, bevor sie gelesen oder geparst
+    werden (vor der Pruefung des Bedienschluessels koennte sonst jeder beliebig grosse Koerper Speicher belegen)."""
+
+    def __init__(self, app, max_bytes: int = 16_384):
+        self.app, self.max_bytes = app, max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        cl = dict(scope.get("headers") or []).get(b"content-length")
+        if cl is not None and (not cl.isdigit() or int(cl) > self.max_bytes):
+            return await self._reject(send)
+        total = 0
+        started = False
+
+        async def limited_receive():
+            nonlocal total
+            msg = await receive()
+            if msg["type"] == "http.request":
+                total += len(msg.get("body", b""))
+                if total > self.max_bytes:
+                    raise _TooLarge()
+            return msg
+
+        async def tracking_send(msg):
+            nonlocal started
+            if msg["type"] == "http.response.start":
+                started = True
+            await send(msg)
+
+        try:
+            await self.app(scope, limited_receive, tracking_send)
+        except _TooLarge:
+            if not started:
+                await self._reject(send)
+
+    @staticmethod
+    async def _reject(send):
+        body = b'{"detail":"Anfrage zu gross"}'
+        await send({"type": "http.response.start", "status": 413,
+                    "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]})
+        await send({"type": "http.response.body", "body": body})
+
+
+class _TooLarge(Exception):
+    pass
 
 
 class FailureLimiter:
@@ -83,6 +189,8 @@ class FailureLimiter:
     Datenschutz (Regel 1): Absender werden nur als HMAC-Hash mit zufaelligem Salz gefuehrt, das beim Start neu gewuerfelt wird
     (keine IP-Adressen im Klartext, nichts wird gespeichert oder geloggt, alles nur im Arbeitsspeicher und kurzlebig)."""
 
+    MAX_TRACKED = 20_000          # so viele Absender hoechstens gleichzeitig verfolgen (aelteste fliegen raus), Schutz des Arbeitsspeichers
+
     def __init__(self, max_fails: int, window_s: float, block_s: float, clock: Callable[[], float]):
         self.max_fails, self.window_s, self.block_s, self._clock = max_fails, window_s, block_s, clock
         self._salt = secrets.token_bytes(16)
@@ -90,7 +198,7 @@ class FailureLimiter:
         self._blocked: dict[str, float] = {}
 
     def _id(self, client: str) -> str:
-        return hmac.new(self._salt, client.encode("utf-8"), "sha256").hexdigest()[:16]
+        return hmac.new(self._salt, client.encode("utf-8", "surrogatepass"), "sha256").hexdigest()[:16]
 
     def blocked_for(self, client: str) -> int:
         """Restliche Sperrzeit in Sekunden (0 = nicht gesperrt)."""
@@ -107,6 +215,8 @@ class FailureLimiter:
     def failure(self, client: str) -> bool:
         """Fehlversuch melden; True, wenn der Absender dadurch gesperrt wurde."""
         i, now = self._id(client), self._clock()
+        if i not in self._fails and len(self._fails) >= self.MAX_TRACKED:
+            self._fails.pop(next(iter(self._fails)))              # aeltester Absender (Einfuegereihenfolge) fliegt raus
         q = self._fails.setdefault(i, deque())
         q.append(now)
         while q and now - q[0] > self.window_s:
@@ -118,7 +228,9 @@ class FailureLimiter:
         return False
 
     def success(self, client: str) -> None:
-        self._fails.pop(self._id(client), None)
+        """Richtiger Schluessel. Fehlversuche bleiben stehen und verfallen nur mit dem Fenster: Sonst koennte ein Angreifer hinter
+        derselben Absender-Kennung (gemeinsames Netz) mit jedem Erfolg des Bedienplatzes seinen Zaehler zuruecksetzen."""
+        return None
 
     def purge(self) -> None:
         now = self._clock()

@@ -31,7 +31,7 @@ echo Bedienplatz: http://localhost:8000/   (wird gleich im Browser geoeffnet)
 echo Beenden: dieses Fenster schliessen oder Strg+C.
 echo.
 start "" cmd /c "timeout /t 4 /nobreak >nul & start http://localhost:8000/"
-".venv\Scripts\uvicorn.exe" app.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log
+".venv\Scripts\python.exe" -m app
 goto ende
 
 :nopython

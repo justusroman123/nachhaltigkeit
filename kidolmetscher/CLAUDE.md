@@ -20,7 +20,7 @@ Pipeline: Whisper large-v3 (SimulStreaming oder WhisperLiveKit) -> TranslateGemm
    oder löschen, nach dem Speichern Ordner und Inhalt prüfen. Ohne Drive-Zugriff: `docs/drive-export/`.
 
 ## Arbeitsweise
-- Nichts als fertig melden, was nicht gelaufen ist. Tests: `cd server && pytest`.
+- Nichts als fertig melden, was nicht gelaufen ist. Tests: `cd server && pytest`. Start immer über `python -m app` (sichere Voreinstellungen, keine Adressen im Log), nie `uvicorn` ohne diese Optionen. Browser-Tests: `server/tests/e2e/*.js` (Playwright, Server mit Attrappen laufen lassen).
 - Start: siehe README. Web-Dateien liegen unter `web/`, Server unter `server/app/`.
 
 ## Plan-Dokument
@@ -37,3 +37,5 @@ Sagt der Nutzer „Ich möchte die VM wieder einrichten“ (oder Ähnliches), de
 ## Betriebsarten (FEST, nicht erweitern ohne Auftrag des Nutzers)
 Es gibt **genau zwei** Betriebsarten: **Vortrag** (durchgehend sprechen, keine Sperre, Sprecher muss nicht aufs Gerät schauen) und **Gespräch** (abwechselnd, Sperre für alle, bis alle Geräte „angezeigt“ und „fertig gesprochen“ gemeldet haben). Details: Protokoll Abschnitt 27. Keine dritte Betriebsart, keine zusätzlichen Schalter.
 Innerhalb des Gesprächs (Protokoll Abschnitte 29/30): **keine Redezeit-Grenze** (Ende nur durch „Fertig“, Stopp oder 120 s ohne Sprache); der **Mitarbeiter hat Vorrang** und kann jeden Gast sofort stoppen („Stopp – ich spreche jetzt“), **Gäste können nur melden** (Wortmeldung, automatische Übergabe, keine Unterbrechung); Gast-Antworten werden dem Mitarbeiter auf Deutsch vorgelesen (Piper `de_DE-thorsten-medium`, CC0 laut Modellkarte, Einrichtung: `scripts/stimme_de_einrichten.sh`).
+
+Gutachten-Ergebnis (Protokoll Abschnitt 32): Im Gespräch geht **nichts still verloren** (Fehler werden gemeldet, der Rest einer Aussage wird auch bei Verbindungsabbruch übersetzt und zugestellt), die Sperre bindet Arbeiten an ihre Runde (Marke) und hält den Rest einer gestoppten Aussage (Haltemarke). Neue Gesprächs-Änderungen immer mit WebSocket-Test und, wenn der Browser betroffen ist, mit einem Szenario in `server/tests/e2e/`.

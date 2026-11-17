@@ -86,7 +86,8 @@ TARGET_LANGS=uk,ar,en,tr
 DEFAULT_LANGS=uk,en
 SERVER_HOURLY_EUR=1.24
 BUDGET_EUR=20
-DEBUG_FEHLER=1
+# Fehlermeldungen mit Text im Log: nur zur Fehlersuche mit Testinhalten auf 1 setzen (kann Textteile enthalten), im Betrieb 0
+DEBUG_FEHLER=0
 HF_HUB_OFFLINE=1
 TRANSFORMERS_OFFLINE=1
 HF_HUB_DISABLE_TELEMETRY=1

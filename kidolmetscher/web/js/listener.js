@@ -13,7 +13,7 @@
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const token = /^[A-Za-z0-9_-]+$/.test(hash.get('t') || '') ? hash.get('t') : null;
   let lang = NAMES[hash.get('l')] ? hash.get('l') : null;      // gewaehlte Sprache (nur im Arbeitsspeicher/URL)
-  let ws = null, retry = 0, ended = false, fontRem = 2, offered = [], startShown = false;
+  let ws = null, retry = 0, lastError = '', ended = false, fontRem = 2, offered = [], startShown = false;
   let audioCtx = null, gain = null, soundOn = false, nextStart = 0;
 
   const t = () => STRINGS[lang] || STRINGS.de;
@@ -100,14 +100,18 @@
     playChain = job.catch(() => {});
     return job.then((h) => (h ? h.done : undefined)).catch(() => {});
   }
+  const sources = new Set();                         // eingeplante/laufende Toene: Stummschalten muss sie stoppen
   async function schedule(audio) {                   // liefert {done}, sobald der Ton eingeplant ist (nicht erst nach dem Abspielen)
+    if (!soundOn) return null;
     if (nextStart - audioCtx.currentTime > MAX_AUDIO_BACKLOG_S) return null;     // zu viel Rueckstau: Ton auslassen
     try {
       const buf = await audioCtx.decodeAudioData(b64ToBuf(audio.data_b64));
+      if (!soundOn) return null;                     // waehrend des Dekodierens stummgeschaltet
       const src = audioCtx.createBufferSource();
       src.buffer = buf; src.connect(gain);
       const at = Math.max(audioCtx.currentTime + 0.05, nextStart);            // Warteschlange: nie ueberlappen
-      const ended = new Promise((resolve) => { src.onended = resolve; });
+      const ended = new Promise((resolve) => { src.onended = () => { sources.delete(src); resolve(); }; });
+      sources.add(src);
       src.start(at); nextStart = at + buf.duration;
       const wait = (buf.duration + 2) * 1000 + Math.max(0, (at - audioCtx.currentTime) * 1000);
       return { done: Promise.race([ended, new Promise((r) => setTimeout(r, wait))]) };
@@ -119,7 +123,11 @@
     await audioCtx.resume();
     soundOn = true; btnSound.textContent = '🔊';
   }
-  function disableSound() { soundOn = false; btnSound.textContent = '🔇'; nextStart = 0; }
+  function disableSound() {
+    soundOn = false; btnSound.textContent = '🔇';
+    sources.forEach((src) => { try { src.stop(); } catch (_) {} });         // schon eingeplanter Ton wird abgebrochen (die Rueckmeldung "fertig" folgt trotzdem)
+    sources.clear(); nextStart = 0;
+  }
   btnSound.addEventListener('click', () => (soundOn ? disableSound() : enableSound()));
   vol.addEventListener('input', () => { if (gain) gain.gain.value = Number(vol.value); });
   $('btnStartSound').addEventListener('click', async () => { await enableSound(); startScreen.hidden = true; });
@@ -131,7 +139,10 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !ended) keepAwake(); });
 
   /* ---------- Verbindung ---------- */
-  function end(text, cls, symbol) { ended = true; status(text, cls); picker.hidden = true; startScreen.hidden = true; notice(symbol); }
+  function end(text, cls, symbol) {
+    ended = true; status(text, cls); picker.hidden = true; startScreen.hidden = true; notice(symbol);
+    resetTalk(); micClose(); dock.hidden = true;     // Mikrofon freigeben (Anzeige am Tablet geht aus), keine Sprechleiste mehr
+  }
 
   function connect() {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -141,8 +152,10 @@
     ws.onmessage = (ev) => {
       let d; try { d = JSON.parse(ev.data); } catch (_) { return; }
       if (d.type === 'ready') {
-        retry = 0; offered = d.langs || [];
+        retry = 0; lastError = ''; offered = d.langs || [];
+        if (d.device && d.device !== myDevice) resetTalk();          // neue Verbindung = neues Geraet beim Server: alter Sprechzustand gilt nicht mehr
         mode = d.mode || 'vortrag'; turn = d.turn || turn; myDevice = d.device || myDevice;
+        opOnline = d.operator_online !== false;
         status('● live', 'ok');
         keepAwake();
         if (!d.lang) { langEl.textContent = '🌐'; notice('…'); showPicker(offered); return; }
@@ -167,45 +180,56 @@
           play(d.audio).then(() => setTimeout(() => sendJson({ type: 'played', seq: d.seq }), readMs));
         } else play(d.audio);
       } else if (d.type === 'turn') {
-        const wasTalking = talking;
         turn = d;
-        if (wasTalking && !mine()) {                                  // dem Gast wurde das Wort genommen (Stopp des Mitarbeiters) oder lange Stille
-          talking = false; micOff(); wanting = false;
-          cutHint = d.reason === 'unterbrochen' ? tt('cutByStaff') : tt('ended');
-          clearTimeout(cutTimer); cutTimer = setTimeout(() => { cutHint = ''; talkRender(); }, 6000);
-        }
+        reconcile(d);
+        talkRender();
+      } else if (d.type === 'operator') {
+        opOnline = d.online !== false;                                // Mitarbeiter (Bedienplatz) verbunden oder nicht
         talkRender();
       } else if (d.type === 'busy') {
-        talking = false; talkRender(tt('busy'));
+        talking = false; pendingOn = false; clearTimeout(pendingTimer); micOff(); talkRender(tt('busy'));
       } else if (d.type === 'problem') {
-        talking = false; micOff(); talkRender(tt('repeat'));
+        showProblem(d.what);                                          // nur ein Hinweis: das Mikrofon bleibt, die Aussage laeuft weiter
       } else if (d.type === 'session_end') {
         end('Ende', 'muted', '✔');
       } else if (d.type === 'token_expired') {
         end('Link abgelaufen', 'bad', '⏱');
       } else if (d.type === 'error') {
         if (d.code === 'lang_invalid') status('Sprache nicht verfügbar', 'warn');
+        else if (d.code === 'room_full') { lastError = 'room_full'; status('Alle Plätze belegt, neuer Versuch …', 'warn'); }   // vorübergehend (z. B. alte Verbindung noch nicht abgelaufen): onclose versucht es erneut
         else end('Link ungültig', 'bad', '⚠');
       }
     };
     ws.onclose = () => {
+      resetTalk();                                          // nichts darf haengen bleiben: Sprechzustand, Mikrofon, Hinweise
       if (ended) return;
-      status('Verbindung weg, neuer Versuch …', 'warn');
+      status(lastError === 'room_full' ? 'Alle Plätze belegt, neuer Versuch …' : 'Verbindung weg, neuer Versuch …', 'warn');
+      if (mode === 'gespraech' && lastError !== 'room_full') { sentBar.hidden = true; bandSet('stop', '⚠ ' + tt('offline')); }
       setTimeout(connect, Math.min(10000, 1000 * 2 ** retry++));
     };
   }
 
 
-  /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ---------- */
+  /* ---------- Gespraechsmodus (Gast): Sprechen-Knopf, Zustand vom Server, Mikrofon nur nach Tippen offen ----------
+     Der Server entscheidet, wer das Wort hat; dieser Teil richtet sich nach seinen "turn"-Meldungen (reconcile) und bleibt nie
+     in einem alten Zustand stehen: bei neuer Verbindung, Ende oder Abbruch wird alles zurueckgesetzt (resetTalk). */
   let mode = 'vortrag', turn = { state: 'frei', who: null, waiting: [] }, talking = false, cfg = null, wanting = false, gotTurn = false;
-  let micStream = null, micCtx = null, micNode = null;
+  let pendingOn = false, pendingTimer = 0;                  // "Sprechen" gesendet, die Antwort des Servers (turn oder busy) steht noch aus
+  let micStream = null, micCtx = null, micNode = null, micStarting = null, opOnline = true, tapBusy = false;
   // Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig", wenn der Mitarbeiter das Wort uebernimmt (Stopp) oder
   // nach langer Stille (Server). Gaeste koennen niemanden stoppen, nur sich melden.
-  let cutHint = '', cutTimer = 0;
+  let cutHint = '', cutTimer = 0, problemHint = '', problemTimer = 0;
   const dock = $('talkDock'), band = $('turnBand'), sentBar = $('sentBar'), btnTalk = $('btnTalk'), talkNote = $('talkNote');
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   let myDevice = null;                                      // Kennung dieses Geraets (vom Server in "ready")
   const mine = () => turn.state === 'spricht' && turn.who === myDevice;
+  function resetTalk() {                                    // alter Sprechzustand gilt nicht mehr (neue Verbindung, Ende, Abbruch)
+    talking = false; wanting = false; gotTurn = false; pendingOn = false;
+    clearTimeout(pendingTimer); clearTimeout(cutTimer); clearTimeout(problemTimer);
+    cutHint = ''; problemHint = '';
+    micOff();
+    if (sentBar) sentBar.hidden = true;
+  }
   function setupTalk() {
     dock.hidden = mode !== 'gespraech';
     if (mode !== 'gespraech') return;
@@ -216,15 +240,39 @@
   function bandSet(kind, text) { band.className = kind; band.textContent = text; }
   const waitsForMe = () => (turn.waiting || []).includes(myDevice);
   const othersWait = () => (turn.waiting || []).some((d) => d !== myDevice);
+  function showCut(text) {                                  // Aussage wurde beendet: Hinweis mindestens 6 s stehen lassen
+    cutHint = text; clearTimeout(cutTimer);
+    cutTimer = setTimeout(() => { cutHint = ''; talkRender(); }, 6000);
+  }
+  const PROBLEM_KEYS = { nicht_erkannt: 'repeat', uebersetzung: 'transFailed', spracherkennung: 'asrFailed', audio_verworfen: 'audioLost' };
+  function showProblem(what) {                              // sichtbar bleiben (8 s), auch wenn gleich danach der Zustand wechselt
+    problemHint = tt(PROBLEM_KEYS[what] || 'repeat');
+    clearTimeout(problemTimer); problemTimer = setTimeout(() => { problemHint = ''; talkRender(); }, 8000);
+    try { if (navigator.vibrate) navigator.vibrate(150); } catch (_) {}
+    talkRender();
+  }
+  // Abgleich mit der Meldung des Servers: Zustand des Geraets und des Servers duerfen nie auseinanderlaufen
+  function reconcile(d) {
+    const me = mine();
+    if (me) { pendingOn = false; clearTimeout(pendingTimer); }
+    if (talking && !me && !pendingOn) {                     // Wort genommen (Stopp des Mitarbeiters), lange Stille oder Freigabe
+      talking = false; micOff(); wanting = false;
+      showCut(tt(d.reason === 'unterbrochen' ? 'cutByStaff' : (d.reason === 'freigegeben' ? 'released' : 'ended')));
+    } else if (me && !talking && !pendingOn && !wanting) {  // Wort uebergeben, aber hier will niemand sprechen (Wortmeldung gerade zurueckgenommen): sofort zurueckgeben
+      sendJson({ type: 'talk', on: false });
+    }
+  }
   function talkRender(hint) {
     if (mode !== 'gespraech') return;
     const s = turn.state, me = mine();
     if (me) gotTurn = true; else if (gotTurn) { gotTurn = false; wanting = false; }   // Aussage vorbei: Wortmeldung erledigt
     btnTalk.textContent = me ? '✔ ' + tt('done') : (s === 'frei' ? '🎙 ' + tt('speak') : (waitsForMe() ? '✖ ' + tt('unwant') : '✋ ' + tt('want')));
     btnTalk.disabled = false;
-    sentBar.hidden = !me;
+    sentBar.hidden = !(me && talking);                        // Pegelbalken nur, solange das Mikrofon wirklich sendet
     if (me && !talking) autoStart();                          // Wortmeldung: Wort wurde uebergeben, Mikrofon geht automatisch an
     if (hint) return bandSet('stop', hint);
+    if (problemHint) return bandSet('stop', '⚠ ' + problemHint);       // Fehlerhinweis hat Vorrang und bleibt sichtbar
+    if (!opOnline) return bandSet('stop', '⚠ ' + tt('noStaff'));        // niemand am Bedienplatz: Aussagen wuerden nicht gehoert
     if (cutHint && !me) return bandSet('warn', '⚠ ' + cutHint);       // Aussage wurde beendet (Mitarbeiter hat das Wort / lange Stille)
     if (s === 'frei') bandSet('', '● ' + tt('canSpeak'));
     else if (me) bandSet(othersWait() ? 'warn' : '', othersWait() ? '⏳ ' + tt('someoneWaits') : '🎙 ' + tt('youSpeak'));
@@ -238,20 +286,37 @@
     micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; });
     talking = true;
     sendJson({ type: 'talk', on: true });
+    talkRender();
   }
-  async function startMic(rate) {
-    if (micNode) { micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; }); return true; }
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-      micCtx = new AudioContext({ sampleRate: rate || 16000 });
-      await micCtx.audioWorklet.addModule('js/pcm-worklet.js');
-      micNode = new AudioWorkletNode(micCtx, 'pcm-capture');
-      micNode.port.onmessage = (ev) => onMicBlock(ev.data);
-      micCtx.createMediaStreamSource(micStream).connect(micNode);
-      return true;
-    } catch (_) { bandSet('stop', tt('micDenied')); return false; }
+  function startMic(rate) {                                   // nie zweimal gleichzeitig (Doppeltipp, langsame Freigabe): gemeinsames Versprechen
+    if (micNode) { micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; }); return Promise.resolve(true); }
+    if (micStarting) return micStarting;
+    micStarting = (async () => {
+      let stream = null, ctx = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        ctx = new AudioContext({ sampleRate: rate || 16000 });
+        await ctx.audioWorklet.addModule('js/pcm-worklet.js');
+        const node = new AudioWorkletNode(ctx, 'pcm-capture');
+        node.port.onmessage = (ev) => onMicBlock(ev.data);
+        ctx.createMediaStreamSource(stream).connect(node);
+        if (ctx.state === 'suspended') await ctx.resume();    // Tablets (iOS): Kontext startet gesperrt
+        micStream = stream; micCtx = ctx; micNode = node;
+        return true;
+      } catch (_) {
+        try { if (stream) stream.getTracks().forEach((tr) => tr.stop()); if (ctx) ctx.close(); } catch (__) {}
+        bandSet('stop', tt('micDenied'));
+        return false;
+      } finally { micStarting = null; }
+    })();
+    return micStarting;
   }
   function micOff() { if (micStream) micStream.getAudioTracks().forEach((tr) => { tr.enabled = false; }); }   // zwischen den Aussagen stumm
+  function micClose() {                                       // Mikrofon wirklich freigeben (Ende, Seite verlassen): Aufnahme-Anzeige des Geraets geht aus
+    try { if (micStream) micStream.getTracks().forEach((tr) => tr.stop()); } catch (_) {}
+    try { if (micCtx) micCtx.close(); } catch (_) {}
+    micStream = micCtx = micNode = null;
+  }
   function onMicBlock(buf) {
     if (!talking) return;
     if (ws && ws.readyState === 1) ws.send(buf);
@@ -261,22 +326,34 @@
     const f = Math.min(1, rms / 3000);                         // Pegelanzeige: das Mikrofon hoert zu (keine Laengenbegrenzung)
     sentBar.firstElementChild.style.width = Math.round(f * 100) + '%';
   }
-  function endTalk() { if (!talking) return; talking = false; micOff(); sendJson({ type: 'talk', on: false }); }
+  function endTalk() {                                        // "Fertig": dem Server immer sagen, auch wenn lokal etwas nicht stimmt
+    if (!talking && !mine()) return;
+    talking = false; pendingOn = false; clearTimeout(pendingTimer); micOff();
+    sendJson({ type: 'talk', on: false });
+    talkRender(tt('ending'));
+  }
+  function armPending() {                                     // keine Antwort des Servers: nicht ewig "Sprechen" anzeigen
+    pendingOn = true; clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(() => { pendingOn = false; if (!mine()) { talking = false; micOff(); } talkRender(); }, 5000);
+  }
   btnTalk.addEventListener('click', async () => {
-    if (mine()) return endTalk();
-    if (turn.state === 'frei' && !talking) {
-      if (!(await startMic(16000))) return;
-      talking = true;
-      sendJson({ type: 'talk', on: true });
-      return;
-    }
-    if (turn.state === 'frei') return;
-    if (waitsForMe()) { wanting = false; sendJson({ type: 'want', on: false }); return; }      // Wortmeldung zurueckziehen
-    if (!(await startMic(16000))) return;                     // Mikrofon-Freigabe jetzt (Antippen), damit spaeter alles automatisch geht
-    micOff();
-    wanting = true; sendJson({ type: 'want', on: true }); talkRender();
+    if (tapBusy) return;                                      // Doppeltipp waehrend der Mikrofon-Freigabe: ignorieren
+    tapBusy = true;
+    try {
+      if (mine() || talking) return endTalk();
+      if (turn.state === 'frei') {
+        if (!(await startMic(16000))) return;
+        talking = true; armPending();
+        sendJson({ type: 'talk', on: true }); talkRender();
+        return;
+      }
+      if (waitsForMe()) { wanting = false; sendJson({ type: 'want', on: false }); return; }      // Wortmeldung zurueckziehen
+      if (!(await startMic(16000))) return;                     // Mikrofon-Freigabe jetzt (Antippen), damit spaeter alles automatisch geht
+      micOff();
+      wanting = true; sendJson({ type: 'want', on: true }); talkRender();
+    } finally { tapBusy = false; }
   });
-  window.addEventListener('pagehide', () => { talking = false; if (micStream) micStream.getTracks().forEach((tr) => tr.stop()); });
+  window.addEventListener('pagehide', () => { resetTalk(); micClose(); });
 
   applyStrings();
   if (location.protocol === 'file:') end('Bitte über den Server öffnen (nicht als Datei)', 'bad', '⚠');

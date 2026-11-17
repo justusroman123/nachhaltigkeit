@@ -74,7 +74,9 @@ WorkingDirectory=/root/kidolmetscher/src/kidolmetscher/server
 EnvironmentFile=/root/kidolmetscher/server.env
 TimeoutStartSec=3600
 ExecStartPre=-/root/kidolmetscher/qualitaetslauf.sh
-ExecStart=/root/kidolmetscher/.venv/bin/uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log
+Environment=HOST=127.0.0.1 PORT=8000
+ExecStart=/root/kidolmetscher/.venv/bin/python -m app
+LimitNOFILE=65536
 Restart=on-failure
 [Install]
 WantedBy=multi-user.target

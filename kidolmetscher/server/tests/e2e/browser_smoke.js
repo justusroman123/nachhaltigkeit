@@ -1,5 +1,5 @@
 // Optionaler Browser-Rauchtest (nicht Teil von pytest). Braucht Node + playwright und einen laufenden Server:
-//   OPERATOR_KEY=... MOCK_ASR_SEGMENT_S=1 uvicorn app.main:create_app --factory --port 8123 --no-access-log
+//   OPERATOR_KEY=... MOCK_ASR_SEGMENT_S=1 PORT=8123 python -m app
 //   OPERATOR_KEY=... BASE=http://127.0.0.1:8123 PYTHON=python3 node tests/e2e/browser_smoke.js
 // Optional SHOTS=/pfad/ordner speichert Bildschirmfotos. QR-Pruefung braucht python mit opencv-python-headless.
 // Nutzt Chromiums Fake-Mikrofon (Testton). Es prueft NICHT das echte DJI Mic Mini.

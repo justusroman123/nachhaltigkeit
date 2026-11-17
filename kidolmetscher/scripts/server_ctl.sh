@@ -13,7 +13,7 @@ case "${1:-}" in
     if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then echo "laeuft bereits (PID $(cat "$PIDF"))"; exit 0; fi
     set -a; . "$DIR/server.env"; set +a
     cd "$APP/server"
-    nohup "$DIR/.venv/bin/uvicorn" app.main:create_app --factory --host 127.0.0.1 --port "${PORT:-8000}" --no-access-log \
+    HOST=127.0.0.1 PORT="${PORT:-8000}" nohup "$DIR/.venv/bin/python" -m app \
       > "$LOGF" 2>&1 &
     echo $! > "$PIDF"
     echo "gestartet (PID $(cat "$PIDF")). Modelle werden geladen; das kann einige Minuten dauern. Fortschritt: tail -f $LOGF"

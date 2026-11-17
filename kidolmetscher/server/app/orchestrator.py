@@ -39,7 +39,7 @@ class Orchestrator:
         self._queues: dict[str, asyncio.Queue] = {}
         self._workers: dict[str, asyncio.Task] = {}
         self._flow = room.tracker                         # Gespraech: echte Sperre, Vortrag: Anzeige, ob noch etwas laeuft
-        self._open: dict[int, int] = {}                  # seq -> noch offene Sprachen
+        self._open: dict[int, list] = {}                 # seq -> [noch offene Sprachen, Marke der Sperrrunde]
         self._tail_since = 0.0                           # Zeit (monotonic), seit der ein Rest ohne Satzzeichen wartet
 
     # ---------- Eingang ----------
@@ -55,6 +55,10 @@ class Orchestrator:
             if time.monotonic() - self._tail_since >= hold:
                 out += self._segmenter.flush()
         self._enqueue(out)
+        self._notice()
+
+    def _notice(self) -> None:
+        """Nicht erkannter Abschnitt: dem Bedienplatz sofort sagen (auch am Ende einer Aussage), nicht erst bei der naechsten."""
         notice = getattr(self._stream, "pop_notice", lambda: None)()
         if notice:
             self.room.push_operator(control_message("problem", what=notice))
@@ -64,15 +68,16 @@ class Orchestrator:
         rest = self._segment(await self._stream.flush())
         rest += self._segmenter.flush()
         self._enqueue(rest)
+        self._notice()
 
     def _done_one(self, seq: int) -> None:
         """Eine Sprache eines Abschnitts ist fertig (oder verworfen); sind alle fertig, ist der Abschnitt erledigt."""
         if seq not in self._open:
             return
-        self._open[seq] -= 1
-        if self._open[seq] <= 0:
-            del self._open[seq]
-            self._flow.segment_done()
+        self._open[seq][0] -= 1
+        if self._open[seq][0] <= 0:
+            token = self._open.pop(seq)[1]
+            self._flow.segment_done(token)               # zaehlt nur, wenn die Sperrrunde noch dieselbe ist (Spaetmeldung einer alten Runde zaehlt nicht)
 
     async def finish(self) -> list[TranslationMessage]:
         """Rest ausgeben, Warteschlangen leeren, ASR-Puffer loeschen, Arbeiter beenden."""
@@ -80,6 +85,7 @@ class Orchestrator:
             rest = self._segment(await self._stream.flush())
             rest += self._segmenter.flush()
             self._enqueue(rest)
+            self._notice()
             return await self.drain()
         finally:
             await self._stream.close()
@@ -126,8 +132,7 @@ class Orchestrator:
                 self.room.counters["segments_no_listener"] += 1
                 continue
             seq = self.room.next_seq()
-            self._flow.segment_started()
-            self._open[seq] = len(langs)
+            self._open[seq] = [len(langs), self._flow.segment_started()]
             for lang in langs:
                 q = self._queue(lang)
                 if q.full():                       # Rueckstau: aeltestes Segment dieser Sprache verwerfen

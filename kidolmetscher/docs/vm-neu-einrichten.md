@@ -22,7 +22,7 @@
 - Fortschritt: `grep -a "^==" /var/log/kidolmetscher-init.log | tail -n 10`
 - Modell fehlt (`/root/kidolmetscher/models/translategemma` nicht da): `strings /var/log/kidolmetscher-init.log | grep HINWEIS`; Token prüfen; Modell laden: ` HF_TOKEN='hf_…' /root/kidolmetscher/.venv/bin/python /root/kidolmetscher/src/kidolmetscher/scripts/fetch_models.py google/translategemma-4b-it /root/kidolmetscher/models/translategemma`, dann `systemctl restart kidolmetscher`.
 - Dienst/Zertifikat: `journalctl -u kidolmetscher --no-pager | tail`, `journalctl -u caddy --no-pager | tail`.
-- Neue Programmversion einspielen: `cd /root/kidolmetscher/src && git pull -q --ff-only && systemctl restart kidolmetscher`.
+- Neue Programmversion einspielen: `bash /root/kidolmetscher/src/kidolmetscher/scripts/vm_aktualisieren.sh` (holt die Version, stellt den Dienst auf den sicheren Startbefehl `python -m app` um und startet neu; nicht während einer Veranstaltung, laufende Sitzungen enden).
 
 ## Bekannte Stolpersteine (alle am 14./15.11. erlebt)
 - Bei der Einrichtung **Befehle einzeln** eingeben; nie `cat > datei` und danach Befehle tippen; Prompt (`C:\Users\Dell>` = PC, `root@xv…:~#` = VM) vor jedem Befehl prüfen.

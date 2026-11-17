@@ -53,7 +53,7 @@ summary { cursor: pointer; padding: .4rem 0; }
 .chk .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: baseline; margin: .15rem 0; }
 .chk .tr { flex: 1 1 18rem; }
 .chk .st { font-size: .85rem; color: var(--muted); white-space: nowrap; }
-.chk .st.ok { color: #14633a; font-weight: 600; }
+.chk .st.ok { color: var(--ok); font-weight: 600; }
 
 button.stopbtn { background: #c0392b; border-color: #c0392b; color: #fff; font-weight: 700; }
 button.stopbtn:hover { background: #a93226; }

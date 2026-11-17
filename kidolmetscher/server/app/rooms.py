@@ -49,7 +49,57 @@ def _audio_seconds(message: dict) -> float:
 
 
 def _hash(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hashlib.sha256(token.encode("utf-8", "surrogatepass")).hexdigest()     # auch Muell wie ein einzelnes Surrogat darf nicht abstuerzen
+
+
+class MsgQueue:
+    """Begrenzte Nachrichtenschlange. Bei Ueberlauf fliegt zuerst der aelteste reine Zustandswert (turn/delivery/flow/pong) raus,
+    Inhalte (Untertitel, Gast-Aussagen) nur, wenn nichts anderes mehr da ist; jede Verwerfung wird gezaehlt (nie still)."""
+    SOFT = ("turn", "delivery", "flow", "pong", "operator")
+
+    def __init__(self, maxsize: int):
+        self._d: deque = deque()
+        self._max = maxsize
+        self._ev = asyncio.Event()
+        self.dropped = 0              # verworfene Nachrichten insgesamt
+        self.lost_content = 0         # davon Inhalte (seit der letzten Abfrage mit take_lost)
+
+    def put_nowait(self, item) -> None:
+        if len(self._d) >= self._max:
+            for i, x in enumerate(self._d):
+                if isinstance(x, dict) and x.get("type") in self.SOFT:
+                    del self._d[i]
+                    break
+            else:
+                self._d.popleft()
+                self.lost_content += 1
+            self.dropped += 1
+        self._d.append(item)
+        self._ev.set()
+
+    async def get(self):
+        while not self._d:
+            self._ev.clear()
+            await self._ev.wait()
+        item = self._d.popleft()
+        if not self._d:
+            self._ev.clear()
+        return item
+
+    def get_nowait(self):
+        if not self._d:
+            raise asyncio.QueueEmpty
+        return self._d.popleft()
+
+    def qsize(self) -> int:
+        return len(self._d)
+
+    def full(self) -> bool:
+        return len(self._d) >= self._max
+
+    def take_lost(self) -> int:
+        n, self.lost_content = self.lost_content, 0
+        return n
 
 
 @dataclass
@@ -65,29 +115,29 @@ class Listener:
         self.fixed_lang = fixed_lang     # Sprache des Links (falls festgelegt)
         self.lang: Optional[str] = fixed_lang   # aktuell gewaehlte Sprache, None bis zur Auswahl
         self.expires_at = expires_at
-        self.queue: asyncio.Queue = asyncio.Queue(maxsize)
-        self.dropped = 0
+        self.queue = MsgQueue(maxsize)
+
+    @property
+    def dropped(self) -> int:
+        return self.queue.dropped
 
     def push(self, item) -> None:
-        if self.queue.full():
-            try:
-                self.queue.get_nowait()
-                self.dropped += 1
-            except asyncio.QueueEmpty:
-                pass
         self.queue.put_nowait(item)
 
 
 class Room:
     def __init__(self, room_id: str, settings: Settings, clock: Callable[[], float],
-                 langs: Optional[tuple] = None, mode: str = "vortrag"):
+                 langs: Optional[tuple] = None, mode: str = "vortrag", turn_clock: Optional[Callable[[], float]] = None):
         if mode not in MODES:
             raise RoomError(f"Betriebsart unbekannt: {mode}")
         self.id = room_id
         self.mode = mode
         self.strict = mode == "gespraech"                        # echte Sperre: erst weitersprechen, wenn alles angekommen ist
-        self._operator_q: asyncio.Queue = asyncio.Queue(2000)   # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
-        self.turns = TurnManager(limits=TurnLimits(idle_s=settings.turn_idle_s), on_change=self._turn_changed)  # Sperre im Gespraechsmodus
+        self._operator_q = MsgQueue(2000)                       # Nachrichten an den Bedienplatz (Gast-Aussagen, Zustand)
+        limits = TurnLimits(idle_s=settings.turn_idle_s, pickup_s=settings.turn_pickup_s, process_max_s=settings.turn_process_max_s,
+                            play_max_s=settings.turn_play_max_s, grace_s=settings.turn_grace_s)
+        tkw = {"clock": turn_clock} if turn_clock else {}       # Uhr der Sperre: Standard monotonic (Tests koennen eine eigene einspeisen)
+        self.turns = TurnManager(limits=limits, on_change=self._turn_changed, **tkw)  # Sperre im Gespraechsmodus
         self.flow = FlowTracker(on_change=self._flow_changed)   # Vortrag: nur Anzeige, ob noch etwas laeuft
         self._delivery: dict[tuple[int, str], dict] = {}        # (seq, sprache) -> wer hat es bekommen/angezeigt/gesprochen (nur Zaehler, keine Inhalte)
         self.settings = settings
@@ -96,7 +146,7 @@ class Room:
         self.created_at = clock()
         self.expires_at = self.created_at + settings.room_ttl_s
         self.closed = False
-        self.operator_active = False
+        self._operator_active = False
         self.counters: Counter = Counter()      # nur Zaehler, nie Inhalte
         self._tokens: dict[str, TokenInfo] = {}
         self._listeners: dict[int, Listener] = {}
@@ -213,6 +263,22 @@ class Room:
             self._push_delivery(message["seq"], lang)
         return delivered
 
+    @property
+    def operator_active(self) -> bool:
+        return self._operator_active
+
+    @operator_active.setter
+    def operator_active(self, value: bool) -> None:
+        """Bedienplatz verbunden/getrennt. Die Zuhoerer erfahren es (Anzeige "Mitarbeiter nicht verbunden")."""
+        value = bool(value)
+        if value == self._operator_active:
+            return
+        self._operator_active = value
+        if not self.closed and self.mode == "gespraech":
+            msg = control_message("operator", online=value)
+            for l in self._listeners.values():
+                l.push(msg)
+
     # --- Gespraechsmodus ---
     def _turn_changed(self, snapshot: dict) -> None:
         """Zustand der Sperre an alle Geraete verteilen (nur Zustand und Rolle, keine Inhalte)."""
@@ -239,21 +305,18 @@ class Room:
         """Zuhoerer-Geraet meldet "angezeigt" (shown) oder "fertig gesprochen" (played) fuer eine Nachricht."""
         for (s, lang), d in list(self._delivery.items()):
             if s == seq and device in d["exp"]:
+                before = (len(d["shown"]), len(d["played"]))
                 d["shown"].add(device)
                 if kind == "played":
                     d["played"].add(device)
-                self._push_delivery(s, lang)
+                if (len(d["shown"]), len(d["played"])) != before:      # nur echte Aenderungen weitergeben (kein Fluten durch Wiederholungen)
+                    self._push_delivery(s, lang)
         if kind == "played":
             self.tracker.playback_done(seq, device)
 
     def push_operator(self, message: dict) -> None:
         if self.closed:
             return
-        if self._operator_q.full():
-            try:
-                self._operator_q.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
         self._operator_q.put_nowait(message)
 
     async def next_operator_message(self, timeout: float) -> Optional[dict]:
@@ -261,6 +324,13 @@ class Room:
             return await asyncio.wait_for(self._operator_q.get(), timeout)
         except asyncio.TimeoutError:
             return None
+
+    def take_lost_operator_messages(self) -> int:
+        """Inhalte fuer den Bedienplatz, die wegen Ueberlaufs verworfen wurden (seit der letzten Abfrage); sie werden gezaehlt und gemeldet."""
+        n = self._operator_q.take_lost()
+        if n:
+            self.counters["operator_messages_lost"] += n
+        return n
 
     # --- Lebenszyklus ---
     def close(self) -> None:
@@ -290,14 +360,17 @@ class Room:
             "listeners_connected": len(self._listeners),
             "operator_active": self.operator_active,
             "listeners": self.listener_counts(),
-            "counters": dict(self.counters),
+            "counters": {**self.counters, "operator_queue_dropped": self._operator_q.dropped,
+                         "listener_queue_dropped": sum(l.dropped for l in self._listeners.values())},
         }
 
 
 class RoomManager:
-    def __init__(self, settings: Settings, clock: Callable[[], float] = time.time):
+    def __init__(self, settings: Settings, clock: Callable[[], float] = time.time,
+                 turn_clock: Optional[Callable[[], float]] = None):
         self.settings = settings
         self._clock = clock
+        self._turn_clock = turn_clock
         self._rooms: dict[str, Room] = {}
 
     def create_room(self, langs: Optional[list] = None, mode: Optional[str] = None) -> Room:
@@ -305,13 +378,19 @@ class RoomManager:
             bad = [l for l in langs if l not in self.settings.target_langs]
             if bad or not langs:
                 raise LanguageError(f"Sprachen nicht erlaubt oder leer: {bad or langs}")
-        room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs, mode or "vortrag")
+        room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs, mode or "vortrag", self._turn_clock)
         self._rooms[room.id] = room
         return room
 
     def get(self, room_id: str) -> Optional[Room]:
         r = self._rooms.get(room_id)
         return r if r and not r.closed else None
+
+    def all_rooms(self) -> list[Room]:
+        return [r for r in list(self._rooms.values()) if not r.closed]
+
+    def room_ids(self) -> list[str]:
+        return list(self._rooms)
 
     def close_room(self, room_id: str) -> bool:
         r = self._rooms.pop(room_id, None)

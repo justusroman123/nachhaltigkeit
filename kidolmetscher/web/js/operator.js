@@ -32,9 +32,11 @@
   const TALK_MIN_LOUD_MS = 250, TALK_MIN_SPEECH_MS = 500, STOP_MIN_MS = 1500, STOP_NOSEG_MS = 8000, STOP_MAX_MS = 180000;
   const TALK_WARN = 0.65, TALK_LATE = 0.85;
   function talkShow(kind, text, frac) {
-    e.talk.className = 'talk ' + kind;
-    e.talkBar.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
-    e.talkMsg.textContent = text; e.talkMsg.className = 'talkmsg ' + kind;
+    const cls = 'talk ' + kind, w = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+    if (e.talk.className !== cls) e.talk.className = cls;
+    if (e.talkBar.style.width !== w) e.talkBar.style.width = w;
+    if (e.talkMsg.textContent !== text) e.talkMsg.textContent = text;       // Live-Region nur bei geaendertem Text neu schreiben
+    if (e.talkMsg.className !== 'talkmsg ' + kind) e.talkMsg.className = 'talkmsg ' + kind;
   }
   function talkIdle(text) {
     talk.state = 'idle'; talk.ms = talk.quietMs = talk.loudRun = talk.hintMs = 0; talk.got = false;
@@ -82,9 +84,19 @@
      Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig", durch "Stopp" des Mitarbeiters (bei einem Gast) oder
      nach langer Stille (Server, idle_s). Der Mitarbeiter hat Vorrang: er kann jeden Gast sofort stoppen und selbst sprechen.
      Gaeste koennen niemanden stoppen, nur sich melden (der Sprechende wird benachrichtigt, nicht unterbrochen). */
-  const conv = { talking: false, hintMs: 0, turn: { state: 'frei', who: null, waiting: [] } };
+  const conv = { talking: false, hintMs: 0, quietMs: 0, hinted: false, note: '', turn: { state: 'frei', who: null, waiting: [] } };
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
-  function convReset() { conv.talking = false; conv.turn = { state: 'frei', who: null, waiting: [] }; convRender(); }
+  let noteTimer = 0;
+  function convNote(text) {                                       // kurzer Hinweis (z. B. "nach Stille beendet"): mindestens 6 s sichtbar
+    conv.note = text; clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { conv.note = ''; convRender(); }, 6000);
+  }
+  function convReset() {                                          // alles auf Anfang (neue Verbindung, Sitzung zu Ende): nichts bleibt haengen
+    conv.talking = false; conv.hintMs = conv.quietMs = 0; conv.hinted = false; conv.note = ''; clearTimeout(noteTimer);
+    staffWanted = false; staffGotTurn = false;
+    conv.turn = { state: 'frei', who: null, waiting: [] };
+    convRender();
+  }
   function convMine() { return conv.turn.state === 'spricht' && conv.turn.who === 'staff'; }
   const staffWaits = () => (conv.turn.waiting || []).includes('staff');
   const othersWait = () => (conv.turn.waiting || []).some((d) => d !== 'staff');
@@ -98,6 +110,7 @@
     else if (gp) e.btnTalk.textContent = '■ Stopp – ich spreche jetzt';
     else e.btnTalk.textContent = staffWaits() ? '✖ Wortmeldung zurücknehmen' : '✋ Als Nächstes sprechen';
     if (hint) return talkShow(kind || 'stop', hint, 1);
+    if (conv.note && !mine) return talkShow('warn', '⚠ ' + conv.note, 1);
     if (t.state === 'frei') talkShow('ok', '● SPRECHEN MÖGLICH', 0);
     else if (mine && othersWait()) talkShow('warn', '⏳ Ein Gast möchte sprechen – bitte zum Ende kommen', 0);
     else if (mine) talkShow('ok', '🎙 SIE SPRECHEN – so lange Sie möchten; „Fertig“ tippen, wenn Sie fertig sind', 0);
@@ -110,26 +123,38 @@
   }
   let staffGotTurn = false, staffWanted = false;
   function convTurn(d) {
+    const wasTalking = conv.talking;
     conv.turn = d;
     if (!convMine()) conv.talking = false;
+    if (wasTalking && !convMine() && d.reason === 'inaktiv') convNote('Ihre Aussage wurde nach langer Stille beendet (keine Sprache gehört).');
     if (convMine()) stopGerman();                               // wer spricht, hoert keine Vorlesung mehr
     if (convMine() && !conv.talking && staffWanted) { staffGotTurn = true; convStart(); }   // Wortmeldung: Wort wurde uebergeben, Mikrofon laeuft automatisch
+    else if (convMine() && !conv.talking && !staffWanted && d.reason !== 'unterbrochen') sendJson({ type: 'talk', on: false });   // Wort ohne Wunsch (Wortmeldung gerade zurueckgenommen): sofort zurueckgeben
     else if (!convMine() && staffGotTurn) { staffGotTurn = false; staffWanted = false; }
     convRender();
   }
   function convStart() { conv.talking = true; conv.hintMs = 0; sendJson({ type: 'talk', on: true }); }
   function convTakeover() { stopGerman(); conv.talking = true; conv.hintMs = 0; sendJson({ type: 'takeover' }); }      // Vorrang: Gast wird sofort abgeschnitten
-  function convEnd() { if (!conv.talking) return; conv.talking = false; sendJson({ type: 'talk', on: false }); }
+  function convEnd() { if (!conv.talking && !convMine()) return; conv.talking = false; sendJson({ type: 'talk', on: false }); }   // dem Server immer Bescheid sagen
   function convBlock(rmsInt16, blockMs) {
-    if (conv.talking) return;                                    // es wird gesendet; die Anzeige kommt vom Server-Zustand
-    // Kein Wort: wer trotzdem spricht, wird gewarnt (diese Worte werden nicht gesendet und nicht uebersetzt)
-    if (conv.turn.state !== 'frei' && !convMine() && rmsInt16 >= ((cfg && cfg.vad_rms) || 400)) {
-      conv.hintMs = (conv.hintMs || 0) + blockMs;
-      if (conv.hintMs >= 400) {
-        if (guestPhase()) convRender('⚠ Ihre Worte werden NICHT übersetzt – „Stopp – ich spreche jetzt“ tippen', 'warn');
+    if (conv.talking) { conv.hintMs = conv.quietMs = 0; return; }   // es wird gesendet; die Anzeige kommt vom Server-Zustand
+    // Kein Wort: wer trotzdem spricht, wird gewarnt (diese Worte werden nicht gesendet und nicht uebersetzt) - auch im freien Zustand ohne Antippen
+    const loud = rmsInt16 >= ((cfg && cfg.vad_rms) || 400);
+    if (loud && !convMine()) {
+      conv.quietMs = 0; conv.hintMs = (conv.hintMs || 0) + blockMs;
+      if (conv.hintMs >= 400 && !conv.hinted) {
+        conv.hinted = true;
+        if (conv.turn.state === 'frei') convRender('⚠ Ihre Worte werden NICHT übersetzt – zuerst „Sprechen“ tippen', 'warn');
+        else if (guestPhase()) convRender('⚠ Ihre Worte werden NICHT übersetzt – „Stopp – ich spreche jetzt“ tippen', 'warn');
         else convRender('bitte warten – Ihre Worte werden jetzt NICHT übersetzt');
       }
-    } else conv.hintMs = 0;
+    } else {
+      conv.hintMs = 0;
+      if (conv.hinted) {                                         // Hinweis nicht ewig stehen lassen: nach kurzer Ruhe wieder die normale Anzeige
+        conv.quietMs += blockMs;
+        if (conv.quietMs >= 1500) { conv.hinted = false; conv.quietMs = 0; convRender(); }
+      }
+    }
   }
   e.btnTalk.addEventListener('click', () => {
     if (convMine()) return convEnd();
@@ -219,6 +244,8 @@
   }
   const PROBLEMS = { spracherkennung: 'Spracherkennung fehlgeschlagen, ein Satz ging verloren.', nicht_erkannt: 'Nicht verstanden (zu leise oder unklar).',
     uebersetzung: 'Übersetzung fehlgeschlagen.', audio_verworfen: 'Verbindung zu langsam, ein Stück Sprache ging verloren.',
+    gast_uebersetzung: 'Die Aussage eines Gastes konnte nicht übersetzt werden (ein Satz fehlt).', gast_spracherkennung: 'Die Sprache eines Gastes konnte nicht erkannt werden (ein Satz fehlt).',
+    nachrichten_verworfen: 'Zu viele Meldungen auf einmal, einzelne gingen verloren – bitte die Kontrolle prüfen.',
     geraet_antwortet_nicht: 'Ein Gerät hat die Ausgabe nicht bestätigt (Verbindung prüfen).', gast_nicht_erkannt: 'Gast nicht verstanden (zu leise oder unklar).' };
   let problemTimer = 0;
   function showProblem(d) {
@@ -262,6 +289,11 @@
 
   /* ---------- Sitzung ---------- */
   e.create.addEventListener('click', async () => {
+    if (e.create.disabled) return;                                // Doppelklick: nur ein Raum
+    e.create.disabled = true;
+    try { await startSession(); } finally { if (!room) e.create.disabled = false; }
+  });
+  async function startSession() {
     if (!(cfg && cfg.key_required === false)) key = e.key.value;
     const chosen = [...e.langs.querySelectorAll('input:checked')].map((c) => c.value);
     if (!chosen.length) return say(e.roomMsg, 'Bitte mindestens eine Sprache anhaken.', 'warn');
@@ -283,22 +315,35 @@
     renderSingleLinks();
     await listDevices();
     if (conversation) { convReset(); wantSending = true; wsRetry = 0; connectOperator(); }   // Gespraech: Verbindung steht von Anfang an (Gast-Antworten kommen jederzeit)
-    statTimer = setInterval(pollStats, 2000); pollStats();
-  });
+    clearInterval(statTimer); statTimer = setInterval(pollStats, 2000); pollStats();
+  }
 
   e.end.addEventListener('click', endSession);
+  function placeholder(id, text) { const p = document.createElement('p'); p.className = 'muted'; p.id = id; p.textContent = text; return p; }
+  function resetSessionUi() {                                      // alles auf Anfang: Anzeige, Verlauf, Zustand, Timer
+    room = null; key = '';
+    stopGerman(); convReset();
+    flow.busy = false; flow.pending = 0; flow.awaiting = 0; flow.seenBusy = false;
+    checks.clear();
+    e.log.replaceChildren(); e.statL.replaceChildren(); e.qr.removeAttribute('src'); e.linkText.textContent = '';
+    e.checkList.replaceChildren(placeholder('checkEmpty', 'Noch nichts gesendet.'));
+    e.guestLog.replaceChildren(placeholder('guestEmpty', 'Noch keine Antwort.'));
+    e.problemBar.hidden = true; clearTimeout(problemTimer);
+    [e.stepInvite, e.stepMic, e.stepLive, e.stepGuest, e.stepCheck].forEach((s) => { s.hidden = true; });
+    e.stepStart.hidden = false; e.create.disabled = false;
+    e.cost.textContent = ''; rtts = [];
+  }
   async function endSession() {
     stopSending();
     clearInterval(statTimer);
     if (room) { try { await api('DELETE', '/api/rooms/' + room.room_id); } catch (_) {} }
-    room = null; key = '';
-    e.log.replaceChildren(); e.statL.replaceChildren(); e.qr.removeAttribute('src'); e.linkText.textContent = '';
-    [e.stepInvite, e.stepMic, e.stepLive, e.stepGuest, e.stepCheck].forEach((s) => { s.hidden = true; });
-    e.checkList.querySelectorAll('.chk').forEach((n) => n.remove());
-    e.guestLog.querySelectorAll('.guestline').forEach((n) => n.remove());
-    e.stepStart.hidden = false;
+    resetSessionUi();
     say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt beenden oder pausieren (Kosten laufen sonst weiter) und auf den Tablets den Browserverlauf löschen.', 'ok');
-    e.cost.textContent = ''; rtts = [];
+  }
+  function sessionGone() {                                         // der Server kennt die Sitzung nicht mehr (Neustart oder abgelaufen)
+    stopSending(); clearInterval(statTimer);
+    resetSessionUi();
+    say(e.roomMsg, 'Die Sitzung gibt es nicht mehr (Server neu gestartet oder abgelaufen). Bitte eine neue Sitzung starten; die Zuhörer brauchen dann neue Links.', 'bad');
   }
 
   /* ---------- Einladung: Link + QR ---------- */
@@ -374,6 +419,7 @@
 
   // Verbindung zum Server; bei Abbruch waehrend des Sendens automatisch neu verbinden (Mikrofon laeuft weiter)
   function connectOperator() {
+    if (ws && ws.readyState <= 1) return;                         // es gibt schon eine Verbindung (oder sie wird gerade aufgebaut)
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const sock = new WebSocket(proto + '//' + location.host + '/ws/operator');
     ws = sock;
@@ -383,9 +429,14 @@
       clearInterval(pingTimer);
       if (ws !== sock) return;                       // bewusst beendet
       ws = null;
+      conv.talking = false;                          // der Server hat das Wort laengst freigegeben: lokal nicht weiter "SPRECHEN" anzeigen
       if (ev && (ev.code === 4401 || ev.code === 4430)) {   // Schluessel falsch bzw. gesperrt: nicht in Endlosschleife neu versuchen
         stopSending(); say(e.micMsg, ev.code === 4430 ? 'Zu viele Fehlversuche, vorübergehend gesperrt. Bitte einige Minuten warten.' : 'Bedienschlüssel wurde abgelehnt.', 'bad'); return;
       }
+      if (ev && (ev.code === 4404 || ev.code === 4408)) {   // Sitzung gibt es nicht mehr (Server neu gestartet oder abgelaufen): nicht endlos wiederholen
+        sessionGone(); return;
+      }
+      talkShow('stop', '⚠ Verbindung zum Server unterbrochen – bitte warten (Sprache wird jetzt nicht übersetzt)', 1);   // im Hauptband, nicht nur in der kleinen Zeile
       if (wantSending && room) {
         say(e.micMsg, 'Verbindung zum Server weg, neuer Versuch … (Mikrofon läuft weiter)', 'warn');
         setTimeout(() => { if (wantSending && room && !ws) connectOperator(); }, Math.min(8000, 1000 * 2 ** wsRetry++));
@@ -395,6 +446,7 @@
       const d = JSON.parse(ev.data);
       if (d.type === 'ready') {
         wsRetry = 0;
+        conv.talking = false; conv.hintMs = conv.quietMs = 0; conv.hinted = false; staffWanted = false; staffGotTurn = false;   // neue Verbindung: alter lokaler Sprechzustand gilt nicht mehr
         if (d.turn) conv.turn = d.turn;
         if (demoMode) { if (!demoTimer) startDemo(d.sample_rate); else say(e.micMsg, '● Wieder verbunden, Demo läuft.', 'ok'); }
         else if (!node) await startCapture(d.sample_rate); else say(e.micMsg, '● Wieder verbunden.', 'ok');
@@ -507,6 +559,7 @@
     if (!room) return;
     try {
       const r = await api('GET', '/api/rooms/' + room.room_id + '/stats');
+      if (r.status === 404) return sessionGone();
       if (!r.ok) return;
       const s = await r.json();
       const chosen = Object.values(s.listeners).reduce((a, b) => a + b, 0);

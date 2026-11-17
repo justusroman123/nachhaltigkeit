@@ -28,4 +28,5 @@ fi
 
 echo "Bedienplatz im Browser öffnen: http://localhost:${PORT}/"
 echo "Beenden mit Strg+C."
-exec .venv/bin/uvicorn app.main:create_app --factory --host "$HOST" --port "$PORT" --no-access-log
+export PORT
+exec .venv/bin/python -m app

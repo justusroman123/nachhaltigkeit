@@ -30,5 +30,6 @@ COPY web /app/web
 ENV PATH=/opt/venv/bin:$PATH WEB_DIR=/app/web HOST=0.0.0.0 PORT=8000
 USER app
 EXPOSE 8000
-# Kein Zugriffsprotokoll (URLs); App-Logs enthalten nur Zaehler und Zeiten.
-CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# Sichere Voreinstellungen (kein Zugriffslog, keine Adressen im Log, kleine Frames): siehe server/app/__main__.py.
+# Hinter einem Proxy im Docker-Netz: TRUSTED_PROXIES auf das Netz des Proxys setzen (docker/docker-compose.yml).
+CMD ["python", "-m", "app"]

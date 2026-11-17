@@ -49,16 +49,18 @@ Dann `http://localhost:8000/` öffnen. Für Handys im selben WLAN: `HOST=0.0.0.0
 des Rechners im Feld „Adresse für Zuhörer“ eintragen (Details: `docs/betrieb.md`). Die Mock-Stufen liefern Testsätze
 („[uk] Dies ist Testsatz Nummer 1 zur Probe.“) und einen Testton statt Sprache.
 
-Von Hand: `cd server && pip install -r requirements-dev.txt && OPERATOR_KEY=... uvicorn app.main:create_app --factory --no-access-log`.
+Von Hand: `cd server && pip install -r requirements-dev.txt && OPERATOR_KEY=... python -m app` (sichere Voreinstellungen: kein Zugriffslog, keine Adressen im Log, kleine WebSocket-Frames; siehe `server/app/__main__.py`).
 Einstellungen: siehe `.env.example` (Kopie als `.env`, wird nie eingecheckt; Variablen müssen in der Umgebung stehen,
 der Server liest `.env` nicht selbst).
 
 ## Tests
 
 ```bash
-cd server && pytest                 # 151 Tests: Räume, Token-Ablauf, Sprachwahl, Segmentierer, Rückstau, Nachrichtenformat, Zeitstempel, Messhilfen,
-                                    # Mock-Pipeline, WebSocket-Ende-zu-Ende, Header, Datenschutzprüfung der Web-Dateien
-node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest (siehe Kopfkommentar der Datei)
+cd server && pytest                 # 326 Tests (Stand 17.11.2026): Räume, Token-Ablauf, Sprachwahl, Segmentierer, Rückstau, Nachrichtenformat, Zeitstempel,
+                                    # Mock-Pipeline, WebSocket-Ende-zu-Ende, Gespräch (Sperre, Wortmeldung, Abbruch, Zufallsläufe), Sicherheit
+                                    # (Größengrenzen, Fluten, Adressen im Log mit echtem Server-Prozess), Header, Datenschutzprüfung der Web-Dateien
+node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest Vortrag (siehe Kopfkommentar der Datei)
+node tests/e2e/gast_ohne_server.js  # optional (Playwright): Gast-Tablet im Gespräch mit nachgestelltem Server; ebenso operator_ohne_server.js, gespraech.js
 ```
 
 ## Skripte (Messen und Testen ohne Mikrofon)

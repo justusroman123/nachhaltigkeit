@@ -52,6 +52,10 @@ services:
       HF_HUB_DISABLE_TELEMETRY: "1"
       DO_NOT_TRACK: "1"
       PUBLIC_URL: https://${DOMAIN:-example.invalid}
+      # Caddy laeuft hier als eigener Container: dessen Adresse (Netz des Compose-Projekts) als vertrauenswuerdigen Proxy eintragen, sonst
+      # teilen alle Besucher eine Absender-Kennung (Sperre gegen Raten des Bedienschluessels). Standard: privates Docker-Netz 172.16.0.0/12,
+      # vor dem Einsatz mit `docker network inspect` pruefen (nicht auf diesem System geprueft).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,::1,172.16.0.0/12}
     expose: ["8000"]
     volumes:
       - ${MODELS_DIR:-./models}:/models:ro   # Modelle nur lesend, nicht im Image, nicht im Repo

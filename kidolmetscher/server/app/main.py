@@ -1,7 +1,8 @@
 """KI-Dolmetscher Server (FastAPI).
 
-Start:  cd server && uvicorn app.main:create_app --factory --no-access-log
-(--no-access-log: Zugriffsprotokolle enthalten sonst URLs; wir wollen nur Zaehler/Zeiten.)
+Start:  cd server && python -m app        (sichere Voreinstellungen: kein Zugriffslog, keine Proxy-Header im Log, kleine Frames)
+Von Hand:  uvicorn app.main:create_app --factory --no-access-log --no-proxy-headers --log-level warning --ws-max-size 65536
+(Zugriffsprotokolle enthalten sonst URLs und Adressen; wir wollen nur Zaehler/Zeiten.)
 
 Datenschutz (Regel 1): nichts wird gespeichert, keine Inhalts-Logs, keine Cookies.
 """
@@ -35,7 +36,8 @@ from .pipeline import build_pipeline
 from .pipeline.base import Pipeline
 from .rooms import END, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
 from .turns import SPRICHT
-from .security import BASE_HEADERS, FailureLimiter, build_csp, client_of, collect_page_hashes
+from .security import (BASE_HEADERS, BodyLimitMiddleware, FailureLimiter, RateBucket, build_csp, client_of,
+                       collect_page_hashes)
 
 log = logging.getLogger("kidolmetscher")
 if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe orchestrator.py)
@@ -43,6 +45,25 @@ if not log.handlers:        # Zeitstempel + Zaehler/Dauern, nie Inhalte (siehe o
     _h.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
     log.addHandler(_h)
     log.setLevel(logging.INFO)
+
+
+class _DropConnectionLines(logging.Filter):
+    """uvicorn schreibt je WebSocket-Verbindung eine INFO-Zeile mit der Adresse des Besuchers ("<ip>:<port> - "WebSocket /ws/..." [accepted]").
+    Wird der Server doch von Hand mit `uvicorn ...` gestartet (statt `python -m app`), halten wir diese Zeilen hiermit aus dem Log."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+        except Exception:
+            return True
+        return not (msg.startswith(("connection open", "connection closed")) or '"WebSocket' in msg or "- \"GET" in msg)
+
+
+for _name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+    logging.getLogger(_name).addFilter(_DropConnectionLines())
+# Bibliotheken koennen in Warnungen Textteile nennen (z. B. Piper: "Missing phoneme from id map: <Zeichen>"): nur Fehler durchlassen
+for _noisy in ("piper", "faster_whisper", "ctranslate2"):
+    logging.getLogger(_noisy).setLevel(logging.ERROR)
+
 
 def pcm_rms(pcm: bytes) -> float:
     """Effektivwert eines PCM16-Blocks (Little Endian). Dient nur der Pruefung "es wird gehoert" (Stille-Frist), nichts wird behalten."""
@@ -57,10 +78,20 @@ def pcm_rms(pcm: bytes) -> float:
 
 
 HELLO_TIMEOUT_S = 10
-MAX_FRAME_BYTES = 64_000          # ein Audio-Block (PCM16); 50 ms bei 16 kHz sind 1600 Byte
+MAX_HELLO_BYTES = 4096            # das erste Frame (hello) ist winzig; alles Groessere wird vor dem Parsen abgewiesen
+MAX_HELLO_TOTAL = 64              # gleichzeitig wartende, noch nicht angemeldete WebSocket-Verbindungen insgesamt
+MAX_HELLO_PER_CLIENT = 8          # ... und je Absender
+MAX_BODY_BYTES = 16_384           # groesster HTTP-Koerper (Einladungen, QR-Adresse sind winzig)
+MAX_FRAME_BYTES = 64_000          # ein Audio-Block des Bedienplatzes (PCM16); 50 ms bei 16 kHz sind 1600 Byte
+MAX_GUEST_FRAME_BYTES = 16_000    # ein Audio-Block eines Gastes (0,5 s); der Browser sendet 1600 Byte
+GUEST_AUDIO_FACTOR = 1.5          # Gast-Audio darf hoechstens so viel schneller als Echtzeit zufliessen (Tablet-Stau darf nachgeliefert werden)
+GUEST_AUDIO_BURST_S = 30          # Vorrat in Audio-Sekunden fuer solche Nachlieferungen
+CTL_BURST, CTL_PER_S = 60, 20     # Steuernachrichten je Verbindung: Vorrat und Nachschub je Sekunde (normal: wenige je Minute)
+CTL_DROP_CLOSE = 200              # so viele verworfene Steuernachrichten, dann wird die Verbindung beendet
 MAX_AUDIO_QUEUE = 3000            # Blocks (150 s); Audio wird praktisch nie verworfen, sonst gingen Woerter verloren
 _END_UTTERANCE = object()         # Marker in der Audio-Warteschlange: Aussage des Mitarbeiters ist zu Ende (Gespraechsmodus)
 REAPER_INTERVAL_S = 30
+TICK_INTERVAL_S = 0.2             # Zeitgrenzen der Sperre pruefen (unabhaengig davon, ob ein Bedienplatz verbunden ist)
 
 
 class RoomRequest(BaseModel):
@@ -83,13 +114,39 @@ class QrRequest(BaseModel):
 
 
 def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline] = None,
-               clock: Callable[[], float] = time.time) -> FastAPI:
+               clock: Callable[[], float] = time.time, turn_clock: Optional[Callable[[], float]] = None) -> FastAPI:
     settings = settings or Settings.from_env()
     pipeline = pipeline or build_pipeline(settings)
-    rooms = RoomManager(settings, clock)
+    rooms = RoomManager(settings, clock, turn_clock)
     page_hashes = collect_page_hashes(settings.web_dir)
     started_at = clock()
     limiter = FailureLimiter(settings.auth_max_fails, settings.auth_window_s, settings.auth_block_s, clock)
+    trusted = settings.trusted_proxies
+    hello_open: dict[str, int] = {}
+    background: set = set()                       # Aufgaben, die den Abbruch eines Handlers ueberleben muessen (Rest einer Aussage abschliessen)
+
+    def spawn(coro) -> None:
+        t = asyncio.create_task(coro)
+        background.add(t)
+        t.add_done_callback(background.discard)
+
+    def who_is(conn) -> str:
+        return client_of(conn, trusted)
+
+    # Demo ohne Schluessel: nur Host-Namen dieses Rechners (Schutz gegen DNS-Rebinding: fremde Seite mit eigenem Namen -> 127.0.0.1)
+    demo_open = settings.allow_no_key and not settings.operator_key
+    allowed_hosts: Optional[set] = None
+    if demo_open and settings.host_check:
+        allowed_hosts = {"localhost", "127.0.0.1", "[::1]"}
+        if settings.public_url:
+            allowed_hosts.add((urlparse(settings.public_url).hostname or "").lower())
+
+    def host_ok(conn) -> bool:
+        if allowed_hosts is None:
+            return True
+        h = (conn.headers.get("host") or "").strip().lower()
+        h = h.split("]")[0] + "]" if h.startswith("[") else h.split(":")[0]
+        return h in allowed_hosts
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -103,21 +160,38 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 if n:
                     log.info("raeume_abgelaufen=%d", n)
 
-        task = asyncio.create_task(reaper())
+        async def ticker():
+            """Zeitgrenzen der Sperre fuer alle Raeume, auch wenn gerade kein Bedienplatz verbunden ist."""
+            while True:
+                await asyncio.sleep(TICK_INTERVAL_S)
+                for room in rooms.all_rooms():
+                    try:
+                        room.turns.tick()
+                        if room.flow.tick():                        # Geraet meldet nicht "fertig": dem Bedienplatz sagen
+                            room.push_operator(control_message("problem", what="geraet_antwortet_nicht"))
+                    except Exception as exc:
+                        log.error("tick_fehler typ=%s", type(exc).__name__)
+
+        tasks = [asyncio.create_task(reaper()), asyncio.create_task(ticker())]
         try:
             yield
         finally:
-            task.cancel()
-            for rid in list(rooms._rooms):        # Sitzungsende: alles loeschen
+            for t in tasks + list(background):
+                t.cancel()
+            for rid in list(rooms.room_ids()):        # Sitzungsende: alles loeschen
                 rooms.close_room(rid)
 
     app = FastAPI(title="KI-Dolmetscher", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings, app.state.rooms, app.state.pipeline = settings, rooms, pipeline
+    app.add_middleware(BodyLimitMiddleware, max_bytes=MAX_BODY_BYTES)
 
     # ---------- Sicherheits-Header ----------
     @app.middleware("http")
     async def security_headers(request, call_next):
-        resp = await call_next(request)
+        if not host_ok(request):
+            resp = Response("Host nicht erlaubt", status_code=421)
+        else:
+            resp = await call_next(request)
         for k, v in BASE_HEADERS.items():
             resp.headers[k] = v
         scripts, styles = page_hashes.get(request.url.path, ([], []))
@@ -137,18 +211,20 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         return "falsch"
 
     def require_operator(key: Optional[str], request: Request) -> None:
-        res = check_key(key, client_of(request))
+        who = who_is(request)
+        res = check_key(key, who)
         if res == "gesperrt":
             raise HTTPException(status_code=429, detail="Zu viele Fehlversuche, bitte spaeter erneut versuchen",
-                                headers={"Retry-After": str(limiter.blocked_for(client_of(request)))})
+                                headers={"Retry-After": str(limiter.blocked_for(who))})
         if res != "ok":
             raise HTTPException(status_code=401, detail="Bedienschluessel falsch")
 
     def key_ok(key: Optional[str]) -> bool:
-        if settings.allow_no_key and not settings.operator_key:
+        if demo_open:
             return True                       # Demo nur auf diesem Rechner (siehe config.validate)
+        # surrogatepass: auch ein einzelnes Unicode-Surrogat (gueltiges JSON) darf nicht abstuerzen, es ist einfach ein falscher Schluessel
         return isinstance(key, str) and hmac.compare_digest(
-            key.encode("utf-8"), settings.operator_key.encode("utf-8"))
+            key.encode("utf-8", "surrogatepass"), settings.operator_key.encode("utf-8", "surrogatepass"))
 
     def origin_ok(ws: WebSocket) -> bool:
         """Schutz gegen fremde Webseiten: Origin muss zum Host passen (fehlt Origin: kein Browser)."""
@@ -158,12 +234,25 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         return not origin or urlparse(origin).netloc == ws.headers.get("host")
 
     async def read_hello(ws: WebSocket) -> Optional[dict]:
+        """Erstes Frame lesen: klein, rechtzeitig, und nur so viele wartende Verbindungen wie erlaubt (vor jeder Anmeldung)."""
+        who = who_is(ws)
+        if sum(hello_open.values()) >= MAX_HELLO_TOTAL or hello_open.get(who, 0) >= MAX_HELLO_PER_CLIENT:
+            return None
+        hello_open[who] = hello_open.get(who, 0) + 1
         try:
             raw = await asyncio.wait_for(ws.receive_text(), HELLO_TIMEOUT_S)
+            if len(raw) > MAX_HELLO_BYTES:
+                return None
             data = json.loads(raw)
             return data if isinstance(data, dict) and data.get("type") == "hello" else None
         except Exception:
             return None
+        finally:
+            n = hello_open.get(who, 1) - 1
+            if n > 0:
+                hello_open[who] = n
+            else:
+                hello_open.pop(who, None)
 
     async def safe_close(ws: WebSocket, code: int) -> None:
         with contextlib.suppress(Exception):
@@ -178,7 +267,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     async def public_config():
         """Nur unkritische Werte, damit die Oberflaeche die Auswahl anzeigen kann."""
         return {"langs": list(settings.target_langs), "default_langs": list(settings.default_langs),
-                "key_required": not (settings.allow_no_key and not settings.operator_key),
+                "key_required": not demo_open,
                 "public_url": settings.public_url,
                 "listener_ttl_s": settings.listener_ttl_s,
                 "min_listener_ttl_s": settings.min_listener_ttl_s,
@@ -266,14 +355,21 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
     # ---------- WebSocket: Bedienplatz ----------
     @app.websocket("/ws/operator")
     async def ws_operator(ws: WebSocket):
-        if not origin_ok(ws):
+        try:
+            await _ws_operator(ws)
+        except Exception as exc:                       # nie unbehandelt: kein Traceback-Flut, nur der Typ
+            log.error("ws_fehler art=operator typ=%s", type(exc).__name__)
+            await safe_close(ws, WS_BAD_REQUEST)
+
+    async def _ws_operator(ws: WebSocket):
+        if not origin_ok(ws) or not host_ok(ws):
             await ws.close(code=1008)
             return
         await ws.accept()
         hello = await read_hello(ws)
         if hello is None:
             return await safe_close(ws, WS_BAD_REQUEST)
-        res = check_key(hello.get("operator_key"), client_of(ws))
+        res = check_key(hello.get("operator_key"), who_is(ws))
         if res == "gesperrt":
             return await safe_close(ws, WS_RATE_LIMITED)
         if res != "ok":
@@ -299,6 +395,8 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
         orch = Orchestrator(room, pipeline, settings, sink=sink)
         audio_q: asyncio.Queue = asyncio.Queue(MAX_AUDIO_QUEUE)
+        ctl = RateBucket(CTL_BURST, CTL_PER_S)
+        ctl_dropped = 0
 
         async def worker():
             while True:
@@ -311,6 +409,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     except Exception as exc:
                         room.counters["pipeline_errors"] += 1
                         log.error("pipeline_fehler typ=%s", settings.fehler(exc))
+                        room.push_operator(control_message("problem", what="spracherkennung"))
                     room.turns.end_speaking("staff")
                     continue
                 try:
@@ -321,7 +420,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     room.push_operator(control_message("problem", what="spracherkennung"))
 
         async def pump():
-            """Nachrichten an den Bedienplatz (Zustand der Sperre, Gast-Aussagen) senden; Zeitgrenzen der Sperre pruefen."""
+            """Nachrichten an den Bedienplatz (Zustand der Sperre, Gast-Aussagen) senden."""
             last_log = time.monotonic()
             while True:
                 if time.monotonic() - last_log >= 10:        # Staulog: nur Zaehler, nie Inhalte
@@ -331,14 +430,13 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                              audio_q.qsize(), room._operator_q.qsize(), snap.get("pending"),
                              room.counters["segments"], room.counters["translations"], room.counters["pipeline_errors"])
                 item = await room.next_operator_message(0.2)
-                if item is not None:
-                    try:
+                try:
+                    if item is not None:
                         await to_operator(item)
-                    except Exception:
-                        return
-                room.turns.tick()
-                if room.flow.tick():                        # Geraet meldet nicht "fertig": dem Bedienplatz sagen
-                    room.push_operator(control_message("problem", what="geraet_antwortet_nicht"))
+                    if room.take_lost_operator_messages():     # Ueberlauf: nie still verlieren
+                        await to_operator(control_message("problem", what="nachrichten_verworfen"))
+                except Exception:
+                    return
 
         worker_task = asyncio.create_task(worker())
         pump_task = asyncio.create_task(pump())
@@ -377,6 +475,12 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                         room.push_operator(control_message("problem", what="audio_verworfen"))   # nicht still verlieren
                     audio_q.put_nowait(data)
                 elif msg.get("text"):
+                    if not ctl.allow():                            # Steuernachrichten fluten: verwerfen, bei Dauerflut trennen
+                        ctl_dropped += 1
+                        room.counters["ctl_dropped"] += 1
+                        if ctl_dropped > CTL_DROP_CLOSE:
+                            break
+                        continue
                     try:
                         data_t = json.loads(msg["text"])
                         kind = data_t.get("type")
@@ -422,14 +526,23 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 # Auch wenn das Aufraeumen abgebrochen wird (z. B. Serverstopp): Bedienplatz wieder freigeben
                 worker_task.cancel()
                 pump_task.cancel()
-                room.turns.release()
+                # Nur die Sache des Mitarbeiters beenden (seine Aussage, Wortmeldung, offene Vorlesungen). Sprechende Gaeste und
+                # deren Wortmeldungen bleiben: ein Netzwackler am Bedienplatz darf niemanden mitten im Satz abschneiden.
+                room.turns.device_left("staff")
                 orch.cancel_workers()
                 room.operator_active = False
 
     # ---------- WebSocket: Zuhoerer ----------
     @app.websocket("/ws/listener")
     async def ws_listener(ws: WebSocket):
-        if not origin_ok(ws):
+        try:
+            await _ws_listener(ws)
+        except Exception as exc:                       # nie unbehandelt: kein Traceback-Flut, nur der Typ
+            log.error("ws_fehler art=zuhoerer typ=%s", type(exc).__name__)
+            await safe_close(ws, WS_BAD_REQUEST)
+
+    async def _ws_listener(ws: WebSocket):
+        if not origin_ok(ws) or not host_ok(ws):
             await ws.close(code=1008)
             return
         await ws.accept()
@@ -451,6 +564,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 "ready", lang=listener.lang, langs=list(room.langs),
                 rtl=listener.lang in RTL_LANGS, mode=room.mode, turn=room.turns.snapshot(),
                 device=f"gast:{listener.id}", sample_rate=settings.sample_rate,
+                operator_online=room.operator_active,
                 expires_in_s=max(0, int(listener.expires_at - clock())))
 
         def select(lang: object) -> bool:
@@ -467,36 +581,64 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
         device = f"gast:{listener.id}"
         guest: Optional[GuestPath] = None
+        my_utt = 0                                   # Nummer der eigenen Aussage (schuetzt vor verspaeteten Abschluessen)
+        audio_pace = RateBucket(GUEST_AUDIO_BURST_S * settings.sample_rate * 2, GUEST_AUDIO_FACTOR * settings.sample_rate * 2)
+        ctl = RateBucket(CTL_BURST, CTL_PER_S)
+        ctl_dropped = 0
 
-        async def end_talk() -> None:
-            if guest is not None and guest.open:
+        async def end_talk(utterance: Optional[int] = None) -> None:
+            """Aussage dieses Gastes abschliessen (Fertig, Stopp, Trennung): Rest erkennen und uebersetzen, dann die Sperre weitergeben."""
+            if guest is not None:
                 await guest.finish()
-            if room.turns.state == SPRICHT and room.turns.who == device:
-                room.turns.end_speaking(device)
+            room.turns.end_speaking(device, utterance)
 
-        async def ensure_guest() -> None:
+        async def ensure_guest() -> bool:
+            """Erkennungsstrom des Gastes bereitstellen und die Sperre an ihn binden. False: nicht moeglich (wurde gemeldet)."""
             nonlocal guest
-            if guest is None or guest.lang != listener.lang:
-                if guest is not None:
-                    await guest.close()
-                guest = GuestPath(room, pipeline, settings, listener)
+            try:
+                if guest is not None and guest.lang != listener.lang:
+                    old, guest = guest, None
+                    await old.shutdown(settings.stage_timeout_s)
+                if guest is None:
+                    guest = GuestPath(room, pipeline, settings, listener)
+            except Exception as exc:
+                room.counters["pipeline_errors"] += 1
+                log.error("gast_start_fehler typ=%s", settings.fehler(exc))
+                listener.push(control_message("problem", what="spracherkennung"))
+                room.push_operator(control_message("problem", what="gast_spracherkennung"))
+                return False
+            if room.turns.state == SPRICHT and room.turns.who == device:
+                guest.begin()
+            return True
 
         async def drain():             # liest Auswahl-Nachrichten und (Gespraechsmodus) Sprechen/Audio/fertig; erkennt, wenn der Client geht
-            nonlocal guest
+            nonlocal my_utt, ctl_dropped
             while True:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
                     return
                 raw = msg.get("bytes")
                 if raw is not None:                         # Audio des Gastes (nur wenn er das Wort hat)
-                    if room.mode != "gespraech" or guest is None or len(raw) > MAX_FRAME_BYTES or len(raw) % 2:
+                    if room.mode != "gespraech" or guest is None or len(raw) > MAX_GUEST_FRAME_BYTES or len(raw) % 2:
                         continue
                     if room.turns.state == SPRICHT and room.turns.who == device:
+                        if not audio_pace.allow(len(raw)):            # schneller als Echtzeit-Vielfaches: nicht annehmen (aber melden)
+                            room.counters["guest_audio_throttled"] += 1
+                            if room.counters["guest_audio_throttled"] % 50 == 1:
+                                listener.push(control_message("problem", what="audio_verworfen"))
+                                room.push_operator(control_message("problem", what="audio_verworfen"))
+                            continue
                         if pcm_rms(raw) >= settings.asr_vad_rms * 0.5:
                             room.turns.touch(device)
                         await guest.on_audio(raw)
-                    elif guest.open:
-                        await end_talk()                    # Zeitgrenze erreicht: Rest abschliessen
+                    elif guest.busy:
+                        await end_talk(my_utt)              # Wort ist weg (Stopp, Zeitgrenze): Rest abschliessen
+                    continue
+                if not ctl.allow():                         # Steuernachrichten fluten: verwerfen, bei Dauerflut trennen
+                    ctl_dropped += 1
+                    room.counters["ctl_dropped"] += 1
+                    if ctl_dropped > CTL_DROP_CLOSE:
+                        return
                     continue
                 try:
                     data = json.loads(msg.get("text") or "")
@@ -513,15 +655,19 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if kind == "talk" and data.get("on"):
                         ok, _ = room.turns.claim(device)
                         if ok:
-                            await ensure_guest()
+                            my_utt = room.turns.utterance
+                            if not await ensure_guest():
+                                room.turns.end_speaking(device, my_utt)
                         else:
                             listener.push(control_message("busy"))
                     elif kind == "talk":
-                        await end_talk()
+                        await end_talk(my_utt)
                     elif kind == "want":                    # Wortmeldung: vorgemerkt, wird automatisch drankommen
                         if data.get("on"):
                             if room.turns.request(device) == "dran":
-                                await ensure_guest()
+                                my_utt = room.turns.utterance
+                                if not await ensure_guest():
+                                    room.turns.end_speaking(device, my_utt)
                         else:
                             room.turns.cancel_request(device)
 
@@ -555,10 +701,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                         await safe_close(ws, 1000)
                         break
                     await ws.send_json(item)
-                    if (isinstance(item, dict) and item.get("type") == "turn" and guest is not None and guest.open
+                    if (isinstance(item, dict) and item.get("type") == "turn" and guest is not None and guest.busy
                             and not (item.get("state") == SPRICHT and item.get("who") == device)):
                         # Mitarbeiter hat das Wort uebernommen (oder lange Stille): bereits Gesagtes abschliessen und uebersetzen
-                        cut_task = asyncio.create_task(end_talk())
+                        cut_task = asyncio.create_task(end_talk(my_utt))
                         cut_tasks.add(cut_task)
                         cut_task.add_done_callback(cut_tasks.discard)
         except Exception:
@@ -568,11 +714,12 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                 if t is not None:
                     t.cancel()
             room.detach_listener(listener)
-            room.turns.device_left(device)
+            room.turns.device_left(device)       # Aussage gilt als beendet; die Sperre wartet weiter, bis der Rest uebersetzt ist (Haltemarke)
             room.flow.device_left(device)
             if guest is not None:
-                with contextlib.suppress(Exception):
-                    await guest.close()
+                # Den offenen Rest nicht verlieren: abschliessen, uebersetzen lassen und dem Mitarbeiter zustellen, erst dann aufraeumen.
+                # Als eigene Aufgabe, damit auch ein abgebrochener Handler (Serverstopp, Testclient) den letzten Satz nicht mitreisst.
+                spawn(guest.shutdown(settings.stage_timeout_s))
 
     # ---------- Statische Dateien (alles lokal) ----------
     @app.get("/", include_in_schema=False)

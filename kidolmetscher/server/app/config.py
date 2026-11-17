@@ -1,6 +1,7 @@
 """Konfiguration aus Umgebungsvariablen (Regel 2/3). Keine Geheimnisse im Code."""
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
 from dataclasses import dataclass
@@ -85,6 +86,12 @@ class Settings:
     auth_window_s: float = 600.0           # ... innerhalb dieser Zeit
     auth_block_s: float = 900.0            # Dauer der Sperre
     turn_idle_s: float = 120.0             # Gespraech: so lange ohne hoerbare Sprache, dann endet die Aussage von selbst; Redezeit ist NICHT begrenzt (Annahme, im Test pruefen)
+    turn_pickup_s: float = 30.0            # Gespraech: so lange auf die Bestaetigung einer automatisch uebergebenen Wortmeldung warten (Annahme)
+    turn_process_max_s: float = 90.0       # Gespraech: laengste Verarbeitung nach einer Aussage, dann geht es weiter (Annahme, messen)
+    turn_play_max_s: float = 15.0          # Gespraech: Mindest-Wartezeit auf "fertig" der Geraete (dazu kommt die Tonlaenge; Annahme)
+    turn_grace_s: float = 0.5              # Gespraech: kurze Schonfrist nach "alle fertig" (Annahme)
+    trusted_proxies: tuple[str, ...] = ("127.0.0.1", "::1")   # nur von diesen Adressen/Netzen wird X-Forwarded-For geglaubt (Caddy auf demselben Rechner)
+    host_check: bool = True                # Demo ohne Schluessel: nur Host-Namen dieses Rechners zulassen (Schutz gegen DNS-Rebinding)
     ring_buffer_size: int = 40             # letzte Untertitel fuer spaet verbundene Zuhoerer (nur Text, ohne Ton)
     history_s: float = 120.0               # Verlauf: aeltere Untertitel werden geloescht (Zuhoerer-Seite und Server)
 
@@ -147,6 +154,13 @@ class Settings:
             raise ConfigError("AUTH_MAX_FAILS, AUTH_WINDOW_S und AUTH_BLOCK_S muessen positiv sein")
         if not (10 <= self.turn_idle_s <= 3600):
             raise ConfigError("TURN_IDLE_S muss zwischen 10 und 3600 Sekunden liegen")
+        if min(self.turn_pickup_s, self.turn_process_max_s, self.turn_play_max_s) <= 0 or self.turn_grace_s < 0:
+            raise ConfigError("TURN_PICKUP_S, TURN_PROCESS_MAX_S und TURN_PLAY_MAX_S muessen positiv, TURN_GRACE_S >= 0 sein")
+        for net in self.trusted_proxies:
+            try:
+                ipaddress.ip_network(net, strict=False)
+            except ValueError:
+                raise ConfigError(f"TRUSTED_PROXIES: keine gueltige Adresse oder kein Netz: '{net}'") from None
         if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0 or self.history_s <= 0 or self.max_guests < 1:
             raise ConfigError("ROOM_TTL_S, MAX_LISTENERS_PER_ROOM oder RING_BUFFER_SIZE ungueltig")
         if self.segment_max_words < 1 or self.lang_queue_max < 1 or self.tts_skip_backlog < 1:
@@ -203,6 +217,12 @@ class Settings:
                 ring_buffer_size=int(get("RING_BUFFER_SIZE", d.ring_buffer_size)),
                 history_s=float(get("HISTORY_S", d.history_s)),
                 turn_idle_s=float(get("TURN_IDLE_S", d.turn_idle_s)),
+                turn_pickup_s=float(get("TURN_PICKUP_S", d.turn_pickup_s)),
+                turn_process_max_s=float(get("TURN_PROCESS_MAX_S", d.turn_process_max_s)),
+                turn_play_max_s=float(get("TURN_PLAY_MAX_S", d.turn_play_max_s)),
+                turn_grace_s=float(get("TURN_GRACE_S", d.turn_grace_s)),
+                trusted_proxies=tuple(x.strip() for x in get("TRUSTED_PROXIES", ",".join(d.trusted_proxies)).split(",") if x.strip()),
+                host_check=_bool(get("HOST_CHECK", "true")),
                 auth_max_fails=int(get("AUTH_MAX_FAILS", d.auth_max_fails)),
                 auth_window_s=float(get("AUTH_WINDOW_S", d.auth_window_s)),
                 auth_block_s=float(get("AUTH_BLOCK_S", d.auth_block_s)),

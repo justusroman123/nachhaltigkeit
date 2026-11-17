@@ -90,7 +90,7 @@ Dafür gibt es noch keinen Messpunkt (siehe Messprotokoll, Abschnitt „Offene M
 | --- | --- |
 | Keine Speicherung von Audio/Text | nur Arbeitsspeicher; Ringpuffer nur Text, klein (`RING_BUFFER_SIZE`, 0 = aus); Löschung bei Sitzungsende |
 | Keine Inhalts-Logs | Logs enthalten Sequenznummer, Sprache, Dauern, Zähler; Test `test_keine_inhalte_in_logs` |
-| Server ohne Zugriffsprotokoll | Start mit `--no-access-log` |
+| Server ohne Zugriffsprotokoll, ohne Adressen im Log | Start über `python -m app` (`server/app/__main__.py`: kein Zugriffslog, Stufe „warning“, keine Proxy-Header-Auswertung durch uvicorn, kleine WebSocket-Frames, Verbindungsobergrenze); zusätzlich Log-Filter für Verbindungszeilen; Test startet den echten Server |
 | Keine Cookies, kein Tracking | Web-Dateien ohne Cookies/Storage; Test `test_web_static.py` |
 | Nichts extern | keine CDNs/Schriften/Skripte; CSP `default-src 'none'`, `script-src 'self'`, kein `unsafe-inline`; Test prüft alle Web-Dateien |
 | Header | CSP, `nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`, `Permissions-Policy`, COOP/CORP, `X-Frame-Options` |
