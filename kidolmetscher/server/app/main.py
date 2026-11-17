@@ -327,7 +327,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         body = body or SessionRequest()
         try:
             room = rooms.create_room(body.langs)
-        except LanguageError as exc:
+        except (LanguageError, RoomError) as exc:      # auch die Obergrenze offener Raeume: klare Meldung statt Serverfehler (wie bei /api/rooms)
             raise HTTPException(400, str(exc))
         return {"room_id": room.id, "langs": list(room.langs), "sample_rate": settings.sample_rate,
                 "shared": make_link(room, None, body.ttl_s),

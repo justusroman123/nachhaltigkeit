@@ -412,6 +412,15 @@ def test_api_session_liefert_sammel_link_und_links_je_sprache(client):
     assert client.post("/api/session", headers=hdr(), json={"langs": ["xx"]}).status_code == 400
 
 
+def test_api_session_bei_erreichter_raum_obergrenze_klare_meldung_statt_serverfehler():
+    """Faengt: POST /api/session fing nur LanguageError; bei erreichter Obergrenze offener Raeume kam ein unbehandelter Fehler (HTTP 500)."""
+    with app_client(make_settings(max_rooms=1)) as c:
+        assert c.post("/api/session", headers=hdr()).status_code == 200
+        r = c.post("/api/session", headers=hdr())
+        assert r.status_code == 400 and "Raeume" in r.json()["detail"]                 # wie bei /api/rooms: klare Meldung, kein 500
+        assert c.post("/api/rooms", headers=hdr()).status_code == 400
+
+
 def test_ping_pong_fuer_netzmessung(client):
     rid = new_room(client)
     op = open_operator(client, rid)

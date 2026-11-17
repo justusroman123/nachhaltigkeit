@@ -150,6 +150,17 @@ def test_ringpuffer_begrenzt_und_ohne_audio(mgr):
     assert all(m["audio"] is None and m["replay"] for m in r)
 
 
+def test_alle_trennen_loescht_den_untertitel_verlauf_fuer_spaetere_gaeste(mgr):
+    """Faengt: Nach 'Alle trennen, neuen Link erzeugen' sah der naechste Gast beim Beitritt noch die letzten Untertitel des vorigen (Ringpuffer blieb)."""
+    room = mgr.create_room()
+    room.publish("uk", {"seq": 1, "text": "vertraulich", "audio": None})
+    assert room.replay("uk")
+    room.revoke_all_access()
+    assert room.replay("uk") == [] and not room._ring
+    room.publish("uk", {"seq": 2, "text": "neu", "audio": None})          # danach laeuft der Verlauf normal weiter
+    assert [m["seq"] for m in room.replay("uk")] == [2]
+
+
 def test_ringpuffer_aus(clock):
     room = RoomManager(make_settings(ring_buffer_size=0), clock).create_room()
     room.publish("uk", {"seq": 1})

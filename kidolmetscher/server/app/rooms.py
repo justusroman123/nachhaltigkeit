@@ -261,6 +261,7 @@ class Room:
         (sie bekommen die Meldung "removed"). Die Sitzung selbst und der Bedienplatz bleiben. Rueckgabe: (getrennte Geraete, widerrufene Links)."""
         links = len(self._tokens)
         self._tokens.clear()
+        self._ring.clear()                         # der naechste Gast darf nichts vom Verlauf des vorigen sehen (letzte Untertitel, bis HISTORY_S)
         n = 0
         for l in list(self._listeners.values()):
             l.push(KICK)
