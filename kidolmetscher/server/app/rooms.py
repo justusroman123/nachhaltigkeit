@@ -224,9 +224,11 @@ class Room:
             raise RoomFullError("Zu viele Zuhoerer")
         if self.mode == "gespraech" and len(self._listeners) >= self.settings.max_guests:
             raise RoomFullError("Zu viele Gaeste")
-        lst = Listener(info.lang, info.expires_at)
+        # Der Link gilt nur zum BEITRETEN (_resolve prueft das). Wer verbunden ist, bleibt bis zum Ende der Sitzung verbunden:
+        # ein Gespraech oder Vortrag wird nicht mitten im Satz abgeschnitten, nur weil die Gueltigkeit des Links abgelaufen ist.
+        lst = Listener(info.lang, self.expires_at)
         while lst.id in self._listeners:           # Kennung ist zufaellig: bei (sehr unwahrscheinlicher) Doppelung neu ziehen
-            lst = Listener(info.lang, info.expires_at)
+            lst = Listener(info.lang, self.expires_at)
         self._listeners[lst.id] = lst
         self.counters["listeners_total"] += 1
         self.counters["listeners_peak"] = max(self.counters["listeners_peak"], len(self._listeners))

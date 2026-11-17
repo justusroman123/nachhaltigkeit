@@ -89,7 +89,7 @@ class Settings:
     auth_max_fails: int = 10               # falsche Bedienschluessel je Absender, dann Sperre (Schutz gegen Raten; Annahme)
     auth_window_s: float = 600.0           # ... innerhalb dieser Zeit
     auth_block_s: float = 900.0            # Dauer der Sperre
-    turn_idle_s: float = 120.0             # Gespraech: so lange ohne hoerbare Sprache, dann endet die Aussage von selbst; Redezeit ist NICHT begrenzt (Annahme, im Test pruefen)
+    turn_idle_s: float = 0.0               # Gespraech: 0 = aus (Standard): nichts beendet eine Aussage von selbst, nur "Fertig" oder Stopp. > 0: Sekunden ohne hoerbare Sprache, dann endet sie von selbst (10 bis 3600)
     turn_pickup_s: float = 30.0            # Gespraech: so lange auf die Bestaetigung einer automatisch uebergebenen Wortmeldung warten (Annahme)
     turn_process_max_s: float = 90.0       # Gespraech: laengste Verarbeitung nach einer Aussage, dann geht es weiter (Annahme, messen)
     turn_play_max_s: float = 15.0          # Gespraech: Mindest-Wartezeit auf "fertig" der Geraete (dazu kommt die Tonlaenge; Annahme)
@@ -159,8 +159,8 @@ class Settings:
             raise ConfigError("Es muss gelten: MIN_LISTENER_TTL_S <= LISTENER_TTL_S <= MAX_LISTENER_TTL_S")
         if self.auth_max_fails < 1 or self.auth_window_s <= 0 or self.auth_block_s <= 0:
             raise ConfigError("AUTH_MAX_FAILS, AUTH_WINDOW_S und AUTH_BLOCK_S muessen positiv sein")
-        if not (10 <= self.turn_idle_s <= 3600):
-            raise ConfigError("TURN_IDLE_S muss zwischen 10 und 3600 Sekunden liegen")
+        if not (self.turn_idle_s == 0 or 10 <= self.turn_idle_s <= 3600):
+            raise ConfigError("TURN_IDLE_S muss 0 (aus) sein oder zwischen 10 und 3600 Sekunden liegen")
         if min(self.turn_pickup_s, self.turn_process_max_s, self.turn_play_max_s) <= 0 or self.turn_grace_s < 0:
             raise ConfigError("TURN_PICKUP_S, TURN_PROCESS_MAX_S und TURN_PLAY_MAX_S muessen positiv, TURN_GRACE_S >= 0 sein")
         for net in self.trusted_proxies:

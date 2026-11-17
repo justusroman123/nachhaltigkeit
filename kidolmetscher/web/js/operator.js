@@ -81,8 +81,8 @@
   }
 
   /* ---------- Gespraechsmodus (Bedienplatz): Sprechen-Knopf, Zustand kommt vom Server ----------
-     Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig", durch "Stopp" des Mitarbeiters (bei einem Gast) oder
-     nach langer Stille (Server, idle_s). Der Mitarbeiter hat Vorrang: er kann jeden Gast sofort stoppen und selbst sprechen.
+     Redezeit ist NICHT begrenzt: Die Aussage endet nur mit "Fertig" oder durch "Stopp" des Mitarbeiters (bei einem Gast);
+     eine Stille-Frist des Servers (TURN_IDLE_S) ist standardmaessig aus. Der Mitarbeiter hat Vorrang: er kann jeden Gast sofort stoppen und selbst sprechen.
      Gaeste koennen niemanden stoppen, nur sich melden (der Sprechende wird benachrichtigt, nicht unterbrochen). */
   const conv = { talking: false, hintMs: 0, quietMs: 0, hinted: false, note: '', turn: { state: 'frei', who: null, waiting: [] } };
   const sendJson = (o) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -306,6 +306,7 @@
       if (!r.ok) return say(e.roomMsg, 'Fehler ' + r.status + ' beim Starten.', 'bad');
       room = await r.json();
     } catch (_) { return say(e.roomMsg, 'Server nicht erreichbar.', 'bad'); }
+    keepAwake();
     e.key.value = '';
     e.stepStart.hidden = true;
     [e.stepInvite, e.stepMic, e.stepLive, e.stepCheck].forEach((s) => { s.hidden = false; });
@@ -319,9 +320,22 @@
   }
 
   e.end.addEventListener('click', endSession);
+  /* Bildschirm waehrend der Sitzung wach halten: Der Bedienplatz soll nicht dunkel werden oder einschlafen, auch wenn lange nur gesprochen und nichts getippt wird.
+     Nur die Anzeige-Sperre des Browsers (Wake Lock), keine Daten; nicht unterstuetzt = nichts passiert. */
+  let wakeLock = null;
+  async function keepAwake() {
+    try {
+      if ('wakeLock' in navigator && !wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch (_) {}
+  }
+  function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch (_) {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && room) keepAwake(); });          // Sperre geht beim Wechsel des Tabs verloren: neu anfordern
   function placeholder(id, text) { const p = document.createElement('p'); p.className = 'muted'; p.id = id; p.textContent = text; return p; }
   function resetSessionUi() {                                      // alles auf Anfang: Anzeige, Verlauf, Zustand, Timer
-    room = null; key = '';
+    room = null; key = ''; releaseAwake();
     stopGerman(); convReset();
     flow.busy = false; flow.pending = 0; flow.awaiting = 0; flow.seenBusy = false;
     checks.clear();
@@ -355,7 +369,7 @@
     const url = e.base.value.trim().replace(/\/+$/, '') + d.path;
     e.linkText.textContent = url;
     const plain = /^http:\/\//i.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
-    say(e.linkInfo, 'Läuft in ' + Math.round(d.expires_in_s / 60) + ' Minuten ab. Angebotene Sprachen: ' +
+    say(e.linkInfo, 'Der Link gilt noch ' + Math.round(d.expires_in_s / 60) + ' Minuten zum Beitreten; wer verbunden ist, bleibt bis zum Ende der Sitzung verbunden. Angebotene Sprachen: ' +
       room.langs.map((l) => SHORT[l] || l).join(', ') + '.' +
       (plain ? ' ⚠ Unverschlüsselte Adresse (http): Stimme, Text und Zugangscode laufen offen durch das Netz. Im Echtbetrieb nur https verwenden.' : ''), plain ? 'warn' : undefined);
     try {
@@ -586,5 +600,5 @@
     [...e.log.children, ...e.guestLog.querySelectorAll('.guestline')].forEach((r) => { if (Number(r.dataset.at) < limit) r.remove(); });
     [...checks].forEach(([k, c]) => { if (Number(c.box.dataset.at) < limit) { c.box.remove(); checks.delete(k); } }); }, 1000);
 
-  window.addEventListener('pagehide', () => { stopSending(); });
+  window.addEventListener('pagehide', () => { stopSending(); releaseAwake(); });
 })();

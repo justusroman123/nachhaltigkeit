@@ -18,7 +18,7 @@ Einrichtung: `docs/betrieb.md` (Abschnitt 5 und 6) und `docs/vm-neu-einrichten.m
 4. **„Sitzung beenden“** löscht alles.
 
 Im **Gespräch** (Auswahl beim Sitzungsstart) tippt der Mitarbeiter „Sprechen“ und „Fertig“; Gäste sprechen am Tablet in ihrer Sprache, der Mitarbeiter liest die deutsche Übersetzung und hört sie vorgelesen, sofern die deutsche Stimme eingerichtet ist (`scripts/stimme_de_einrichten.sh`).
-Eine Aussage endet durch „Fertig“, den Stopp des Mitarbeiters oder nach 120 s ohne hörbare Sprache; es gibt keine Redezeit-Grenze.
+Eine Aussage endet nur durch „Fertig“ oder den Stopp des Mitarbeiters; es gibt keine Redezeit-Grenze und keine Zeitschaltung (die Stille-Frist `TURN_IDLE_S` ist standardmäßig aus, `0`).
 
 **Schnell ausprobieren auf dem eigenen Rechner (Demo mit Attrappen, ohne Bedienschlüssel):**
 Windows: `start.bat` doppelklicken (Python 3 muss installiert sein, https://www.python.org/downloads/, „Add python.exe to PATH“ ankreuzen).

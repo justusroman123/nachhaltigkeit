@@ -69,7 +69,7 @@ Bedienplatz (Chromebook, Browser)             Server (FastAPI, GPU-VM)          
 
 Im Gespräch spricht immer nur **eine** Person (Sperre `turns.py`): frei → spricht → übersetzt → Wiedergabe → frei. Die Sperre wird erst frei, wenn alle Geräte „fertig“ melden
 (Ton zu Ende oder Text angezeigt) oder eine Zeitgrenze greift (`TURN_PROCESS_MAX_S` 90 s, `TURN_PLAY_MAX_S` 15 s plus Tonlänge, `TURN_GRACE_S` 0,5 s). Die Redezeit ist nicht begrenzt; nur
-`TURN_IDLE_S` (120 s) ohne hörbare Sprache gibt das Wort frei. Der Mitarbeiter hat Vorrang (kann andere stoppen), Gäste können sich nur melden (`TURN_PICKUP_S` 30 s).
+~~`TURN_IDLE_S` (120 s) ohne hörbare Sprache gibt das Wort frei.~~ **Überholt seit 17.11.2026 (E47):** `TURN_IDLE_S` ist standardmäßig 0 (aus); nur „Fertig“ oder der Stopp des Mitarbeiters beenden eine Aussage. Wer die Stille-Frist einschalten will, setzt 10 bis 3600 Sekunden. Der Mitarbeiter hat Vorrang (kann andere stoppen), Gäste können sich nur melden (`TURN_PICKUP_S` 30 s).
 Bis zu `MAX_GUESTS` (3) Gäste gleichzeitig. Gäste senden ihr Mikrofon über `/ws/listener`; `conversation.py` erkennt die Sprache des Gastes, übersetzt ins Deutsche und sendet `guest_message`
 an den Bedienplatz (Text und optional deutsche Sprachausgabe). Fehler gehen als `problem` an Mitarbeiter und Gast, nichts geht still verloren. Alles nur im Arbeitsspeicher.
 
@@ -115,7 +115,7 @@ Dafür gibt es noch keinen Messpunkt (siehe Messprotokoll, Abschnitt „Offene M
 | Keine Cookies, kein Tracking | Web-Dateien ohne Cookies/Storage; Test `test_web_static.py`; Token und Sprache stehen aber in der Adresse der Zuhörerseite (Browserverlauf) |
 | Nichts extern | keine CDNs/Schriften/Skripte; CSP `default-src 'none'`, `script-src 'self'`, kein `unsafe-inline`; Test prüft alle Web-Dateien |
 | Header | CSP, `nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`, `Strict-Transport-Security: max-age=31536000` (wird immer gesendet, ohne `includeSubDomains`/`preload`), `Permissions-Policy`, COOP/CORP, `X-Frame-Options` |
-| Zuhörer-Links | Zufalls-Token, Ablaufzeit, nur Hash im Speicher, auch bei laufender Verbindung wird bei Ablauf getrennt |
+| Zuhörer-Links | Zufalls-Token, Ablaufzeit (gilt zum Beitreten), nur Hash im Speicher; ~~auch bei laufender Verbindung wird bei Ablauf getrennt~~ **Überholt seit 17.11.2026:** wer verbunden ist, bleibt bis zum Ende der Sitzung (`ROOM_TTL_S`) verbunden, damit nichts mitten im Gespräch abgeschnitten wird |
 | Bedienplatz | Schlüssel aus Umgebung (`OPERATOR_KEY`, ≥ 16 Zeichen, ≥ 8 verschiedene Zeichen), Vergleich zeitkonstant; **Sperre gegen Raten (seit 16.11.2026):** 10 Fehlversuche in 600 s, dann 900 s Sperre je Absender (IPv4-Adresse bzw. IPv6-/64-Präfix, nur als Hash mit zufälligem Salz im Arbeitsspeicher), auch für den richtigen Schlüssel (HTTP 429, WebSocket-Code 4430); ein Erfolg löscht Fehlversuche nicht; die Zahlen sind Annahmen (`AUTH_MAX_FAILS`, `AUTH_WINDOW_S`, `AUTH_BLOCK_S`) |
 | WebSocket | Herkunftsprüfung gegen fremde Webseiten im Browser: Origin muss zum Host passen. Clients **ohne** Origin-Header (kein Browser) werden nicht abgewiesen und müssen sich mit dem Bedienschlüssel anmelden; die Prüfung ist mit `ORIGIN_CHECK=false` abschaltbar (nur für Vorschau-Tests). Größengrenzen vor der Anmeldung, Begrenzung von Steuernachrichten und Audio-Zufluss je Verbindung |
 | `mic-test.html` | einzige Seite mit Inline-Skript; bekommt in der CSP den Hash genau dieser Blöcke |

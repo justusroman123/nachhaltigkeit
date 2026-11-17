@@ -4,10 +4,12 @@ Zaehler und Geraete-Kennungen); die Uhr ist austauschbar fuer Tests.
 
 Zustaende: frei -> spricht -> uebersetzt -> wiedergabe -> frei
   frei        niemand spricht; jeder darf "Sprechen" antippen (wer zuerst kommt)
-  spricht     eine Person spricht, so lange sie moechte (Ende: "Fertig", Stopp durch den Mitarbeiter oder lange Stille)
+  spricht     eine Person spricht, so lange sie moechte (Ende: "Fertig" oder Stopp durch den Mitarbeiter; eine Stille-Frist ist
+              nur auf Wunsch eingeschaltet, idle_s > 0)
   uebersetzt  der Server verarbeitet noch Abschnitte der Aussage
   wiedergabe  Ergebnisse sind verteilt; wartet, bis alle Empfaenger "fertig" melden (Ton zu Ende / Text angezeigt)
-Sprechen wird nie zeitlich begrenzt. Nur lange STILLE gibt das Wort frei (idle_s). Zeitgrenzen in uebersetzt/wiedergabe
+Sprechen wird nie zeitlich begrenzt, auch Pausen nicht (idle_s = 0, Standard). Nur wenn idle_s > 0 gesetzt wird, gibt lange STILLE das Wort
+frei. Zeitgrenzen in uebersetzt/wiedergabe
 verhindern, dass ein haengendes Geraet alle blockiert; "freigeben" (Mitarbeiter) beendet alles sofort.
 Vorrang: Der Mitarbeiter ("staff") kann jede andere Person sofort stoppen (take_over); Gaeste koennen niemanden stoppen,
 sondern sich nur melden (request): der Sprechende wird benachrichtigt, nicht unterbrochen, und der Naechste bekommt das Wort
@@ -22,7 +24,7 @@ FREI, SPRICHT, UEBERSETZT, WIEDERGABE = "frei", "spricht", "uebersetzt", "wieder
 
 @dataclass
 class TurnLimits:
-    idle_s: float = 120.0           # so lange ohne hoerbare Sprache, dann gibt der Server das Wort frei; Redezeit ist NICHT begrenzt (Annahme, im Test pruefen)
+    idle_s: float = 0.0             # 0 = aus (Standard): nichts beendet eine Aussage von selbst, nur "Fertig" oder Stopp. > 0: so lange ohne hoerbare Sprache, dann gibt der Server das Wort frei
     pickup_s: float = 30.0          # automatisch uebernommene Wortmeldung: so lange darauf warten, dass das Geraet "Sprechen" bestaetigt (Annahme)
     process_max_s: float = 90.0     # laengste Verarbeitung nach dem Sprechen; Vollstaendigkeit geht vor (Annahme, messen)
     play_max_s: float = 15.0        # Mindest-Wartezeit auf "fertig" der Geraete; dazu kommt die Laenge des erwarteten Tons (Annahme)
@@ -49,6 +51,10 @@ class TurnManager:
         self.waiting: list[str] = []             # Wortmeldungen in Reihenfolge; wer dran ist, bekommt das Wort automatisch
 
     # ---------- Hilfen ----------
+    def _idle_deadline(self) -> Optional[float]:
+        """Frist der Stille-Frist; None, wenn sie ausgeschaltet ist (idle_s = 0)."""
+        return self.clock() + self.limits.idle_s if self.limits.idle_s > 0 else None
+
     def _set(self, state: str, who: Optional[str], limit_s: Optional[float], reason: str = "") -> None:
         self.state, self.who = state, who
         self._deadline = self.clock() + limit_s if limit_s else None
@@ -89,7 +95,7 @@ class TurnManager:
         if self.state == SPRICHT and self.who == who:         # schon dran (z. B. nach Wortmeldung automatisch uebernommen)
             if self._pickup:
                 self._pickup = False
-                self._deadline = self.clock() + self.limits.idle_s
+                self._deadline = self._idle_deadline()
             return True, ""
         if self.state != FREI:
             return False, "busy"
@@ -97,10 +103,10 @@ class TurnManager:
         return True, ""
 
     def touch(self, who: str) -> None:
-        """Hoerbare Sprache des Sprechenden: verschiebt die Frist der Freigabe bei Stille (Redezeit bleibt unbegrenzt)."""
+        """Hoerbare Sprache des Sprechenden: verschiebt die Frist der Freigabe bei Stille (Redezeit bleibt unbegrenzt; ohne Stille-Frist gibt es keine Frist)."""
         if self.state == SPRICHT and self.who == who:
             self._pickup = False
-            self._deadline = self.clock() + self.limits.idle_s
+            self._deadline = self._idle_deadline()
 
     def take_over(self, who: str) -> tuple[bool, str]:
         """Vorrang des Mitarbeiters ("Stopp"): sofort das Wort, auch wenn eine andere Person spricht oder noch uebersetzt bzw.
@@ -209,7 +215,7 @@ class TurnManager:
             self._free_at = None                 # inzwischen ist wieder etwas offen: weiter warten
         if self._deadline is not None and now >= self._deadline:
             if self.state == SPRICHT:
-                self._set(UEBERSETZT, self.who, self.limits.process_max_s, "inaktiv")        # lange Stille (keine Redezeit-Grenze)
+                self._set(UEBERSETZT, self.who, self.limits.process_max_s, "inaktiv")        # nur mit eingeschalteter Stille-Frist (idle_s > 0); keine Redezeit-Grenze
                 self._advance()
             elif self.state == UEBERSETZT:
                 self.pending = 0

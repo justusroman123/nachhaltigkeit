@@ -23,7 +23,13 @@ const guestMsg = (seq, o = {}) => msg('guest_message', { seq, from_lang: 'uk', t
 async function seite(b) {                                    // frische Seite mit nachgestelltem WebSocket; Sitzung ist noch nicht gestartet
   const ctx = await b.newContext({ permissions: ['microphone'] });
   await ctx.addInitScript(() => {
-    window.__starts = 0; window.__stops = 0;
+    window.__starts = 0; window.__stops = 0; window.__wl = { req: 0, rel: 0, type: '' };
+    try {                                                           // Bildschirm-Sperre (Wake Lock) nachgestellt: zaehlt Anforderungen und Freigaben
+      Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request: async (type) => {
+        window.__wl.req++; window.__wl.type = type; const ls = [];
+        return { addEventListener: (_t, f) => ls.push(f), release() { window.__wl.rel++; ls.forEach((f) => f()); return Promise.resolve(); } };
+      } } });
+    } catch (_) {}
     const P = AudioBufferSourceNode.prototype, st = P.start, sp = P.stop;
     P.start = function (...a) { window.__starts++; return st.apply(this, a); };
     P.stop = function (...a) { window.__stops++; return sp.apply(this, a); };
@@ -173,6 +179,38 @@ async function szenario(b, name, fn) {
     await page.fill('#base', 'https://dolmetscher.example.org'); await page.click('#btnNewLink');
     ok(await until(async () => !/Unverschlüsselte/.test(await page.textContent('#linkInfo')), 3000), 'bei https keine Warnung');
     ok(/vor.*dem ersten Sprechen/s.test(await page.textContent('#infoText')) || (await page.locator('#infoText').count()) === 1, 'Textvorschlag zur Information der Teilnehmenden ist vorhanden');
+    await ctx.close();
+  }
+
+
+  console.log('--- B-13: Der Bedienplatz haelt den Bildschirm waehrend der Sitzung wach und gibt ihn am Ende frei (kein Einschlafen beim langen Sprechen)');
+  {
+    const { ctx, page, got, S, n } = await seite(b);
+    await page.goto(BASE + '/operator.html');
+    ok((await page.evaluate(() => window.__wl.req)) === 0, 'vor der Sitzung wird nichts angefordert');
+    await sitzungStarten(page, got);
+    ok(await until(async () => (await page.evaluate(() => window.__wl.req)) === 1), 'Sitzung angelegt: Bildschirm-Sperre angefordert');
+    ok((await page.evaluate(() => window.__wl.type)) === 'screen', 'Art der Sperre: screen');
+    await page.click('#btnEnd');
+    ok(await until(async () => (await page.evaluate(() => window.__wl.rel)) === 1), 'Sitzung beendet: Sperre wieder freigegeben');
+    await ctx.close();
+  }
+
+  console.log('--- B-14: Mitarbeiter spricht 3 Stunden (Uhr der Seite vorgestellt): die Seite beendet die Aussage nie von selbst, nur "Fertig" tut es');
+  {
+    const { ctx, page, got, S, n } = await seite(b);
+    await page.clock.install();
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    await page.click('#btnTalk');
+    ok(await until(() => n('talk', { on: true }) === 1), 'Sprechen wird gesendet');
+    S.ws.send(turn('spricht', 'staff'));
+    ok(await until(async () => /SIE SPRECHEN/.test(await page.textContent('#talkMsg'))), 'Anzeige: SIE SPRECHEN');
+    await page.clock.fastForward('03:00:00'); await sleep(600);
+    ok(/SIE SPRECHEN/.test(await page.textContent('#talkMsg')), 'nach 3 Stunden zeigt die Seite noch SIE SPRECHEN');
+    ok(n('talk', { on: false }) === 0, 'die Seite hat die Aussage nicht von selbst beendet');
+    ok(/Fertig/.test(await page.textContent('#btnTalk')), 'der Knopf heisst weiter "Fertig"');
+    await page.click('#btnTalk');
+    ok(await until(() => n('talk', { on: false }) === 1, 2000), 'erst "Fertig" beendet die Aussage');
     await ctx.close();
   }
 

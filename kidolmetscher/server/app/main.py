@@ -28,7 +28,7 @@ import segno
 from pydantic import BaseModel
 
 from .config import Settings, apply_offline_defaults
-from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FULL, WS_NOT_FOUND,
+from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_FULL, WS_NOT_FOUND,
                        WS_RATE_LIMITED, WS_UNAUTHORIZED, control_message)
 from .conversation import GuestPath
 from .orchestrator import Orchestrator
@@ -698,9 +698,9 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     await ws.send_json(m)
             while True:
                 remaining = listener.expires_at - clock()
-                if remaining <= 0:
-                    await ws.send_json(control_message("token_expired"))
-                    await safe_close(ws, WS_EXPIRED)
+                if remaining <= 0:                  # Lebensdauer der Sitzung (ROOM_TTL_S) ist um; der Link selbst gilt nur zum Beitreten
+                    await ws.send_json(control_message("session_end"))
+                    await safe_close(ws, 1000)
                     break
                 if get_task is None:
                     get_task = asyncio.create_task(listener.queue.get())

@@ -201,23 +201,23 @@ def test_B4_stopp_nimmt_die_eigene_wortmeldung_des_mitarbeiters_zurueck():
 
 
 def test_B1_B4_B9_B8_standardwerte_entsprechen_der_vorgabe():
-    """Faengt: geaenderte Standardwerte (T16, T17, T18, S10, K01). Die Tests setzen alle Werte selbst, die Vorgabe (120 s, 30 s, 10/10 min/15 min) steht nirgends."""
-    assert TurnLimits().idle_s == 120 and TurnLimits().pickup_s == 30
+    """Faengt: geaenderte Standardwerte (T16, T17, T18, S10, K01). Die Tests setzen alle Werte selbst, die Vorgabe (Stille-Frist AUS, 30 s, 10/10 min/15 min) steht nirgends."""
+    assert TurnLimits().idle_s == 0 and TurnLimits().pickup_s == 30          # Nutzerwunsch 17.11.2026: nichts beendet eine Aussage von selbst
     s = Settings()
-    assert s.turn_idle_s == 120
+    assert s.turn_idle_s == 0
     assert (s.auth_max_fails, s.auth_window_s, s.auth_block_s) == (10, 600, 900)
     assert s.debug_fehler is False
     assert (s.lang_queue_max, s.tts_skip_backlog, s.stage_timeout_s) == (500, 100000, 60)     # B7: "Vollstaendigkeit geht vor" (K03/K04)
     assert Settings().fehler(RuntimeError("GEHEIMER INHALT")) == "RuntimeError"
     room = RoomManager(make_settings()).create_room(mode="gespraech")
-    assert room.turns.limits.idle_s == 120
+    assert room.turns.limits.idle_s == 0
 
 
 # ================================================================== B1: Stille-Frist und hoerbare Sprache (Ende-zu-Ende)
 def test_B1_hoerbare_sprache_des_mitarbeiters_verlaengert_stille_aber_nicht_stille():
     """Faengt: touch() fuer den Mitarbeiter entfernt (M01) oder pcm_rms() kaputt (M03). 5 Minuten am Stueck, alle 60 s hoerbare Sprache."""
     clk = FakeClock(1000.0)
-    with client_with(make_settings()) as c:
+    with client_with(make_settings(turn_idle_s=120)) as c:
         rid, op = raum(c)
         c.app.state.rooms.get(rid).turns.clock = clk                  # Uhr der Sperre austauschbar (kein Warten in Echtzeit)
         op.send_json({"type": "talk", "on": True})
@@ -235,7 +235,7 @@ def test_B1_hoerbare_sprache_des_mitarbeiters_verlaengert_stille_aber_nicht_stil
 def test_B1_hoerbare_sprache_des_gastes_verlaengert_die_frist():
     """Faengt: touch() fuer Gaeste entfernt (M02)."""
     clk = FakeClock(1000.0)
-    with client_with(make_settings()) as c:
+    with client_with(make_settings(turn_idle_s=120)) as c:
         rid, op = raum(c)
         c.app.state.rooms.get(rid).turns.clock = clk
         uk, dev = beitreten(c, rid, "uk")
@@ -253,7 +253,7 @@ def test_B1_hoerbare_sprache_des_gastes_verlaengert_die_frist():
 def test_B1_hoerbare_stille_wird_nach_120_s_beendet_auch_wenn_nichts_gesendet_wird():
     """Faengt: Idle-Frist wirkt im Server nicht (T05/M16). Bestehende Tests pruefen die Frist nur an TurnManager, nie im laufenden Server."""
     clk = FakeClock(1000.0)
-    with client_with(make_settings()) as c:
+    with client_with(make_settings(turn_idle_s=120)) as c:
         rid, op = raum(c)
         c.app.state.rooms.get(rid).turns.clock = clk
         op.send_json({"type": "talk", "on": True})
@@ -898,3 +898,45 @@ def test_B1_B7_fertig_des_mitarbeiters_uebersetzt_auch_den_rest_der_aussage():
         wait_until(lambda: stats(c, rid)["counters"].get("audio_chunks", 0) == 3, what="Audio angekommen")
         op.send_json({"type": "talk", "on": False})
         wait_until(lambda: stats(c, rid)["counters"].get("translations", 0) == 2, what="beide Abschnitte uebersetzt")
+
+
+# ================================================================== Nutzerwunsch 17.11.2026: Redezeit beliebig lang, nichts schaltet von selbst ab
+def test_ohne_stille_frist_bleibt_der_mitarbeiter_stundenlang_dran_und_ein_gast_kann_nur_melden():
+    """Faengt: eine Zeitgrenze, die eine Aussage des Mitarbeiters von selbst beendet (Standard: Stille-Frist aus). 3 Stunden ohne hoerbare
+    Sprache (Uhr der Sperre vorgestellt); ein Gast meldet sich und versucht, ihn zu stoppen: der Mitarbeiter bleibt dran."""
+    assert make_settings().turn_idle_s == 0
+    clk = FakeClock(1000.0)
+    with client_with(make_settings(max_guests=2)) as c:
+        rid, op = raum(c)
+        c.app.state.rooms.get(rid).turns.clock = clk
+        uk, dev = beitreten(c, rid, "uk")
+        op.send_json({"type": "talk", "on": True})
+        recv_until(op, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == "staff")
+        for _ in range(6):                                                # 6 x 30 Minuten = 3 Stunden, nie hoerbare Sprache gemeldet
+            clk.advance(1800); time.sleep(0.45)                           # der Takt (alle 0,2 s) hat mindestens einmal geprueft
+        t = stats(c, rid)["turn"]
+        assert t["state"] == "spricht" and t["who"] == "staff"
+        uk.send_json({"type": "want", "on": True}); uk.send_json({"type": "takeover"}); uk.send_json({"type": "release"})
+        recv_until(op, lambda m: m["type"] == "turn" and m.get("waiting") == [dev])      # Wortmeldung kommt an ...
+        clk.advance(1800); time.sleep(0.45)
+        t = stats(c, rid)["turn"]
+        assert t["state"] == "spricht" and t["who"] == "staff" and t["waiting"] == [dev]  # ... unterbricht aber nicht, auch nach Stunden nicht
+        op.send_json({"type": "talk", "on": False})                        # nur "Fertig" beendet die Aussage
+        recv_until(op, lambda m: m["type"] == "turn" and m["state"] in ("uebersetzt", "wiedergabe"))
+
+
+def test_ohne_stille_frist_bleibt_ein_gast_dran_bis_der_mitarbeiter_stoppt():
+    """Faengt: Zeitgrenze fuer Gaeste. Ein Gast spricht (oder schweigt) 3 Stunden lang; der Mitarbeiter kann ihn jederzeit sofort stoppen."""
+    clk = FakeClock(1000.0)
+    with client_with(make_settings(max_guests=2)) as c:
+        rid, op = raum(c)
+        c.app.state.rooms.get(rid).turns.clock = clk
+        uk, dev = beitreten(c, rid, "uk")
+        uk.send_json({"type": "talk", "on": True})
+        recv_until(op, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == dev)
+        for _ in range(6):
+            clk.advance(1800); time.sleep(0.45)
+        t = stats(c, rid)["turn"]
+        assert t["state"] == "spricht" and t["who"] == dev
+        op.send_json({"type": "takeover"})                                 # Vorrang: sofort
+        recv_until(op, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == "staff" and m.get("reason") == "unterbrochen")

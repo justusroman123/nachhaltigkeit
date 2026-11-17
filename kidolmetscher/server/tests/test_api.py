@@ -144,18 +144,24 @@ def test_abgelaufener_token_wird_abgewiesen(settings):
         assert ws.receive_json()["code"] == "token_invalid"
 
 
-def test_verbundener_zuhoerer_wird_bei_ablauf_getrennt():
-    s = make_settings(min_listener_ttl_s=1)
-    with app_client(s) as c:
+def test_verbundener_zuhoerer_bleibt_nach_ablauf_des_links_verbunden_neu_beitreten_geht_nicht_mehr():
+    """Nutzerwunsch 17.11.2026: Nichts schneidet ein laufendes Gespraech oder einen Vortrag von selbst ab. Der Link gilt nur zum
+    BEITRETEN; wer verbunden ist, bleibt bis zum Ende der Sitzung verbunden."""
+    from conftest import FakeClock
+    clk = FakeClock()
+    with app_client(make_settings(min_listener_ttl_s=1), clk) as c:
         rid = new_room(c)
-        ws = open_listener(c, token_of(new_link(c, rid, "uk", ttl_s=1)))
+        tok = token_of(new_link(c, rid, "uk", ttl_s=60))
+        ws = open_listener(c, tok)
         assert ws.receive_json()["type"] == "ready"
-        t0 = time.time()
-        assert ws.receive_json()["type"] == "token_expired"
-        assert time.time() - t0 < 3
-        with pytest.raises(WebSocketDisconnect) as e:
-            ws.receive_json()
-        assert e.value.code == 4408
+        clk.advance(3600)                                              # Link ist laengst abgelaufen
+        time.sleep(0.6)                                                # der Server haette Gelegenheit gehabt, die Verbindung zu trennen
+        st = c.get(f"/api/rooms/{rid}/stats", headers=hdr()).json()
+        assert st["listeners_connected"] == 1 and st["room_open"]
+        ws2 = open_listener(c, tok)                                    # derselbe Link taugt zum Beitreten nicht mehr
+        assert ws2.receive_json()["code"] == "token_invalid"
+        assert c.delete(f"/api/rooms/{rid}", headers=hdr()).status_code == 200
+        assert ws.receive_json()["type"] == "session_end"              # das Ende der Sitzung beendet die Verbindung
 
 
 def test_sitzungsende_benachrichtigt_und_loescht(client):

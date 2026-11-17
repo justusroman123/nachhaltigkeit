@@ -181,3 +181,47 @@ def test_gast_kann_niemanden_stoppen_nur_melden():
     assert t.state == SPRICHT and t.who == "staff"
     assert t.request("gast:1") == "vorgemerkt"                       # Gast kann sich nur melden: kein Abbruch
     assert t.state == SPRICHT and t.who == "staff" and t.waiting == ["gast:1"]
+
+
+def test_standard_ohne_stille_frist_nichts_beendet_eine_aussage_von_selbst():
+    """Nutzerwunsch 17.11.2026: Mitarbeiter und Gast sprechen so lange sie wollen; nur "Fertig" oder Stopp beendet (Stille-Frist aus)."""
+    assert TurnLimits().idle_s == 0
+    u, ev, t = neu()
+    t.claim("staff")
+    for _ in range(36):                                   # 3 Stunden in 5-Minuten-Schritten, dazwischen nie hoerbare Sprache
+        u.t += 300; t.tick()
+        assert t.state == SPRICHT and t.who == "staff"
+    t.touch("staff"); u.t += 3600; t.tick()
+    assert t.state == SPRICHT and t._deadline is None     # auch nach hoerbarer Sprache entsteht keine Frist
+    assert t.request("gast:1") == "vorgemerkt" and t.take_over("gast:1") == (False, "nicht_erlaubt")
+    u.t += 10_000; t.tick()
+    assert t.state == SPRICHT and t.who == "staff" and t.waiting == ["gast:1"]       # Gast hat nur gemeldet, nichts unterbrochen
+    t.end_speaking("staff")                               # "Fertig"
+    assert t.state in (UEBERSETZT, WIEDERGABE)
+
+
+def test_standard_ohne_stille_frist_ein_gast_bleibt_dran_bis_der_mitarbeiter_stoppt():
+    u, ev, t = neu()
+    t.claim("gast:1")
+    u.t += 7200; t.tick(); t.touch("gast:1"); u.t += 7200; t.tick()
+    assert t.state == SPRICHT and t.who == "gast:1"
+    ok, prev = t.take_over("staff")                       # Vorrang des Mitarbeiters gilt immer
+    assert ok and prev == "gast:1" and t.who == "staff" and ev[-1]["reason"] == "unterbrochen"
+
+
+def test_wortmeldung_uebergabe_ohne_stille_frist_hat_nach_der_bestaetigung_keine_frist():
+    u, ev, t = neu(pickup_s=30)
+    t.claim("staff"); assert t.request("gast:1") == "vorgemerkt"
+    t.end_speaking("staff"); u.t += 0.6; t.tick()                                    # nichts offen: frei, der Gast bekommt das Wort automatisch
+    assert t.state == SPRICHT and t.who == "gast:1" and t._pickup
+    assert t.claim("gast:1") == (True, "")                                           # Geraet bestaetigt
+    u.t += 7200; t.tick()
+    assert t.state == SPRICHT and t.who == "gast:1" and t._deadline is None
+
+
+def test_mit_eingeschalteter_stille_frist_endet_die_aussage_wie_eingestellt():
+    u, ev, t = neu(idle_s=30)
+    t.claim("staff"); u.t += 29; t.tick(); assert t.state == SPRICHT
+    t.touch("staff"); u.t += 29; t.tick(); assert t.state == SPRICHT                 # hoerbare Sprache verschiebt die Frist
+    u.t += 2; t.tick()
+    assert t.state in (UEBERSETZT, WIEDERGABE) and any(e.get("reason") == "inaktiv" for e in ev)      # erst nach 29 + 2 s Stille
