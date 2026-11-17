@@ -91,6 +91,10 @@ class MsgQueue:
             raise asyncio.QueueEmpty
         return self._d.popleft()
 
+    def clear(self) -> None:
+        self._d.clear()
+        self._ev.clear()
+
     def qsize(self) -> int:
         return len(self._d)
 
@@ -147,6 +151,7 @@ class Room:
         self.expires_at = self.created_at + settings.room_ttl_s
         self.closed = False
         self._operator_active = False
+        self._operator_seen = clock()           # Zeitpunkt, zu dem zuletzt ein Bedienplatz verbunden war (oder der Raum entstand)
         self.counters: Counter = Counter()      # nur Zaehler, nie Inhalte
         self._tokens: dict[str, TokenInfo] = {}
         self._listeners: dict[int, Listener] = {}
@@ -159,6 +164,9 @@ class Room:
         """lang=None erzeugt einen Sammel-Link (alle Sprachen des Raums, Auswahl durch den Zuhoerer)."""
         self._ensure_open()
         s = self.settings
+        self.purge_tokens()
+        if len(self._tokens) >= s.max_tokens_per_room:
+            raise RoomError(f"Zu viele Zuhoerer-Links in diesem Raum (hoechstens {s.max_tokens_per_room})")
         if lang is not None and (lang not in SUPPORTED_LANGS or lang not in self.langs):
             raise RoomError(f"Sprache nicht aktiviert: {lang}")
         ttl = s.listener_ttl_s if ttl_s is None else ttl_s
@@ -180,6 +188,27 @@ class Room:
             self._tokens.pop(_hash(token), None)
             raise TokenError("Token abgelaufen")
         return info
+
+    def purge_tokens(self) -> int:
+        """Abgelaufene Zuhoerer-Links entfernen (nur Hashes, aber nichts muss laenger als noetig im Speicher stehen)."""
+        now = self._clock()
+        gone = [h for h, t in self._tokens.items() if now >= t.expires_at]
+        for h in gone:
+            self._tokens.pop(h, None)
+        return len(gone)
+
+    def purge_history(self) -> None:
+        """Verlauf aktiv kuerzen: Untertitel aelter als history_s werden geloescht, auch wenn niemand sie abruft (Datenminimierung)."""
+        now = self._clock()
+        for lang, ring in list(self._ring.items()):
+            while ring and now - ring[0][0] > self.settings.history_s:
+                ring.popleft()
+            if not ring:
+                self._ring.pop(lang, None)
+
+    def idle_s(self) -> float:
+        """Wie lange ist kein Bedienplatz verbunden (0, solange einer verbunden ist)."""
+        return 0.0 if self._operator_active else max(0.0, self._clock() - self._operator_seen)
 
     def has_token(self, token: str) -> bool:
         try:
@@ -274,6 +303,7 @@ class Room:
         if value == self._operator_active:
             return
         self._operator_active = value
+        self._operator_seen = self._clock()
         if not self.closed and self.mode == "gespraech":
             msg = control_message("operator", online=value)
             for l in self._listeners.values():
@@ -344,6 +374,7 @@ class Room:
         self._tokens.clear()
         self._ring.clear()
         self._delivery.clear()
+        self._operator_q.clear()               # deutscher Quelltext, Gast-Aussagen und Sprachausgabe fuer den Bedienplatz: weg
         self.turns.release()
         self.operator_active = False
 
@@ -378,6 +409,8 @@ class RoomManager:
             bad = [l for l in langs if l not in self.settings.target_langs]
             if bad or not langs:
                 raise LanguageError(f"Sprachen nicht erlaubt oder leer: {bad or langs}")
+        if len(self.all_rooms()) >= self.settings.max_rooms:
+            raise RoomError(f"Zu viele offene Raeume (hoechstens {self.settings.max_rooms}); bitte eine Sitzung beenden")
         room = Room(secrets.token_urlsafe(12), self.settings, self._clock, langs, mode or "vortrag", self._turn_clock)
         self._rooms[room.id] = room
         return room
@@ -410,9 +443,12 @@ class RoomManager:
     def purge_expired(self) -> int:
         """Schliesst Raeume nach ROOM_TTL_S. Gibt die Anzahl geschlossener Raeume zurueck."""
         now = self._clock()
-        expired = [rid for rid, r in self._rooms.items() if r.closed or now >= r.expires_at]
+        expired = [rid for rid, r in self._rooms.items()
+                   if r.closed or now >= r.expires_at or r.idle_s() >= self.settings.room_idle_s]    # auch: lange ohne Bedienplatz
         for rid in expired:
             self.close_room(rid)
+        for r in self._rooms.values():
+            r.purge_tokens()
         return len(expired)
 
     def __len__(self) -> int:

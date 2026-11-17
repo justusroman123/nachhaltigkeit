@@ -10,9 +10,63 @@ def mgr(settings, clock):
     return RoomManager(settings, clock)
 
 
-def test_raeume_haben_eindeutige_ids(mgr):
-    ids = {mgr.create_room().id for _ in range(50)}
+def test_raeume_haben_eindeutige_ids(settings, clock):
+    import dataclasses
+    from app.rooms import RoomManager
+    m = RoomManager(dataclasses.replace(settings, max_rooms=100), clock)
+    ids = {m.create_room().id for _ in range(50)}
     assert len(ids) == 50 and all(len(i) >= 12 for i in ids)
+
+
+def test_obergrenze_fuer_raeume_und_links(settings, clock):
+    import dataclasses
+    import pytest
+    from app.rooms import RoomError, RoomManager
+    m = RoomManager(dataclasses.replace(settings, max_rooms=2, max_tokens_per_room=3), clock)
+    r1, r2 = m.create_room(), m.create_room()
+    with pytest.raises(RoomError):
+        m.create_room()                                    # dritter Raum: Obergrenze
+    m.close_room(r1.id)
+    m.create_room()                                        # nach dem Schliessen wieder moeglich
+    for _ in range(3):
+        r2.create_listener_token("uk")
+    with pytest.raises(RoomError):
+        r2.create_listener_token("uk")                     # vierter Link: Obergrenze
+    clock.advance(10_000)                                  # abgelaufene Links zaehlen nicht mehr mit
+    r2.create_listener_token("uk")
+
+
+def test_raum_ohne_bedienplatz_wird_nach_leerlauf_geschlossen_mit_bedienplatz_nicht(settings, clock):
+    import dataclasses
+    from app.rooms import RoomManager
+    m = RoomManager(dataclasses.replace(settings, room_idle_s=600, room_ttl_s=100_000, listener_ttl_s=60), clock)
+    a, b = m.create_room(), m.create_room()
+    b.operator_active = True                               # hier ist ein Bedienplatz verbunden
+    clock.advance(599); assert m.purge_expired() == 0
+    clock.advance(2); assert m.purge_expired() == 1        # a: seit 601 s ohne Bedienplatz
+    assert m.get(a.id) is None and m.get(b.id) is not None
+    b.operator_active = False                              # Bedienplatz weg: ab jetzt laeuft die Leerlauf-Frist
+    clock.advance(599); assert m.purge_expired() == 0
+    clock.advance(2); assert m.purge_expired() == 1
+
+
+def test_verlauf_wird_aktiv_gekuerzt_auch_ohne_abruf_und_beim_schliessen_ist_die_schlange_leer(settings, clock):
+    import dataclasses
+    from app.rooms import RoomManager
+    m = RoomManager(dataclasses.replace(settings, history_s=120, ring_buffer_size=5), clock)
+    room = m.create_room()
+    tok, _ = room.create_listener_token("uk")
+    room.attach_listener(tok)
+    room.publish("uk", {"seq": 1, "text": "alt"})
+    clock.advance(121)
+    assert room._ring.get("uk")                            # noch da: niemand hat abgerufen
+    room.purge_history()
+    assert not room._ring                                  # aktiv entfernt (Datenminimierung)
+    room._operator_q.clear()
+    room.push_operator({"type": "guest_message", "seq": 2, "text": "deutscher Text"})
+    assert room._operator_q.qsize() == 1
+    m.close_room(room.id)
+    assert room._operator_q.qsize() == 0                   # beim Sitzungsende ist auch die Warteschlange zum Bedienplatz leer
 
 
 def test_token_zufaellig_und_nur_als_hash_gespeichert(mgr):

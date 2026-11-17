@@ -105,6 +105,11 @@ class Orchestrator:
         self._workers.clear()
         self._queues.clear()
         self.messages.clear()
+        self._segmenter.reset()                       # Rest eines Satzes nicht im Speicher stehen lassen
+        try:                                          # Erkennungsstrom schliessen (loescht seinen Audiopuffer), ohne zu warten
+            asyncio.get_running_loop().create_task(self._stream.close())
+        except RuntimeError:
+            pass
 
     async def aclose(self) -> None:
         for t in self._workers.values():

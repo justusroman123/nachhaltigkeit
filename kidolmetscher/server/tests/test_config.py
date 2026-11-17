@@ -4,7 +4,7 @@ from app.config import ConfigError, Settings
 
 
 def env(**kw):
-    return {"OPERATOR_KEY": "x" * 20, **kw}
+    return {"OPERATOR_KEY": "abcdefghij0123456789", **kw}
 
 
 def test_defaults_aus_env():
@@ -43,7 +43,7 @@ def test_demo_ohne_schluessel_nur_lokal():
     with pytest.raises(ConfigError):                       # ohne Schalter bleibt der Schluessel Pflicht
         Settings.from_env({"HOST": "127.0.0.1"})
     # mit gesetztem Schluessel gilt er weiterhin, auch bei ALLOW_NO_KEY
-    assert Settings.from_env({"ALLOW_NO_KEY": "true", "OPERATOR_KEY": "x" * 20, "HOST": "0.0.0.0"}).operator_key
+    assert Settings.from_env({"ALLOW_NO_KEY": "true", "OPERATOR_KEY": "abcdefghij0123456789", "HOST": "0.0.0.0"}).operator_key
 
 
 def test_persisch_optional():
@@ -61,7 +61,7 @@ def test_env_example_ist_vollstaendig_und_ohne_geheimnisse():
     for secret in ("OPERATOR_KEY", "HF_TOKEN"):
         assert vals[secret] == ""
     # Beispieldatei muss mit gesetztem Schluessel ladbar sein
-    Settings.from_env({**vals, "OPERATOR_KEY": "y" * 20, "WEB_DIR": "../web"})
+    Settings.from_env({**vals, "OPERATOR_KEY": "abcdefghij0123456789", "WEB_DIR": "../web"})
 
 
 def test_neue_einstellungen_und_pruefung():
@@ -72,3 +72,47 @@ def test_neue_einstellungen_und_pruefung():
     for bad in ({"SEGMENT_MAX_WORDS": "0"}, {"LANG_QUEUE_MAX": "0"}, {"BUDGET_EUR": "-1"}):
         with pytest.raises(ConfigError):
             Settings.from_env(env(**bad))
+
+
+def test_gleichfoermiger_schluessel_wird_abgelehnt():
+    import pytest
+    with pytest.raises(ConfigError):
+        Settings.from_env({"OPERATOR_KEY": "a" * 24})                  # lang genug, aber nur ein Zeichen
+    with pytest.raises(ConfigError):
+        Settings.from_env({"OPERATOR_KEY": "abababababababababab"})    # nur 2 verschiedene Zeichen
+    assert Settings.from_env({"OPERATOR_KEY": "k3y-Zufall-0123456789"}).operator_key
+
+
+def test_env_example_entspricht_den_standardwerten_und_nennt_jede_einstellung():
+    """Die Vorlage wird fuer den Docker-Weg eingelesen: alte Werte darin wuerden die Standardwerte still ueberschreiben (Gutachten: Satzgrenzen,
+    Warteschlangen, Verlauf). Jeder aktive Eintrag muss dem Standardwert entsprechen; jede vom Programm gelesene Variable muss in der Datei stehen."""
+    import dataclasses
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    text = (root / ".env.example").read_text(encoding="utf-8")
+    aktiv = dict(l.split("=", 1) for l in text.splitlines() if "=" in l and not l.lstrip().startswith("#"))
+    erwartet = dataclasses.replace(Settings(), operator_key="abcdefghij0123456789", web_dir=Path("../web").resolve())
+    geladen = Settings.from_env({**aktiv, "OPERATOR_KEY": "abcdefghij0123456789", "WEB_DIR": "../web"})
+    abweichend = {f.name: (getattr(geladen, f.name), getattr(erwartet, f.name))
+                  for f in dataclasses.fields(Settings) if getattr(geladen, f.name) != getattr(erwartet, f.name)}
+    assert not abweichend, f".env.example weicht von den Standardwerten ab: {abweichend}"
+    quelle = (root / "server" / "app" / "config.py").read_text(encoding="utf-8")
+    gelesen = set(re.findall(r'get\("([A-Z][A-Z0-9_]+)"', quelle)) | {"HF_TOKEN"}
+    genannt = set(re.findall(r"^#?\s*([A-Z][A-Z0-9_]+)=", text, flags=re.M))
+    assert not (gelesen - genannt), f"nicht in .env.example erwaehnt: {sorted(gelesen - genannt)}"
+
+
+def test_offline_voreinstellungen_nur_bei_lokalen_modellen(tmp_path):
+    from app.config import apply_offline_defaults
+    d = tmp_path / "modell"; d.mkdir()
+    mit = Settings(asr_backend="real", mt_backend="real", asr_model=str(d), mt_model_id=str(d))
+    e = {}
+    assert set(apply_offline_defaults(mit, e)) == {"HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK", "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
+    e = {"HF_HUB_OFFLINE": "0"}                                             # bewusst gesetzte Werte bleiben
+    apply_offline_defaults(mit, e); assert e["HF_HUB_OFFLINE"] == "0"
+    e = {}
+    ohne = Settings(asr_backend="real", mt_backend="real", asr_model="large-v3", mt_model_id=str(d))   # Modellname statt Ordner: Download noetig
+    assert set(apply_offline_defaults(ohne, e)) == {"HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"}
+    e = {}
+    assert set(apply_offline_defaults(Settings(), e)) == {"HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"}   # Attrappen: nichts erzwingen

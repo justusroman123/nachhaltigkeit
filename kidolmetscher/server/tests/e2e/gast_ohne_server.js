@@ -36,14 +36,17 @@ async function szenario(b, name, fn, opts) {                      // frische Sei
       if (d.type === 'hello') {
         if (S.full > 0) { S.full--; ws.send(msg('error', { code: 'room_full' })); ws.close(); return; }      // Platzgrenze: Server lehnt ab und schliesst
         S.dev = S.conns === 1 ? DEV : 'gast:test000' + S.conns;                                             // neue Verbindung = neue Kennung beim Server
-        ws.send(msg('ready', { lang: 'uk', langs: ['uk', 'en'], mode: 'gespraech', turn: { state: 'frei', who: null, waiting: [] }, device: S.dev, sample_rate: 16000, expires_in_s: 3600, operator_online: true }));
+        ws.send(msg('ready', { lang: (opts && opts.nolang) ? null : 'uk', langs: ['uk', 'en'], mode: 'gespraech', turn: { state: 'frei', who: null, waiting: [] }, device: S.dev, sample_rate: 16000, expires_in_s: 3600, operator_online: true }));
       }
     });
   });
   if (opts && opts.full) S.full = opts.full;
-  await page.goto(BASE + '/listener.html#t=testtoken&l=uk');
-  await page.waitForSelector('#btnSubsOnly', { state: 'visible', timeout: 15000 }); await page.click('#btnSubsOnly');
-  await page.waitForSelector('#talkDock:not([hidden])');
+  if (opts && opts.clock) await page.clock.install();
+  await page.goto(BASE + '/listener.html#t=testtoken' + ((opts && opts.nolang) ? '' : '&l=uk'));
+  if (!(opts && opts.nostart)) {
+    await page.waitForSelector('#btnSubsOnly', { state: 'visible', timeout: 15000 }); await page.click('#btnSubsOnly');
+    await page.waitForSelector('#talkDock:not([hidden])');
+  }
   const n = (t, o) => got.filter((m) => m.type === t && (!o || Object.entries(o).every(([k, v]) => m[k] === v))).length;
   await fn(page, S, n, got);
   await ctx.close();
@@ -181,6 +184,44 @@ async function szenario(b, name, fn, opts) {                      // frische Sei
     ok(await until(async () => /⚠/.test(await page.textContent('#turnBand')) && /(not connected|nicht verbunden|не підключений)/i.test(await page.textContent('#turnBand'))), 'Hinweis erscheint');
     S.ws.send(msg('operator', { online: true }));
     ok(await until(async () => !/(not connected|nicht verbunden|не підключений)/i.test(await page.textContent('#turnBand'))), 'Hinweis verschwindet');
+  });
+
+
+  await szenario(b, 'Information VOR der ersten Aufnahme: Startbildschirm nennt KI, Stimme und Datenschutz (ohne Extra-Klick)', async (page, S, n) => {
+    await page.waitForSelector('#startScreen:not([hidden])', { timeout: 10000 });
+    const ai = await page.textContent('#startAi'), pv = await page.textContent('#startPrivacy');
+    ok(/KI|AI|штучн/i.test(ai), 'KI-Hinweis steht auf dem Startbildschirm');
+    ok(/Stimme|voice|голос/i.test(pv) && /(nicht gespeichert|not stored|не зберігається)/i.test(pv), 'Hinweis zur Stimme: nur zum Uebersetzen, nicht gespeichert');
+    ok((await page.getAttribute('#startPrivacyLink', 'href')) === 'datenschutz.html' && (await page.textContent('#startPrivacyLink')).length > 2, 'Link zum Datenschutzhinweis ist da');
+    ok((await page.getAttribute('#startScreen', 'role')) === 'dialog', 'Startbildschirm ist als Dialog ausgezeichnet');
+    ok(n('audio') === 0 && n('talk') === 0, 'bis dahin wurde nichts aufgenommen oder gesendet');
+  }, { nostart: true });
+
+  await szenario(b, 'Information VOR der ersten Aufnahme: auch die Sprachwahl hat Hinweis und Link', async (page, S, n) => {
+    await page.waitForSelector('#picker:not([hidden])', { timeout: 10000 });
+    const t = await page.textContent('#pickerInfo');
+    ok(/KI/.test(t) && /AI/.test(t) && /Datenschutz/.test(t), 'Hinweis zweisprachig mit Link "Datenschutz / Privacy"');
+    ok((await page.locator('#pickerInfo a[href="datenschutz.html"]').count()) === 1, 'Link zum Datenschutzhinweis');
+  }, { nostart: true, nolang: true });
+
+  await szenario(b, 'Mikrofon wird nach Leerlauf wirklich freigegeben (Aufnahme-Anzeige des Geraets geht aus)', async (page, S, n) => {
+    await page.click('#btnTalk'); await until(() => n('talk', { on: true }) === 1);
+    S.ws.send(turn('spricht', DEV)); await until(() => n('audio') > 3);
+    ok(await page.evaluate(() => window.__streams.some((s) => s.getTracks().some((t) => t.readyState === 'live'))), 'beim Sprechen ist das Mikrofon offen');
+    await page.click('#btnTalk'); await until(() => n('talk', { on: false }) === 1);
+    S.ws.send(turn('frei', null));
+    await page.clock.fastForward(10000);
+    ok(await page.evaluate(() => window.__streams.some((s) => s.getTracks().some((t) => t.readyState === 'live'))), 'nach 10 s ist es noch stumm gehalten (bereit fuer die naechste Aussage)');
+    await page.clock.fastForward(20000);
+    ok(await until(() => page.evaluate(() => window.__streams.every((s) => s.getTracks().every((t) => t.readyState === 'ended'))), 3000), 'nach 30 s Leerlauf ist das Mikrofon ganz freigegeben');
+    await page.click('#btnTalk');
+    ok(await until(() => n('talk', { on: true }) === 2, 3000), 'beim naechsten Tippen oeffnet es sich wieder');
+  }, { clock: true });
+
+  await szenario(b, 'Ende der Sitzung: Zugangscode verschwindet aus der Adresszeile', async (page, S, n) => {
+    ok(/#t=testtoken/.test(page.url()), 'vorher steht der Code in der Adresse');
+    S.ws.send(msg('session_end'));
+    ok(await until(() => !/testtoken/.test(page.url()), 3000), 'danach nicht mehr');
   });
 
   await b.close();

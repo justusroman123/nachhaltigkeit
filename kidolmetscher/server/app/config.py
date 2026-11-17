@@ -12,6 +12,7 @@ from .messages import SUPPORTED_LANGS
 
 BACKENDS = ("mock", "real")
 MIN_OPERATOR_KEY_LEN = 16
+MIN_OPERATOR_KEY_DISTINCT = 8         # verhindert Schluessel wie "aaaaaaaaaaaaaaaaaaaa"
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
@@ -80,6 +81,9 @@ class Settings:
     min_listener_ttl_s: int = 60
     max_listener_ttl_s: int = 28800
     room_ttl_s: int = 43200
+    room_idle_s: float = 3600.0            # Raum ohne verbundenen Bedienplatz wird nach dieser Zeit geschlossen (Annahme; Raum, Links, Verlauf gehen dann weg)
+    max_rooms: int = 20                    # gleichzeitig offene Raeume (Schutz des Arbeitsspeichers; Annahme)
+    max_tokens_per_room: int = 200         # Zuhoerer-Links je Raum (Annahme)
     max_listeners_per_room: int = 100      # Platzhalter, nicht gemessen
     max_guests: int = 3                    # Gespraechsmodus: so viele Gaeste gleichzeitig (Vorgabe des Nutzers)
     auth_max_fails: int = 10               # falsche Bedienschluessel je Absender, dann Sperre (Schutz gegen Raten; Annahme)
@@ -136,6 +140,9 @@ class Settings:
         elif require_operator_key and len(self.operator_key) < MIN_OPERATOR_KEY_LEN:
             raise ConfigError(
                 f"OPERATOR_KEY fehlt oder ist kuerzer als {MIN_OPERATOR_KEY_LEN} Zeichen")
+        elif require_operator_key and len(set(self.operator_key)) < MIN_OPERATOR_KEY_DISTINCT:
+            raise ConfigError(
+                f"OPERATOR_KEY ist zu gleichfoermig (mindestens {MIN_OPERATOR_KEY_DISTINCT} verschiedene Zeichen); bitte einen zufaelligen Schluessel erzeugen")
         for name in ("asr_backend", "mt_backend", "tts_backend"):
             if getattr(self, name) not in BACKENDS:
                 raise ConfigError(f"{name.upper()} muss {BACKENDS} sein")
@@ -163,6 +170,8 @@ class Settings:
                 raise ConfigError(f"TRUSTED_PROXIES: keine gueltige Adresse oder kein Netz: '{net}'") from None
         if self.room_ttl_s < 1 or self.max_listeners_per_room < 1 or self.ring_buffer_size < 0 or self.history_s <= 0 or self.max_guests < 1:
             raise ConfigError("ROOM_TTL_S, MAX_LISTENERS_PER_ROOM oder RING_BUFFER_SIZE ungueltig")
+        if self.room_idle_s < 60 or self.max_rooms < 1 or self.max_tokens_per_room < 1:
+            raise ConfigError("ROOM_IDLE_S (>= 60), MAX_ROOMS und MAX_TOKENS_PER_ROOM (>= 1) ungueltig")
         if self.segment_max_words < 1 or self.lang_queue_max < 1 or self.tts_skip_backlog < 1:
             raise ConfigError("SEGMENT_MAX_WORDS, LANG_QUEUE_MAX, TTS_SKIP_BACKLOG muessen >= 1 sein")
         if self.server_hourly_eur < 0 or self.budget_eur < 0:
@@ -213,6 +222,9 @@ class Settings:
                 min_listener_ttl_s=int(get("MIN_LISTENER_TTL_S", d.min_listener_ttl_s)),
                 max_listener_ttl_s=int(get("MAX_LISTENER_TTL_S", d.max_listener_ttl_s)),
                 room_ttl_s=int(get("ROOM_TTL_S", d.room_ttl_s)),
+                room_idle_s=float(get("ROOM_IDLE_S", d.room_idle_s)),
+                max_rooms=int(get("MAX_ROOMS", d.max_rooms)),
+                max_tokens_per_room=int(get("MAX_TOKENS_PER_ROOM", d.max_tokens_per_room)),
                 max_listeners_per_room=int(get("MAX_LISTENERS_PER_ROOM", d.max_listeners_per_room)),
                 ring_buffer_size=int(get("RING_BUFFER_SIZE", d.ring_buffer_size)),
                 history_s=float(get("HISTORY_S", d.history_s)),
@@ -257,3 +269,25 @@ class Settings:
         except ValueError as exc:   # z. B. int("abc")
             raise ConfigError(f"Ungueltiger Konfigurationswert: {exc}") from exc
         return s.validate(require_operator_key)
+
+
+def apply_offline_defaults(s: Settings, env: Optional[dict] = None) -> list[str]:
+    """Sorgt dafuer, dass die Modell-Bibliotheken zur Laufzeit nicht nach Hause telefonieren (Datenschutz-Regel 1: nichts extern).
+    Telemetrie wird immer ausgeschaltet. Liegen die Modelle als lokale Ordner vor, wird zusaetzlich der Offline-Betrieb erzwungen
+    (HF_HUB_OFFLINE, TRANSFORMERS_OFFLINE); wer zum ersten Mal herunterlaedt, setzt HF_HUB_OFFLINE=0 selbst. Bereits gesetzte Werte
+    bleiben unangetastet. Muss vor dem Import der Bibliotheken laufen. Rueckgabe: Namen der gesetzten Variablen (fuer das Log)."""
+    e = os.environ if env is None else env
+    gesetzt = []
+
+    def setze(name: str, wert: str) -> None:
+        if name not in e:
+            e[name] = wert
+            gesetzt.append(name)
+
+    setze("HF_HUB_DISABLE_TELEMETRY", "1")
+    setze("DO_NOT_TRACK", "1")
+    lokal = [p for p, backend in ((s.asr_model, s.asr_backend), (s.mt_model_id, s.mt_backend)) if backend == "real" and p]
+    if lokal and all(Path(p).is_dir() for p in lokal):
+        setze("HF_HUB_OFFLINE", "1")
+        setze("TRANSFORMERS_OFFLINE", "1")
+    return gesetzt

@@ -163,6 +163,19 @@ async function szenario(b, name, fn) {
     await ctx.close();
   }
 
+
+  console.log('--- http-Adresse fuer die Zuhoerer wird deutlich gewarnt');
+  {
+    const { ctx, page, got, S, n } = await seite(b);
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    await page.fill('#base', 'http://192.168.0.5:8000'); await page.click('#btnNewLink');
+    ok(await until(async () => /Unverschlüsselte Adresse/.test(await page.textContent('#linkInfo')), 3000), 'Warnung vor unverschluesselter Adresse');
+    await page.fill('#base', 'https://dolmetscher.example.org'); await page.click('#btnNewLink');
+    ok(await until(async () => !/Unverschlüsselte/.test(await page.textContent('#linkInfo')), 3000), 'bei https keine Warnung');
+    ok(/vor.*dem ersten Sprechen/s.test(await page.textContent('#infoText')) || (await page.locator('#infoText').count()) === 1, 'Textvorschlag zur Information der Teilnehmenden ist vorhanden');
+    await ctx.close();
+  }
+
   await b.close();
   console.log(fails ? fails + ' FEHLER' : 'alles ok');
   process.exit(fails ? 1 : 0);

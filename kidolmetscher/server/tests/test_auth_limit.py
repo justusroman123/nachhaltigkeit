@@ -77,7 +77,7 @@ def test_http_nach_zu_vielen_falschen_schluesseln_429_auch_mit_richtigem_schlues
 
 
 def test_richtiger_schluessel_wird_nie_gesperrt():
-    with app_client(make_settings(auth_max_fails=3), clock=FakeClock()) as c:
+    with app_client(make_settings(auth_max_fails=3, max_rooms=100), clock=FakeClock()) as c:
         for _ in range(30):
             assert c.post("/api/rooms", headers=hdr()).status_code == 200
 

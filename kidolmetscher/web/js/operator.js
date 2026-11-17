@@ -272,7 +272,7 @@
       cfg = await (await fetch('/api/config', { cache: 'no-store' })).json();
     } catch (_) { return say(e.roomMsg, 'Server nicht erreichbar. Läuft er und stimmt die Adresse?', 'bad'); }
     e.base.value = cfg.public_url || location.origin;
-    if (cfg.key_required === false) { $('keyRow').hidden = true; key = ''; }   // Demo ohne Schluessel
+    if (cfg.key_required === false) { $('keyRow').hidden = true; key = ''; $('demoWarn').hidden = false; }   // Demo ohne Schluessel: deutlich warnen
     cfg.langs.forEach((l) => {
       const lab = document.createElement('label'); lab.className = 'chip';
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = l; cb.checked = cfg.default_langs.includes(l);
@@ -354,8 +354,10 @@
     const d = await r.json();
     const url = e.base.value.trim().replace(/\/+$/, '') + d.path;
     e.linkText.textContent = url;
+    const plain = /^http:\/\//i.test(url) && !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
     say(e.linkInfo, 'Läuft in ' + Math.round(d.expires_in_s / 60) + ' Minuten ab. Angebotene Sprachen: ' +
-      room.langs.map((l) => SHORT[l] || l).join(', ') + '.');
+      room.langs.map((l) => SHORT[l] || l).join(', ') + '.' +
+      (plain ? ' ⚠ Unverschlüsselte Adresse (http): Stimme, Text und Zugangscode laufen offen durch das Netz. Im Echtbetrieb nur https verwenden.' : ''), plain ? 'warn' : undefined);
     try {
       const q = await api('POST', '/api/qr', { url });
       if (q.ok) e.qr.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(await q.text());

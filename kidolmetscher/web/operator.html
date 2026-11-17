@@ -17,6 +17,7 @@
 <main>
 <section id="stepStart" class="card">
   <h2><span class="num">1</span> Sitzung starten</h2>
+  <p id="demoWarn" class="bad" role="alert" hidden><b>⚠ Demo ohne Bedienschlüssel – nur zum Ausprobieren auf diesem Rechner, nicht für echte Gespräche.</b></p>
   <div id="keyRow">
     <label for="key">Bedienschlüssel</label>
     <input id="key" type="password" autocomplete="off" placeholder="wird nicht gespeichert">
@@ -51,11 +52,17 @@
         <select id="ttl"></select>
         <button id="btnNewLink">Neuen Link erzeugen</button>
       </div>
-      <label for="base">Adresse für Zuhörer (für Handys im Netz anpassen, z. B. http://192.168.0.5:8000)</label>
+      <label for="base">Adresse für Zuhörer (für Handys im Netz anpassen; im Echtbetrieb nur mit https)</label>
       <input id="base" type="text" inputmode="url" autocomplete="off">
       <p class="muted" id="linkInfo"></p>
     </div>
   </div>
+  <details id="infoText">
+    <summary>Teilnehmende vorab informieren (Textvorschlag – vor Verwendung rechtlich prüfen lassen)</summary>
+    <p>Die Teilnehmenden sollten <b>vor</b> dem ersten Sprechen erfahren, dass hier eine KI übersetzt und was mit ihrer Stimme geschieht. Mündlich oder als Aushang neben dem QR-Code, z. B.:</p>
+    <blockquote id="infoQuote">Diese Veranstaltung wird mit einer KI übersetzt. Wenn Sie in Ihrem Gerät sprechen, wird Ihre Stimme nur zum Übersetzen an einen Server gesendet und nicht gespeichert; Untertitel und Ton erscheinen auf den Geräten. Die Übersetzung kann Fehler enthalten. Auf Wunsch steht eine menschliche Dolmetscherin oder ein menschlicher Dolmetscher zur Verfügung. Verantwortlich: [Stelle eintragen]. Datenschutzhinweis: [Adresse eintragen].</blockquote>
+    <p class="muted">Die Stellen in eckigen Klammern müssen Sie selbst ausfüllen. Der Server bietet den Text nur an, er prüft nicht, ob informiert wurde.</p>
+  </details>
   <details id="single">
     <summary>Einzel-Links je Sprache (z. B. für fest zugeordnete Tablets)</summary>
     <p class="muted">Ein Einzel-Link öffnet direkt eine Sprache, ohne Auswahl.</p>

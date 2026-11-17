@@ -61,6 +61,7 @@ BASE_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "no-store",
+    "Strict-Transport-Security": "max-age=31536000",      # nur ueber HTTPS wirksam (Browser ignorieren ihn ueber HTTP); ohne includeSubDomains/preload
     "Permissions-Policy": "microphone=(self), camera=(), geolocation=(), interest-cohort=()",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
@@ -199,6 +200,10 @@ class FailureLimiter:
 
     def _id(self, client: str) -> str:
         return hmac.new(self._salt, client.encode("utf-8", "surrogatepass"), "sha256").hexdigest()[:16]
+
+    def ident(self, client: str) -> str:
+        """Pseudonyme Absender-Kennung (HMAC mit zufaelligem Salz): fuer alle Zaehler, die Absender unterscheiden muessen, ohne die Adresse zu halten."""
+        return self._id(client)
 
     def blocked_for(self, client: str) -> int:
         """Restliche Sperrzeit in Sekunden (0 = nicht gesperrt)."""

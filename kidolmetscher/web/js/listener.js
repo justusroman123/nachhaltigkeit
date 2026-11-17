@@ -31,18 +31,25 @@
     $('notice').dir = dir;
     $('btnStartSound').textContent = '🔊  ' + s.start; $('btnSubsOnly').textContent = s.subsOnly;
     $('startAi').textContent = s.ai; startScreen.dir = dir;
+    $('startPrivacy').textContent = s.privacyShort || STRINGS.en.privacyShort;                 // Information VOR der ersten Aufnahme (Art. 13 DSGVO), ohne Extra-Klick
+    $('startPrivacyLink').textContent = s.privacy;
     vol.setAttribute('aria-label', s.volume); vol.title = s.volume;
   }
 
   /* ---------- Sprachauswahl ---------- */
   function showPicker(langs) {
     picker.querySelectorAll('button').forEach((b) => b.remove());
+    const info = $('pickerInfo');
     langs.forEach((l) => {
       const b = document.createElement('button');
       b.textContent = NAMES[l] || l; b.lang = l; b.dir = RTL.includes(l) ? 'rtl' : 'ltr';
       b.addEventListener('click', () => choose(l));
-      picker.appendChild(b);
+      picker.insertBefore(b, info);
     });
+    // Noch keine Sprache gewaehlt: Hinweis zweisprachig und mit Link zum Datenschutzhinweis
+    info.replaceChildren(document.createTextNode(STRINGS.de.ai + ' ' + STRINGS.de.privacyShort + ' / ' + STRINGS.en.ai + ' ' + STRINGS.en.privacyShort + ' '));
+    const a = document.createElement('a'); a.href = 'datenschutz.html'; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Datenschutz / Privacy';
+    info.appendChild(a);
     picker.hidden = false;
   }
   function choose(l) {
@@ -121,10 +128,10 @@
     audioCtx = audioCtx || new AudioContext();    // erst nach Tipp erlaubt (Autoplay-Regeln der Tablets)
     if (!gain) { gain = audioCtx.createGain(); gain.connect(audioCtx.destination); gain.gain.value = Number(vol.value); }
     await audioCtx.resume();
-    soundOn = true; btnSound.textContent = '🔊';
+    soundOn = true; btnSound.textContent = '🔊'; btnSound.setAttribute('aria-pressed', 'true');
   }
   function disableSound() {
-    soundOn = false; btnSound.textContent = '🔇';
+    soundOn = false; btnSound.textContent = '🔇'; btnSound.setAttribute('aria-pressed', 'false');
     sources.forEach((src) => { try { src.stop(); } catch (_) {} });         // schon eingeplanter Ton wird abgebrochen (die Rueckmeldung "fertig" folgt trotzdem)
     sources.clear(); nextStart = 0;
   }
@@ -133,15 +140,27 @@
   $('btnStartSound').addEventListener('click', async () => { await enableSound(); startScreen.hidden = true; });
   $('btnSubsOnly').addEventListener('click', () => { startScreen.hidden = true; });
 
+  let wakeLock = null;
   async function keepAwake() {
-    try { if ('wakeLock' in navigator) await navigator.wakeLock.request('screen'); } catch (_) {}
+    try {
+      if ('wakeLock' in navigator && !wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch (_) {}
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !ended) keepAwake(); });
+  function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch (_) {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !ended) keepAwake();
+    if (document.hidden && !talking && !wanting && !pendingOn) micClose();       // im Hintergrund kein offenes Mikrofon (Aufnahme-Anzeige des Geraets)
+  });
 
   /* ---------- Verbindung ---------- */
   function end(text, cls, symbol) {
     ended = true; status(text, cls); picker.hidden = true; startScreen.hidden = true; notice(symbol);
     resetTalk(); micClose(); dock.hidden = true;     // Mikrofon freigeben (Anzeige am Tablet geht aus), keine Sprechleiste mehr
+    releaseAwake();
+    try { history.replaceState(null, '', location.pathname); } catch (_) {}      // Zugangscode und Sprache nicht im Browserverlauf stehen lassen
   }
 
   function connect() {
@@ -283,12 +302,15 @@
   }
   async function autoStart() {                                // nur nach eigener Wortmeldung (Mikrofon-Freigabe wurde beim Antippen erteilt)
     if (!wanting || talking || !micNode) return;
+    lastMicUse = Date.now();
     micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; });
     talking = true;
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (_) {}       // Signal: Sie sind dran, das Mikrofon ist jetzt offen
     sendJson({ type: 'talk', on: true });
     talkRender();
   }
   function startMic(rate) {                                   // nie zweimal gleichzeitig (Doppeltipp, langsame Freigabe): gemeinsames Versprechen
+    lastMicUse = Date.now();
     if (micNode) { micStream.getAudioTracks().forEach((tr) => { tr.enabled = true; }); return Promise.resolve(true); }
     if (micStarting) return micStarting;
     micStarting = (async () => {
@@ -311,7 +333,12 @@
     })();
     return micStarting;
   }
-  function micOff() { if (micStream) micStream.getAudioTracks().forEach((tr) => { tr.enabled = false; }); }   // zwischen den Aussagen stumm
+  let lastMicUse = 0;
+  const MIC_IDLE_MS = 20000;                                  // Annahme: 20 s ohne Sprechen oder Wortmeldung, dann wird das Mikrofon wirklich freigegeben
+  setInterval(() => {                                         // zwischen den Aussagen nur stumm, nach Leerlauf ganz zu (Aufnahme-Anzeige des Geraets geht aus)
+    if (micNode && !talking && !wanting && !pendingOn && !mine() && Date.now() - lastMicUse > MIC_IDLE_MS) micClose();
+  }, 3000);
+  function micOff() { if (micStream) micStream.getAudioTracks().forEach((tr) => { tr.enabled = false; }); lastMicUse = Date.now(); }   // zwischen den Aussagen stumm
   function micClose() {                                       // Mikrofon wirklich freigeben (Ende, Seite verlassen): Aufnahme-Anzeige des Geraets geht aus
     try { if (micStream) micStream.getTracks().forEach((tr) => tr.stop()); } catch (_) {}
     try { if (micCtx) micCtx.close(); } catch (_) {}
@@ -319,6 +346,7 @@
   }
   function onMicBlock(buf) {
     if (!talking) return;
+    lastMicUse = Date.now();
     if (ws && ws.readyState === 1) ws.send(buf);
     const a = new Int16Array(buf); let sum = 0;
     for (let i = 0; i < a.length; i++) sum += a[i] * a[i];

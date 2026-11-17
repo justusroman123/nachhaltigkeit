@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 import segno
 from pydantic import BaseModel
 
-from .config import Settings
+from .config import Settings, apply_offline_defaults
 from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_EXPIRED, WS_FULL, WS_NOT_FOUND,
                        WS_RATE_LIMITED, WS_UNAUTHORIZED, control_message)
 from .conversation import GuestPath
@@ -116,6 +116,13 @@ class QrRequest(BaseModel):
 def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline] = None,
                clock: Callable[[], float] = time.time, turn_clock: Optional[Callable[[], float]] = None) -> FastAPI:
     settings = settings or Settings.from_env()
+    apply_offline_defaults(settings)                 # Bibliotheken sollen zur Laufzeit nicht nach Hause telefonieren (vor dem Laden der Modelle)
+    if not settings.origin_check:
+        log.warning("start_warnung origin_check=aus (nur fuer Vorschau-Tests hinter Zwischenservern)")
+    if settings.allow_no_key and not settings.operator_key:
+        log.warning("start_warnung demo_ohne_schluessel=an (nur auf diesem Rechner, nicht fuer echte Gespraeche)")
+    if settings.debug_fehler:
+        log.warning("start_warnung debug_fehler=an (Fehlermeldungen koennen Textteile enthalten; nur mit Testinhalten)")
     pipeline = pipeline or build_pipeline(settings)
     rooms = RoomManager(settings, clock, turn_clock)
     page_hashes = collect_page_hashes(settings.web_dir)
@@ -161,11 +168,15 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     log.info("raeume_abgelaufen=%d", n)
 
         async def ticker():
-            """Zeitgrenzen der Sperre fuer alle Raeume, auch wenn gerade kein Bedienplatz verbunden ist."""
+            """Zeitgrenzen der Sperre fuer alle Raeume, auch wenn gerade kein Bedienplatz verbunden ist; Verlauf aktiv kuerzen."""
+            n = 0
             while True:
                 await asyncio.sleep(TICK_INTERVAL_S)
+                n += 1
                 for room in rooms.all_rooms():
                     try:
+                        if n % 25 == 0:                                 # etwa alle 5 s: aelteste Untertitel loeschen (history_s), auch ohne Abruf
+                            room.purge_history()
                         room.turns.tick()
                         if room.flow.tick():                        # Geraet meldet nicht "fertig": dem Bedienplatz sagen
                             room.push_operator(control_message("problem", what="geraet_antwortet_nicht"))
@@ -223,7 +234,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         if demo_open:
             return True                       # Demo nur auf diesem Rechner (siehe config.validate)
         # surrogatepass: auch ein einzelnes Unicode-Surrogat (gueltiges JSON) darf nicht abstuerzen, es ist einfach ein falscher Schluessel
-        return isinstance(key, str) and hmac.compare_digest(
+        return bool(settings.operator_key) and isinstance(key, str) and hmac.compare_digest(
             key.encode("utf-8", "surrogatepass"), settings.operator_key.encode("utf-8", "surrogatepass"))
 
     def origin_ok(ws: WebSocket) -> bool:
@@ -235,7 +246,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
     async def read_hello(ws: WebSocket) -> Optional[dict]:
         """Erstes Frame lesen: klein, rechtzeitig, und nur so viele wartende Verbindungen wie erlaubt (vor jeder Anmeldung)."""
-        who = who_is(ws)
+        who = limiter.ident(who_is(ws))                  # nur die pseudonyme Kennung halten, nie die Adresse
         if sum(hello_open.values()) >= MAX_HELLO_TOTAL or hello_open.get(who, 0) >= MAX_HELLO_PER_CLIENT:
             return None
         hello_open[who] = hello_open.get(who, 0) + 1
@@ -431,6 +442,9 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                              room.counters["segments"], room.counters["translations"], room.counters["pipeline_errors"])
                 item = await room.next_operator_message(0.2)
                 try:
+                    if room.closed:                              # Sitzung beendet (anderer Tab, Ablauf, Leerlauf): Bedienplatz nicht offen lassen
+                        await safe_close(ws, 1000)
+                        return
                     if item is not None:
                         await to_operator(item)
                     if room.take_lost_operator_messages():     # Ueberlauf: nie still verlieren
