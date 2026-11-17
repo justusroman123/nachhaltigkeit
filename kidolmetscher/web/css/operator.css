@@ -15,6 +15,11 @@ legend { padding: 0 .4rem; }
 .row select { width: auto; }
 button.big { min-height: 56px; font-size: 1.1rem; padding: .6rem 1.2rem; }
 button.danger { border-color: var(--bad); color: var(--bad); margin-top: 1rem; }
+.devices { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); }
+.devline { font-size: 1.1rem; margin: .2rem 0 .5rem; }
+.devline.alert { color: var(--bad); font-weight: 700; }
+.joinnote { border: 2px solid var(--bad); border-radius: 8px; padding: .5rem .8rem; margin: .5rem 0; font-weight: 600; }
+.devices button.danger { margin-top: .2rem; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { display: inline-flex; align-items: center; gap: .5rem; padding: .55rem .9rem; min-height: 48px;
         border: 1px solid var(--line); border-radius: 999px; background: var(--bg); cursor: pointer; }

@@ -224,6 +224,18 @@ async function szenario(b, name, fn, opts) {                      // frische Sei
     ok(await until(() => !/testtoken/.test(page.url()), 3000), 'danach nicht mehr');
   });
 
+  await szenario(b, 'Tuer zu: Der Mitarbeiter trennt alle Geraete - Meldung, Mikrofon frei, keine Neuverbindung, Code aus der Adresszeile', async (page, S, n) => {
+    await page.click('#btnTalk'); await until(() => n('talk', { on: true }) === 1);
+    S.ws.send(turn('spricht', DEV)); await until(() => n('audio') > 3);
+    const verbindungen = S.conns;
+    S.ws.send(msg('removed')); S.ws.close({ code: 4403, reason: 'entfernt' });
+    ok(await until(async () => /Vom Mitarbeiter getrennt/.test(await page.textContent('#status')), 3000), 'Gast sieht: vom Mitarbeiter getrennt');
+    ok(await until(() => page.evaluate(() => window.__streams.every((s) => s.getTracks().every((t) => t.readyState === 'ended'))), 3000), 'Mikrofon ist ganz freigegeben');
+    ok(!/testtoken/.test(page.url()), 'Zugangscode steht nicht mehr in der Adresszeile');
+    await sleep(3500);
+    ok(S.conns === verbindungen, 'die Seite verbindet sich nicht neu (' + S.conns + ' Verbindungen)');
+  });
+
   await b.close();
   console.log(fails ? fails + ' FEHLER' : 'alles ok');
   process.exit(fails ? 1 : 0);

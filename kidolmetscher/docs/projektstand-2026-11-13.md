@@ -516,7 +516,7 @@ Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Absc
 **Tests:** 326 bestanden, 3 übersprungen (vorher 236/3). Neu: `test_gespraech_ws.py`, `test_gespraech_zufall.py` (Zufallsläufe über echte WebSockets), `test_gespraech_luecken.py`, `test_turns_wettlauf.py`, `test_sicherheit.py` (u. a. echter Server-Prozess). Browser (Chromium mit Fake-Mikrofon, nicht Teil von pytest, Exit-Code bei Fehler): `server/tests/e2e/gast_ohne_server.js`, `operator_ohne_server.js`, `gespraech.js` sowie die bestehenden `browser_smoke.js` und `pruefung_f.js` (Vortrag): alle bestanden.
 
 **Bewusst nicht umgesetzt / offen (Hürden):**
-- **S10:** Ein Zuhörer-Link ist bis zum Ablauf ein „Dauerpasswort“: wer ihn kennt, kann (bis zu 3) Gästeplätze belegen; der Mitarbeiter kann niemanden entfernen und den Link nicht widerrufen. Außerdem sehen Gäste die zufälligen Kennungen der anderen Gäste in den Zustandsmeldungen (keine Rechte daran). Maßnahme für den Behördeneinsatz: Funktionen „Gast entfernen“, „Link widerrufen“, Sicht nur auf die eigene Rolle.
+- **S10:** Ein Zuhörer-Link ist bis zum Ablauf ein „Dauerpasswort“: wer ihn kennt, kann (bis zu 3) Gästeplätze belegen; der Mitarbeiter kann niemanden entfernen und den Link nicht widerrufen. Außerdem sehen Gäste die zufälligen Kennungen der anderen Gäste in den Zustandsmeldungen (keine Rechte daran). Maßnahme für den Behördeneinsatz: Funktionen „Gast entfernen“, „Link widerrufen“, Sicht nur auf die eigene Rolle. *Teilweise erledigt am 17.11.2026 (Abschnitt 35): Beitritte sind am Bedienplatz sofort sichtbar, ein Knopf „Alle trennen, neuen Link erzeugen“ widerruft alle Links und trennt alle Geräte, Gäste sehen keine fremden Kennungen. Weiter offen: einzelne Geräte entfernen, Bindung eines Links an ein Gerät.*
 - **S6 (Teil):** Ein Fremder, der **dieselbe öffentliche Adresse** wie der Bedienplatz nutzt (gemeinsames Netz/NAT) und 10 falsche Schlüssel sendet, sperrt den Bediener für 15 Minuten aus. Abhilfe wäre eine zufällige Sitzungskennung nach erfolgreicher Anmeldung (Schlüssel nur einmal senden); nicht umgesetzt.
 - **Nicht prüfbar in dieser Umgebung:** echte Tablets (iOS/Safari: Mikrofon, Hintergrund, Sperrbildschirm), echte Sprachausgabe und Erkennung bei Verbindungsabbruch, Verhalten der Skripte auf der echten VM (Aktualisierung: `scripts/vm_aktualisieren.sh`).
 - Die Gutachter-Befunde zu Barrierefreiheit (Kontrast Dunkelmodus) sind behoben (`.chk .st.ok` nutzt die Farbvariable); eine vollständige Barrierefreiheitsprüfung (BITV/EN 301 549) steht aus.
@@ -559,3 +559,19 @@ Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Absc
 - *Verbindung und Sitzung:* tote Verbindung nach etwa 20 s; Raum ohne Bedienplatz nach `ROOM_IDLE_S` (1 h); Sitzung spätestens nach `ROOM_TTL_S` (12 h).
 
 **Wichtig:** Die laufende VM zeigt das **alte** Verhalten (120 s Stille-Frist, Trennung bei Link-Ablauf), bis `scripts/vm_aktualisieren.sh` ausgeführt wurde.
+
+
+## 35. Zugang der Zuhörer: Niemand soll heimlich mithören können (17.11.2026, Nachmittag)
+
+**Anlass:** Nutzerwunsch: Die Anwendung muss sehr sicher sein; vor allem darf niemand heimlich zuhören können. Das war die bekannte Hürde S10 (Abschnitt 32): Ein weitergegebener Link oder ein fotografierter QR-Code war bis zum Ablauf ein Dauerpasswort, und der Mitarbeiter sah nicht, wer zuhört.
+
+**Umgesetzt (Server, Browser, Tests; E50, E51):**
+- **Jeder Beitritt und jeder Weggang ist am Bedienplatz sofort sichtbar:** Hinweis „Neues Gerät verbunden (Sprache)“, Anzeige „Verbunden: N“, im Gespräch **Warnfarbe ab dem zweiten Gerät**. Nur Art, Sprache und Zahl, **keine Kennung**. Ein Beitritt, der geschieht, bevor der Bedienplatz verbunden ist, wird nachgeliefert; die Abfrage alle 2 s fängt außerdem jeden Anstieg ab.
+- **Ein neuer Knopf „Alle trennen, neuen Link erzeugen“** (zweimal tippen): alle Links des Raums werden ungültig, alle verbundenen Geräte bekommen „vom Mitarbeiter getrennt“ und verbinden sich nicht neu, ein neuer Link und QR-Code steht sofort da (`POST /api/rooms/{id}/disconnect-all`, nur mit Bedienschlüssel). **Abweichung von der Regel „keine zusätzlichen Schalter“ (CLAUDE.md): ein zusätzlicher Knopf. Bitte bestätigen oder streichen.**
+- **Gäste sehen keine Kennungen anderer Gäste mehr:** Im Zustand der Sperre erfahren sie nur „Mitarbeiter“, sich selbst oder „gast“.
+- **Gespräch: Link standardmäßig nur 30 Minuten zum Beitreten gültig** (kürzeste Wahl; im Bedienplatz änderbar). Verbundene Geräte bleiben bis zum Sitzungsende verbunden (Abschnitt 34).
+- **Tests:** 8 neue Server-Tests (`test_zugang.py`; durch vier Mutationen geprüft: ohne die Anonymisierung, ohne Widerruf der Links, ohne Trennung oder ohne Beitritts-Meldung schlagen sie fehl), drei neue Browser-Szenarien (Beitritt sichtbar, „Alle trennen“, Gast wird getrennt) und eine Ende-zu-Ende-Prüfung mit echtem Server. Gesamt: **345 bestanden, 4 übersprungen**. Die Browser-Skripte beenden ihre Sitzungen jetzt selbst, sodass wiederholte Läufe die Raum-Obergrenze nicht mehr füllen (die Hinweiszeile aus Abschnitt 33 zum Neustart des Testservers gilt nicht mehr).
+
+**Weiter offen (nicht umgesetzt):** einzelne Geräte entfernen (die Kennungen müssten angezeigt werden); Link an ein Gerät binden (ohne Cookies kein Merkmal, Wiederverbinden nach Netzwechsel schwierig); eine akustische Erkennung durch Wartende (Hörer oder Kopfhörer am Gast-Gerät, siehe Hardware-Dokumente in Drive); gemeinsamer Bedienschlüssel; Aussperren hinter gemeinsamer Adresse (S6, Teil).
+
+**Wichtig:** Die laufende VM zeigt das alte Verhalten, bis `scripts/vm_aktualisieren.sh` ausgeführt wurde.

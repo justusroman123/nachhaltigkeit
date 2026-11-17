@@ -26,6 +26,7 @@ WS_EXPIRED = 4408
 WS_CONFLICT = 4409
 WS_FULL = 4429
 WS_RATE_LIMITED = 4430      # zu viele falsche Schluessel: Absender vorübergehend gesperrt
+WS_REMOVED = 4403           # der Mitarbeiter hat alle Gaeste getrennt und die Links ungueltig gemacht
 
 
 def now_ms() -> int:

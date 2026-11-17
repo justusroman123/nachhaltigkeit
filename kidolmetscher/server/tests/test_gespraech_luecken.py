@@ -470,7 +470,7 @@ def test_B4_wortmeldung_von_gaesten_der_reihe_nach_automatisch_und_zurueckziehen
         recv_until(op, lambda m: m["type"] == "turn" and m.get("waiting") == [db, da])
         op.send_json({"type": "talk", "on": False})                    # Mitarbeiter: Fertig
         m, _ = recv_until(b, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == db)
-        assert m["reason"] == "naechster" and m["waiting"] == [da]    # B ist als Erster dran (nicht A)
+        assert m["reason"] == "naechster" and m["waiting"] == ["gast"]    # B ist als Erster dran (nicht A); B sieht A nur als "gast", nie die Kennung (S10)
         b.send_json({"type": "talk", "on": True}); b.send_json({"type": "talk", "on": False})   # B bestaetigt und ist fertig
         m, _ = recv_until(a, lambda m: m["type"] == "turn" and m["state"] == "spricht" and m["who"] == da)
         assert m["reason"] == "naechster" and m["waiting"] == []

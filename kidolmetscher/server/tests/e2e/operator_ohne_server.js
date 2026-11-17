@@ -55,13 +55,17 @@ async function sitzungStarten(page, got) {
   await until(() => got.filter((m) => m.type === 'hello').length > vorher);
   await sleep(500);
 }
+async function schliessen(page, ctx) {                         // Sitzung beenden (loescht den Raum auf dem Server), damit wiederholte Laeufe die Obergrenze MAX_ROOMS nicht fuellen
+  try { if (await page.locator('#btnEnd').isVisible()) { await page.click('#btnEnd'); await sleep(400); } } catch (_) {}
+  await ctx.close();
+}
 async function szenario(b, name, fn) {
   console.log('--- ' + name);
   const { ctx, page, got, S, n } = await seite(b);
   await page.goto(BASE + '/operator.html');
   await sitzungStarten(page, got);
   await fn(page, S, n, got);
-  await ctx.close();
+  await schliessen(page, ctx);
 }
 
 (async () => {
@@ -130,7 +134,7 @@ async function szenario(b, name, fn) {
     ok(/gibt es nicht mehr/.test(await page.textContent('#roomMsg')), 'Klartext: Sitzung gibt es nicht mehr');
     const c = S.conns; await sleep(3500);
     ok(S.conns === c, 'es wird nicht endlos neu verbunden');
-    await ctx.close();
+    await schliessen(page, ctx);
   }
 
   console.log('--- B-12: Doppelklick auf "Sitzung starten" legt nur einen Raum an');
@@ -146,7 +150,7 @@ async function szenario(b, name, fn) {
     ok(S.conns === 1, 'genau eine Verbindung zum Server (' + S.conns + ')');
     await page.click('#btnTalk');
     ok(await until(() => n('talk', { on: true }) === 1, 2000), 'Sprechen funktioniert');
-    await ctx.close();
+    await schliessen(page, ctx);
   }
 
   console.log('--- B-10: zweite Sitzung im selben Tab zeigt die ersten Saetze; Vorlesung endet mit der Sitzung');
@@ -166,7 +170,7 @@ async function szenario(b, name, fn) {
     S.ws.send(msg('translation', { seq: 0, lang: 'uk', text: 'NEU', text_src: 'neu-quelle', t: { t_audio_in: 1, t_asr: 2, t_mt: 3, t_tts: 4, t_out: 5 } }));
     ok(await until(async () => (await page.locator('.chk').count()) === 1 && /neu-quelle/.test(await page.textContent('#checkList'))), 'in der zweiten Sitzung erscheint der erste Satz sichtbar');
     ok(!/alt-quelle/.test(await page.textContent('#checkList')), 'keine Reste der ersten Sitzung');
-    await ctx.close();
+    await schliessen(page, ctx);
   }
 
 
@@ -179,7 +183,7 @@ async function szenario(b, name, fn) {
     await page.fill('#base', 'https://dolmetscher.example.org'); await page.click('#btnNewLink');
     ok(await until(async () => !/Unverschlüsselte/.test(await page.textContent('#linkInfo')), 3000), 'bei https keine Warnung');
     ok(/vor.*dem ersten Sprechen/s.test(await page.textContent('#infoText')) || (await page.locator('#infoText').count()) === 1, 'Textvorschlag zur Information der Teilnehmenden ist vorhanden');
-    await ctx.close();
+    await schliessen(page, ctx);
   }
 
 
@@ -193,7 +197,7 @@ async function szenario(b, name, fn) {
     ok((await page.evaluate(() => window.__wl.type)) === 'screen', 'Art der Sperre: screen');
     await page.click('#btnEnd');
     ok(await until(async () => (await page.evaluate(() => window.__wl.rel)) === 1), 'Sitzung beendet: Sperre wieder freigegeben');
-    await ctx.close();
+    await schliessen(page, ctx);
   }
 
   console.log('--- B-14: Mitarbeiter spricht 3 Stunden (Uhr der Seite vorgestellt): die Seite beendet die Aussage nie von selbst, nur "Fertig" tut es');
@@ -211,7 +215,44 @@ async function szenario(b, name, fn) {
     ok(/Fertig/.test(await page.textContent('#btnTalk')), 'der Knopf heisst weiter "Fertig"');
     await page.click('#btnTalk');
     ok(await until(() => n('talk', { on: false }) === 1, 2000), 'erst "Fertig" beendet die Aussage');
-    await ctx.close();
+    await schliessen(page, ctx);
+  }
+
+  console.log('--- B-15: Jeder Beitritt wird sofort angezeigt (Zahl, Sprache, Hinweis); mehr Geraete als erwartet fallen im Gespraech auf');
+  {
+    const { ctx, page, got, S, n } = await seite(b);
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    ok((await page.textContent('#devCount')) === '0' && (await page.isHidden('#joinNote')), 'zu Beginn: 0 Geraete, kein Hinweis');
+    S.ws.send(msg('listeners', { change: 'join', lang: 'uk', count: 1, by_lang: { uk: 1 } }));
+    ok(await until(async () => /Neues Gerät verbunden \(Ukrainisch\)/.test(await page.textContent('#joinNote'))), 'Hinweis "Neues Geraet verbunden (Ukrainisch)" erscheint sofort');
+    ok((await page.textContent('#devCount')) === '1', 'Zaehler zeigt 1');
+    ok(!(await page.evaluate(() => document.getElementById('devLine').classList.contains('alert'))), 'bei einem Gast keine Warnfarbe');
+    S.ws.send(msg('listeners', { change: 'join', lang: null, count: 2, by_lang: { uk: 1 } }));
+    ok(await until(async () => (await page.textContent('#devCount')) === '2'), 'Zaehler zeigt 2');
+    ok(await page.evaluate(() => document.getElementById('devLine').classList.contains('alert')), 'im Gespraech faellt ein zweites Geraet durch die Warnfarbe auf');
+    S.ws.send(msg('listeners', { change: 'leave', lang: 'uk', count: 1, by_lang: {} }));
+    ok(await until(async () => /Gerät getrennt/.test(await page.textContent('#joinNote'))), 'Weggang wird gemeldet');
+    await schliessen(page, ctx);
+  }
+
+  console.log('--- B-16: "Alle trennen, neuen Link erzeugen": erst nachfragen, dann trennen; der neue Link steht sofort da, der alte ist ungueltig');
+  {
+    const { ctx, page, got, S, n } = await seite(b);
+    const posts = [];
+    page.on('request', (r) => { if (r.method() === 'POST' && /disconnect-all$/.test(r.url())) posts.push(r.url()); });
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    const alt = await page.textContent('#linkText');
+    await page.click('#btnDoorShut');
+    ok(/Wirklich alle trennen/.test(await page.textContent('#btnDoorShut')) && posts.length === 0, 'erster Tipp fragt nur nach, nichts wird getrennt');
+    await page.click('#btnDoorShut');
+    ok(await until(() => posts.length === 1), 'zweiter Tipp loest das Trennen aus (genau ein Aufruf)');
+    ok(await until(async () => { const t = await page.textContent('#linkText'); return t && t !== alt; }, 6000), 'ein neuer Link steht da');
+    ok(await until(async () => /getrennt/.test(await page.textContent('#joinNote'))), 'Meldung ueber das Trennen');
+    ok((await page.textContent('#btnDoorShut')) === 'Alle trennen, neuen Link erzeugen', 'Knopf ist wieder im Ausgangszustand');
+    const tok = (u) => (u.match(/#t=([^&]+)/) || [])[1];
+    const alt_tok = tok(alt), neu_tok = tok(await page.textContent('#linkText'));
+    ok(alt_tok && neu_tok && alt_tok !== neu_tok, 'neuer Zugangscode');
+    await schliessen(page, ctx);
   }
 
   await b.close();

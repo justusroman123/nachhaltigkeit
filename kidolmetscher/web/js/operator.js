@@ -16,7 +16,8 @@
     backlog: $('backlog'), cost: $('cost'), demo: $('btnDemo'),
     talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg'),
     vortragBox: $('vortragBox'), convBox: $('convBox'), btnTalk: $('btnTalk'), btnRelease: $('btnRelease'),
-    stepGuest: $('stepGuest'), guestLog: $('guestLog'), stepCheck: $('stepCheck'), checkList: $('checkList'), problemBar: $('problemBar') };
+    stepGuest: $('stepGuest'), guestLog: $('guestLog'), stepCheck: $('stepCheck'), checkList: $('checkList'), problemBar: $('problemBar'),
+    devLine: $('devLine'), devCount: $('devCount'), joinNote: $('joinNote'), doorShut: $('btnDoorShut') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
@@ -312,6 +313,7 @@
     [e.stepInvite, e.stepMic, e.stepLive, e.stepCheck].forEach((s) => { s.hidden = false; });
     const conversation = room.mode !== 'vortrag';              // Dolmetschen und Gespraech: Sprechen-Knopf mit Sperre
     e.vortragBox.hidden = conversation; e.convBox.hidden = !conversation; e.stepGuest.hidden = room.mode !== 'gespraech';
+    if (room.mode === 'gespraech' && e.ttl.options.length) e.ttl.selectedIndex = 0;      // Gespraech: der Gast scannt sofort, der Link soll nur kurz zum Beitreten taugen (kuerzeste Dauer)
     await createInvite();
     renderSingleLinks();
     await listDevices();
@@ -333,9 +335,49 @@
   }
   function releaseAwake() { try { if (wakeLock) wakeLock.release(); } catch (_) {} wakeLock = null; }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && room) keepAwake(); });          // Sperre geht beim Wechsel des Tabs verloren: neu anfordern
+  /* ---------- Wer ist verbunden: jeder Beitritt ist sofort sichtbar, "Tuer zu" trennt alle (kein heimliches Mithoeren) ----------
+     Nur Zahlen und Sprache, keine Kennungen. Meldung vom Server (WebSocket) sofort; die Abfrage alle 2 s faengt auch den Fall ab, dass der
+     Bedienplatz noch nicht verbunden war (Vortrag vor "Senden starten"). */
+  let devCount = 0, joinNoteTimer = 0, joinNoteAt = 0, doorArmed = 0;
+  const DOOR_LABEL = 'Alle trennen, neuen Link erzeugen';
+  function devRender() {
+    e.devCount.textContent = String(devCount);
+    e.devLine.classList.toggle('alert', devCount > 1 && !!room && room.mode === 'gespraech');      // im Gespraech ist meist ein Gast erwartet
+  }
+  function joinNote(text) {
+    e.joinNote.textContent = text; e.joinNote.hidden = false; joinNoteAt = performance.now();
+    clearTimeout(joinNoteTimer); joinNoteTimer = setTimeout(() => { e.joinNote.hidden = true; }, 15000);
+  }
+  function listenersEvent(d) {
+    devCount = Number(d.count) || 0; devRender();
+    const l = d.lang ? (LANG_DE[d.lang] || d.lang) : 'Sprache noch nicht gewählt';
+    if (d.change === 'join') joinNote('⚠ Neues Gerät verbunden (' + l + '). Jetzt verbunden: ' + devCount + '.');
+    else if (d.change === 'leave') joinNote('Gerät getrennt (' + l + '). Jetzt verbunden: ' + devCount + '.');
+  }
+  function devPoll(n) {                                            // Zahl aus der Abfrage; ein Anstieg ohne frische Meldung vom Server wird trotzdem gezeigt
+    if (n > devCount && performance.now() - joinNoteAt > 4000) joinNote('⚠ Neues Gerät verbunden. Jetzt verbunden: ' + n + '.');
+    devCount = n; devRender();
+  }
+  e.doorShut.addEventListener('click', async () => {
+    if (!room) return;
+    if (!doorArmed) {                                              // erster Tipp fragt nach, der zweite innerhalb von 5 s fuehrt aus
+      e.doorShut.textContent = 'Wirklich alle trennen? Nochmal tippen';
+      doorArmed = setTimeout(() => { doorArmed = 0; e.doorShut.textContent = DOOR_LABEL; }, 5000);
+      return;
+    }
+    clearTimeout(doorArmed); doorArmed = 0; e.doorShut.textContent = DOOR_LABEL;
+    try {
+      const r = await api('POST', '/api/rooms/' + room.room_id + '/disconnect-all');
+      if (!r.ok) return joinNote('Trennen fehlgeschlagen (Fehler ' + r.status + ').');
+      const d = await r.json();
+      await createInvite();                                        // sofort ein neuer Link und QR-Code
+      joinNote(d.disconnected + ' Gerät(e) getrennt. Der alte Link ist ungültig; oben steht ein neuer Link.');
+    } catch (_) { joinNote('Server nicht erreichbar.'); }
+  });
   function placeholder(id, text) { const p = document.createElement('p'); p.className = 'muted'; p.id = id; p.textContent = text; return p; }
   function resetSessionUi() {                                      // alles auf Anfang: Anzeige, Verlauf, Zustand, Timer
     room = null; key = ''; releaseAwake();
+    devCount = 0; devRender(); e.joinNote.hidden = true; clearTimeout(joinNoteTimer); clearTimeout(doorArmed); doorArmed = 0; e.doorShut.textContent = DOOR_LABEL;
     stopGerman(); convReset();
     flow.busy = false; flow.pending = 0; flow.awaiting = 0; flow.seenBusy = false;
     checks.clear();
@@ -472,6 +514,7 @@
       } else if (d.type === 'translation') { showMessage(d); talkTranslated(); checkTranslation(d); }
       else if (d.type === 'turn') convTurn(d);
       else if (d.type === 'flow') { flow.busy = d.busy; flow.pending = d.pending; flow.awaiting = d.awaiting; if (d.busy) flow.seenBusy = true; if (room && room.mode === 'vortrag') vortragStatus(); }
+      else if (d.type === 'listeners') listenersEvent(d);
       else if (d.type === 'delivery') checkDelivery(d);
       else if (d.type === 'problem') showProblem(d);
       else if (d.type === 'busy') { conv.talking = false; convRender('Gerade spricht jemand oder es wird übersetzt.'); }
@@ -578,6 +621,7 @@
       if (r.status === 404) return sessionGone();
       if (!r.ok) return;
       const s = await r.json();
+      devPoll(s.listeners_connected);
       const chosen = Object.values(s.listeners).reduce((a, b) => a + b, 0);
       e.statTotal.textContent = s.listeners_connected === 0 ? 'Noch keine Zuhörer verbunden.'
         : s.listeners_connected + ' Zuhörer verbunden' +

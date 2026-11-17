@@ -29,12 +29,12 @@ from pydantic import BaseModel
 
 from .config import Settings, apply_offline_defaults
 from .messages import (RTL_LANGS, WS_BAD_REQUEST, WS_CONFLICT, WS_FULL, WS_NOT_FOUND,
-                       WS_RATE_LIMITED, WS_UNAUTHORIZED, control_message)
+                       WS_RATE_LIMITED, WS_REMOVED, WS_UNAUTHORIZED, control_message)
 from .conversation import GuestPath
 from .orchestrator import Orchestrator
 from .pipeline import build_pipeline
 from .pipeline.base import Pipeline
-from .rooms import END, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
+from .rooms import END, KICK, LanguageError, RoomError, RoomFullError, RoomManager, TokenError
 from .turns import SPRICHT
 from .security import (BASE_HEADERS, BodyLimitMiddleware, FailureLimiter, RateBucket, build_csp, client_of,
                        collect_page_hashes)
@@ -356,6 +356,17 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         s["budget_eur"] = settings.budget_eur or None
         return s
 
+    @app.post("/api/rooms/{room_id}/disconnect-all")
+    async def disconnect_all(request: Request, room_id: str, x_operator_key: Optional[str] = Header(default=None)):
+        """Tuer zu: alle Links des Raums ungueltig, alle verbundenen Zuhoerer getrennt. Danach erzeugt der Bedienplatz einen neuen Link."""
+        require_operator(x_operator_key, request)
+        room = rooms.get(room_id)
+        if room is None:
+            raise HTTPException(404, "Raum unbekannt")
+        n, links = room.revoke_all_access()
+        log.info("zugang_geschlossen getrennt=%d links=%d", n, links)
+        return {"disconnected": n, "links_revoked": links}
+
     @app.delete("/api/rooms/{room_id}")
     async def delete_room(request: Request, room_id: str, x_operator_key: Optional[str] = Header(default=None)):
         require_operator(x_operator_key, request)
@@ -576,7 +587,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
         def ready_message() -> dict:
             return control_message(
                 "ready", lang=listener.lang, langs=list(room.langs),
-                rtl=listener.lang in RTL_LANGS, mode=room.mode, turn=room.turns.snapshot(),
+                rtl=listener.lang in RTL_LANGS, mode=room.mode, turn=room.turn_view(f"gast:{listener.id}"),
                 device=f"gast:{listener.id}", sample_rate=settings.sample_rate,
                 operator_online=room.operator_active,
                 expires_in_s=max(0, int(listener.expires_at - clock())))
@@ -713,6 +724,10 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
                     if item is END:
                         await ws.send_json(control_message("session_end"))
                         await safe_close(ws, 1000)
+                        break
+                    if item is KICK:                    # der Mitarbeiter hat alle Gaeste getrennt: Link ist ungueltig, nicht neu verbinden
+                        await ws.send_json(control_message("removed"))
+                        await safe_close(ws, WS_REMOVED)
                         break
                     await ws.send_json(item)
                     if (isinstance(item, dict) and item.get("type") == "turn" and guest is not None and guest.busy

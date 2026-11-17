@@ -63,6 +63,7 @@ Bedienplatz (Chromebook, Browser)             Server (FastAPI, GPU-VM)          
 4. Bedienplatz verbindet `/ws/operator` (erste Nachricht: Raum und Schlüssel) und sendet Audio.
 5. Sitzungsende: `DELETE /api/rooms/{id}`, Raum-Ablauf `ROOM_TTL_S` (Standard 43200 s) oder ein Raum ohne verbundenen Bedienplatz nach `ROOM_IDLE_S` (Standard 3600 s):
    Tokens, Zuhörer, Ringpuffer und die Warteschlange zum Bedienplatz werden gelöscht, Zuhörer erhalten `session_end`.
+6. **Zugang (seit 17.11.2026, E50/E51):** Jeder Beitritt und jeder Weggang eines Zuhörers geht sofort als `listeners` an den Bedienplatz (Art, Sprache, Anzahl, keine Kennung). Der Bedienplatz zeigt „Verbunden: N“ und hat **einen** Knopf „Alle trennen, neuen Link erzeugen“ (`POST /api/rooms/{id}/disconnect-all`, nur mit Bedienschlüssel): alle Links des Raums werden ungültig, alle verbundenen Zuhörer erhalten `removed` und werden mit Code 4403 getrennt (die Seite verbindet sich nicht neu). Gäste sehen im Zustand der Sperre (`turn.who`, `turn.waiting`) nur `staff`, ihre eigene Kennung oder `gast`, nie die Kennung eines anderen Gastes.
    Je Raum gibt es höchstens `MAX_TOKENS_PER_ROOM` Zuhörer-Links (Standard 200).
 
 ### Ablauf im Gespräch (Betriebsart `gespraech`, seit 15.11.2026)

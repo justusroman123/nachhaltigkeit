@@ -38,6 +38,7 @@ class LanguageError(RoomError):
 
 
 END = object()   # Marker in Zuhoererwarteschlange: Sitzung beendet
+KICK = object()  # Marker in Zuhoererwarteschlange: der Mitarbeiter hat dieses Geraet getrennt
 
 
 def _audio_seconds(message: dict) -> float:
@@ -232,6 +233,7 @@ class Room:
         self._listeners[lst.id] = lst
         self.counters["listeners_total"] += 1
         self.counters["listeners_peak"] = max(self.counters["listeners_peak"], len(self._listeners))
+        self._listeners_changed("join", lst)           # jeder Beitritt wird dem Bedienplatz sofort gemeldet (kein heimliches Mithoeren)
         return lst
 
     def select_language(self, listener: Listener, lang: str) -> None:
@@ -245,7 +247,27 @@ class Room:
         listener.lang = lang
 
     def detach_listener(self, listener: Listener) -> None:
-        self._listeners.pop(listener.id, None)
+        gone = self._listeners.pop(listener.id, None)
+        if gone is not None and not self.closed:
+            self._listeners_changed("leave", listener)
+
+    def _listeners_changed(self, change: str, listener: Listener) -> None:
+        """Beitritt oder Weggang eines Geraets an den Bedienplatz melden: nur Art, Sprache und Zaehler, keine Kennung, keine Inhalte."""
+        self.push_operator(control_message("listeners", change=change, lang=listener.lang, count=len(self._listeners),
+                                           by_lang=self.listener_counts()))
+
+    def revoke_all_access(self) -> tuple[int, int]:
+        """Der Mitarbeiter schliesst die Tuer: alle Links dieses Raums werden ungueltig, alle verbundenen Zuhoerer werden getrennt
+        (sie bekommen die Meldung "removed"). Die Sitzung selbst und der Bedienplatz bleiben. Rueckgabe: (getrennte Geraete, widerrufene Links)."""
+        links = len(self._tokens)
+        self._tokens.clear()
+        n = 0
+        for l in list(self._listeners.values()):
+            l.push(KICK)
+            n += 1
+        self.counters["access_revoked"] += 1
+        self.counters["listeners_removed"] += n
+        return n, links
 
     def listener_counts(self) -> dict[str, int]:
         c = Counter(l.lang for l in self._listeners.values() if l.lang is not None)
@@ -312,12 +334,24 @@ class Room:
                 l.push(msg)
 
     # --- Gespraechsmodus ---
+    def turn_view(self, device: str) -> dict:
+        """Zustand der Sperre aus Sicht eines Gastes: "staff", die eigene Kennung oder "gast" (irgendein anderer Gast). Gaeste erfahren
+        keine Kennungen anderer Gaeste (S10)."""
+        snap = self.turns.snapshot()
+        return self._anon_turn(snap, device)
+
+    @staticmethod
+    def _anon_turn(snap: dict, device: str) -> dict:
+        def anon(x):
+            return x if x is None or x == "staff" or x == device else "gast"
+        return {**snap, "who": anon(snap.get("who")), "waiting": [anon(w) for w in snap.get("waiting", [])]}
+
     def _turn_changed(self, snapshot: dict) -> None:
-        """Zustand der Sperre an alle Geraete verteilen (nur Zustand und Rolle, keine Inhalte)."""
-        msg = control_message("turn", **snapshot)
-        self.push_operator(msg)
+        """Zustand der Sperre an alle Geraete verteilen (nur Zustand und Rolle, keine Inhalte). Der Bedienplatz sieht alle Kennungen,
+        ein Gast nur "staff", sich selbst und "gast"."""
+        self.push_operator(control_message("turn", **snapshot))
         for l in self._listeners.values():
-            l.push(msg)
+            l.push(control_message("turn", **self._anon_turn(snapshot, f"gast:{l.id}")))
 
     @property
     def tracker(self):

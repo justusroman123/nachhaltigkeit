@@ -213,6 +213,8 @@
         end('Ende', 'muted', '✔');
       } else if (d.type === 'token_expired') {
         end('Link abgelaufen', 'bad', '⏱');
+      } else if (d.type === 'removed') {
+        end('Vom Mitarbeiter getrennt', 'bad', '⛔');                 // Tuer zu: der Link ist ungueltig, nicht neu verbinden
       } else if (d.type === 'error') {
         if (d.code === 'lang_invalid') status('Sprache nicht verfügbar', 'warn');
         else if (d.code === 'room_full') { lastError = 'room_full'; status('Alle Plätze belegt, neuer Versuch …', 'warn'); }   // vorübergehend (z. B. alte Verbindung noch nicht abgelaufen): onclose versucht es erneut

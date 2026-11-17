@@ -72,6 +72,15 @@ const text = async (p, sel) => ((await p.textContent(sel)) || '').trim();
   ok(await until(async () => (await sent(op, 'played')) >= 1, 15000), 'B5/B6 Bedienplatz meldet "played" fuer die Gast-Antwort');
 
   await op.click('#btnTalk');                                    // Fertig
+
+  // Zugang: der Beitritt des Gastes war am Bedienplatz sichtbar; "Alle trennen" trennt den Gast wirklich und macht den alten Link ungueltig
+  ok((await text(op, '#devCount')) === '1', 'Z1 Bedienplatz zeigt "Verbunden: 1" (der Gast)');
+  await op.click('#btnDoorShut'); await op.click('#btnDoorShut');
+  ok(await until(async () => /Vom Mitarbeiter getrennt/.test(await text(g, '#status')), 8000), 'Z2 Gast-Seite zeigt "Vom Mitarbeiter getrennt"');
+  ok(await until(async () => (await text(op, '#devCount')) === '0', 8000), 'Z3 Bedienplatz zeigt danach "Verbunden: 0"');
+  const alterCode = ((await g.url()).match(/#t=([^&]+)/) || [])[1];
+  ok(!alterCode, 'Z4 Zugangscode steht nicht mehr in der Adresszeile des Gastes');
+  try { if (await op.locator('#btnEnd').isVisible()) { await op.click('#btnEnd'); await sleep(400); } } catch (_) {}       // Raum loeschen (wiederholte Laeufe)
   console.log('JS-Fehler:', errs.length ? errs : 'keine');
   ok(errs.length === 0, 'keine JavaScript-Fehler');
   await b.close();
