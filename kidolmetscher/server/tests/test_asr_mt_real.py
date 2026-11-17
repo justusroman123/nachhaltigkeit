@@ -241,6 +241,10 @@ def test_mt_laden_faellt_auf_bild_text_modell_zurueck(monkeypatch, tmp_path):
     mod = types.ModuleType("transformers")
     mod.__dict__.update(vars(fake))
     monkeypatch.setitem(sys.modules, "transformers", mod)
+    torch_attrappe = types.ModuleType("torch")           # der Test darf kein installiertes torch voraussetzen
+    torch_attrappe.bfloat16, torch_attrappe.float16, torch_attrappe.float32 = "bf16", "f16", "f32"
+    torch_attrappe.cuda = types.SimpleNamespace(is_available=lambda: False)
+    monkeypatch.setitem(sys.modules, "torch", torch_attrappe)
     mt = RealMt(make_settings(mt_backend="real", mt_model_id=str(tmp_path), mt_device="cpu", mt_dtype="float32"))
     run(mt.load())
     assert calls == ["image_text", "causal", "eval"]

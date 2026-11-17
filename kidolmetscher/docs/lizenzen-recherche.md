@@ -1,4 +1,4 @@
-# Lizenz-Recherche (Plan, Prompt E) – Stand 11.11.2026
+# Lizenz-Recherche (Plan, Prompt E) – Stand 11.11.2026, Nachtrag 17.11.2026 am Ende
 
 Nur lesend, ohne Anmeldung. Quellen sind Projektseiten auf GitHub (Sekundärquellen). **Die MODEL_CARDs auf Hugging Face, die
 Gemma-Bedingungen und die Anbieterseiten waren aus dieser Sitzung nicht erreichbar** (Domains nicht freigegeben). Keine Rechtsberatung.
@@ -80,7 +80,7 @@ Hinweise:
 
 | Modell | Lizenz laut Metadaten | Zugang | Anmerkung |
 | --- | --- | --- | --- |
-| google/translategemma-12b-it (auch 4b, 27b) | **gemma** (Gemma-Nutzungsbedingungen) | **beschränkt, manuelle Freigabe** (`gated: manual`) | Modellkarte ohne Anmeldung nicht lesbar (HTTP 401): **unterstützte Sprachen und Prompt-Format unbekannt**; die Gewichte können nur mit freigegebenem Konto geladen werden (macht laut Plan Jonas) |
+| google/translategemma-12b-it (auch 4b, 27b; **eingesetzt wird seit 14.11.2026 die 4B-Variante**, deren Lizenz-Metadaten hier nicht einzeln gelesen sind) | **gemma** (Gemma-Nutzungsbedingungen) | **beschränkt, manuelle Freigabe** (`gated: manual`) | Modellkarte ohne Anmeldung nicht lesbar (HTTP 401): **unterstützte Sprachen und Prompt-Format unbekannt**; die Gewichte können nur mit freigegebenem Konto geladen werden (macht laut Plan Jonas) |
 | openai/whisper-large-v3 | **Apache-2.0** | offen | (frühere Annahme „MIT“ war falsch) |
 | facebook/nllb-200-distilled-600M und nllb-200-1.3B | **CC-BY-NC-4.0** | offen | **nicht kommerziell**; relevant, falls die NLLB-Übersetzung von WhisperLiveKit genutzt würde |
 
@@ -122,3 +122,31 @@ Sprachen und Prompt-Format von TranslateGemma (Modellkarte gesperrt); Lizenz des
 - Ukrainisch: `lada` (x_low), `mykyta`, `oleksa`, `tetiana` (high), `ukrainian_tts` (medium, 3 Sprecher).
 
 **Folge:** Für Türkisch und Arabisch gibt es in Piper keine Stimme mit geklärter freier Lizenz. Für Ton in diesen Sprachen wäre ein anderes Sprachausgabe-Modell nötig (noch nicht recherchiert). Bis dahin: nur Untertitel.
+
+## Nachtrag 17.11.2026: Abgleich mit dem Code und dem Einsatz
+
+Keine Rechtsberatung. Quellen: `scripts/server_setup.sh`, `scripts/fetch_voices.py`, `server/app/pipeline/asr_real.py`, Protokoll Abschnitte 5, 15, 29, 30, 32. Es wurde nichts neu aus dem Netz gelesen; diese Liste stellt nur Dokument und Einsatz gegenüber.
+
+### Was tatsächlich geladen und eingesetzt wird
+
+| Komponente | Exakte Kennung im Einsatz | Lizenz laut dieser Recherche | Geprüft für die **eingesetzte** Kennung? |
+| --- | --- | --- | --- |
+| Spracherkennung | `Systran/faster-whisper-large-v3` (CTranslate2-Umsetzung, `server_setup.sh` Zeile 55) | Tabelle oben führt `openai/whisper-large-v3`: Apache-2.0 (Hugging-Face-Metadaten 11.11.2026) | **nein** (Messpunkt: `python -c "from huggingface_hub import model_info; print(model_info('Systran/faster-whisper-large-v3').card_data.license)"` oder `grep -i license <Modellordner>/README.md`) |
+| Übersetzung | `google/translategemma-4b-it` (A4000; Standard des Skripts: `translategemma-12b-it`) | `gemma` für 12B gelesen | **nein** für 4B (gleiche Messung mit `google/translategemma-4b-it`) |
+| Sprachausgabe (Paket) | `piper-tts` laut `server/requirements-tts.txt` | GPL-3.0 (Nachfolger) | gelesen, **rechtliche Pflichten für den Einsatz als Dienst nicht bewertet** (E10) |
+| Stimme Ukrainisch | `uk_UA-ukrainian_tts-medium` | CC0 | gelesen (MODEL_CARD 11.11.2026) |
+| Stimme Englisch | `en_GB-alba-medium` | **CC BY 4.0** | gelesen (MODEL_CARD 11.11.2026); **Namensnennung nicht umgesetzt** (siehe unten) |
+| Stimme Deutsch (Bedienplatz) | `de_DE-thorsten-medium` | CC0 | MODEL_CARD am 11.11.2026 gelesen und am 16.11.2026 erneut gelesen. Das Protokoll (Abschnitt 29, 15.11.2026) sagt noch „Lizenz nicht geprüft“; das ist durch Abschnitt 30 (16.11.2026) überholt. Der Hinweis auf den Widerspruch einer Drittseite im Entwurf ist nicht bestätigt |
+
+Die Kopfzeile von `server/app/pipeline/asr_real.py` nennt „Whisper large-v3, MIT-Lizenz“. Das **widerspricht** dieser Recherche (Apache-2.0); die Annahme „MIT“ wurde am 11.11.2026 als falsch festgestellt (`docs/entscheidungen.md`). Code nicht geändert.
+
+### Pflichten, die dokumentiert, aber **nicht umgesetzt** sind
+
+1. **Namensnennung für `en_GB-alba` (CC BY 4.0):** Weder in der Weboberfläche noch im Repository gibt es eine Nennung oder eine NOTICE-Datei (`grep -rn -i 'alba\|namensnennung\|CC BY' web` ohne Treffer). Die Stimme `en_GB-alba` wird in der Anwendung noch nicht namentlich genannt; das ist vor einem Behördeneinsatz nachzuholen (Zuhörerseite, Merkblatt oder NOTICE-Datei).
+2. **Gemma-Bedingungen:** Die Nutzungseinschränkungen der Prohibited Use Policy sind als durchsetzbare Bedingung in Nutzungsbedingungen aufzunehmen, die Bedingungen sind weiterzugeben. Es gibt keine Nutzungsbedingungen im Repository. Die Prohibited Use Policy wurde abgerufen, aber **nicht ausgewertet**.
+3. **GPL-3.0 (Piper-Paket):** Pflichten beim Betrieb als Dienst sind **nicht bewertet** (Entscheidung E10 bleibt dafür offen, obwohl Piper im Einsatz ist).
+4. **Stimmen ohne geklärte Lizenz** (Arabisch, Türkisch, Persisch) sind nicht eingebunden; dort gibt es nur Untertitel (E24).
+
+### Zur Vorgabe „möglichst Open Source“
+
+Eingesetzt werden Modelle mit **lizenzkostenfreien Gewichten**, aber nicht durchweg unter Open-Source-Lizenzen: Whisper (Apache-2.0 laut Metadaten, für das geladene Paket zu prüfen), TranslateGemma (Gemma-Nutzungsbedingungen, **keine Open-Source-Lizenz im üblichen Sinn**) und Piper (GPL-3.0) mit Stimmen unter jeweils eigener Lizenz. Eine einzige Tabelle mit exakter Kennung, Lizenz, Prüfdatum und Fundstelle führt `docs/entscheidungen.md` (Lizenztabelle); die Lizenzen der installierten Python-Pakete erzeugt `scripts/sbom_erzeugen.py` (Selbstauskunft der Pakete, keine rechtliche Prüfung).

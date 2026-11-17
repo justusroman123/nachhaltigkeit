@@ -1,8 +1,29 @@
-# Entwurf: Betriebsarten „Vortrag“ und „Gespräch“ (Stand 15.11.2026)
+# Entwurf: Betriebsarten „Vortrag“ und „Gespräch“ (Stand 15.11.2026) – Historie, überholt seit 15.11.2026
 
-> **Maßgeblich ist Abschnitt 27 des Protokolls: genau ZWEI Betriebsarten (Vortrag ohne Sperre, Gespräch mit Sperre).** Andere Betriebsarten oder Schalter in diesem Entwurf gelten nicht mehr.
+> **Historie, überholt seit 15.11.2026.** Dieser Entwurf bleibt als Geschichte erhalten. **Maßgeblich sind Abschnitt 27 des Protokolls (genau ZWEI Betriebsarten: Vortrag ohne Sperre, Gespräch mit Sperre), die Abschnitte 29, 30 und 32 sowie der Code (`server/app/turns.py`, `server/app/config.py`, `server/app/main.py`).** Andere Betriebsarten, Schalter, Zeiten und Abläufe in diesem Entwurf gelten nicht mehr.
 
-Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends: Server, Bedienplatz und Gast-Seite sind gebaut (siehe Protokoll Abschnitt 23); offen: Tippen statt Sprechen, Ton am Bedienplatz, GPU-Test.** Zahlen mit „Annahme“ sind nicht gemessen.
+## Entwurf und aktueller Stand (Code, 17.11.2026)
+
+Alle aktuellen Zeiten sind **Annahmen und nicht gemessen** (Einstellungen mit Standardwert in `server/app/config.py`).
+
+| Punkt | Entwurf (überholt) | Aktuell |
+| --- | --- | --- |
+| Ende einer Aussage | nach ca. 2 s Pause oder erneutem Tippen; Zeitgrenze 60 s | **keine Redezeit-Grenze.** Ende durch „Fertig“, Stopp des Mitarbeiters, Trennung des Geräts oder **120 s ohne hörbare Sprache** (`TURN_IDLE_S`) |
+| Zustand „uebersetzt“, Zeitgrenze | 20 s | höchstens **90 s** (`TURN_PROCESS_MAX_S`) |
+| Zustand „wiedergabe“, Zeitgrenze | 15 s | mindestens **15 s, bei Ton Tonlänge + 8 s** (`TURN_PLAY_MAX_S`); danach Schonfrist 0,5 s (`TURN_GRACE_S`) |
+| Gast verlässt die Seite mitten im Satz | Sperre löst sich nach ca. 3 s ohne Audio | Die Aussage endet **sofort** bei Verbindungsende; der offene Rest wird abgeschlossen, übersetzt und dem Mitarbeiter zugestellt; die **Sperre hält, bis der Rest übersetzt ist** (Protokoll Abschnitt 32) |
+| Stille oder Rauschen nach dem Tippen | Aussage wird verworfen, Sperre löst sich sofort | Die Sperre **bleibt bis „Fertig“ oder 120 s Stille** (abgeleitet aus `turns.py`, nicht gemessen) |
+| Sehr lange Aussagen | Zeitgrenze 60 s | keine Grenze (siehe oben) |
+| Tippen statt Sprechen, Nachricht `{"type":"text"}` | geplant | **nicht gebaut** |
+| Notbremse | „Freigeben“ am Bedienplatz | „Freigeben“ bleibt; zusätzlich **Vorrang des Mitarbeiters** („Stopp – ich spreche jetzt“, Nachricht `takeover`) und **Wortmeldung** der Gäste mit automatischer Übergabe (Protokoll Abschnitte 29, 30) |
+| Übernahme einer Wortmeldung | nicht vorgesehen | Bestätigung des Geräts höchstens 30 s (`TURN_PICKUP_S`) |
+| Deutsche Stimme am Bedienplatz | optional per Schalter; Modellkarte nach Suchergebnis CC0, Drittseite widerspricht | Piper `de_DE-thorsten-medium` wird mitgeladen und am Bedienplatz vorgelesen; Modellkarte am 16.11.2026 selbst gelesen: **CC0** (Protokoll Abschnitt 30) |
+| TranslateGemma | 4B/12B offen | **4B** im Einsatz (A4000); Qualität gegenüber 12B unbekannt |
+| GPU-Preis | A4000 zuletzt 0,2652 € pro Stunde netto | unverändert; Ada-Konfiguration 1,2641 € pro Stunde netto (Quelle `docs/kosten.md`) |
+| Nur der Mitarbeiter bekommt die Übersetzung (Annahme) | Annahme | **stimmt mit dem Code überein** |
+| Offene Punkte (Abschnitt 9) | vier Fragen an den Nutzer | beantwortet durch die Abschnitte 27 bis 30 des Protokolls (u. a. Gast-Antworten werden laut gelesen, kein automatisches Ende nach 2 s Pause) |
+
+Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends: Server, Bedienplatz und Gast-Seite sind gebaut (siehe Protokoll Abschnitt 23); offen: Tippen statt Sprechen, Ton am Bedienplatz, GPU-Test.** *Überholt: Ton am Bedienplatz ist seit 16.11.2026 gebaut (Abschnitt 30); Tippen statt Sprechen bleibt nicht gebaut.* Zahlen mit „Annahme“ sind nicht gemessen.
 
 ## 0. Vorgaben des Nutzers
 - **Alles per Sprache.** Optional zusätzlich Tippen (z. B. laute Umgebung). Es muss **super einfach** bleiben, wie die bisherige Bedienung.
@@ -44,7 +65,7 @@ Aufgenommen aus den Wünschen des Nutzers vom 15.11.2026. **Stand 15.11. abends:
 2. **Raum-Art:** `mode` = `vortrag|gespraech` beim Anlegen des Raums; `max_gaeste=3`; Gäste bekommen Kennung `gast:<n>` nach Beitrittsreihenfolge.
 3. **Spracherkennung je Strom mit Quellsprache** (heute fest `de`): `new_stream(lang)` mit `language=lang` (Ukrainisch, Englisch zuerst). **Whisper-Qualität für Ukrainisch ist unbekannt** (messen mit eigenen Sätzen).
 4. **Rückrichtung:** Gast-Text → TranslateGemma `lang→de` → Bedienplatz (Text, optional Ton). Nur der Mitarbeiter bekommt die Übersetzung (Annahme; andere Gäste sehen nur „Gast spricht“).
-5. **Deutsche Stimme** für den Ton am Bedienplatz (optional, Schalter): Piper `de_DE-thorsten-medium`; die Modellkarte nennt laut Suchergebnis **CC0**, eine Drittseite behauptet „nur nichtkommerziell“ (Widerspruch). **Vor Einsatz Modellkarte selbst lesen.**
+5. **Deutsche Stimme** für den Ton am Bedienplatz (optional, Schalter): Piper `de_DE-thorsten-medium`; die Modellkarte nennt laut Suchergebnis **CC0**, eine Drittseite behauptet „nur nichtkommerziell“ (Widerspruch). **Vor Einsatz Modellkarte selbst lesen.** *Überholt seit 16.11.2026: Modellkarte gelesen, CC0; die Drittseite ist damit nicht bestätigt.*
 6. **Protokoll (JSON):**
    - Zuhörer-Seite → Server: `{"type":"talk","on":true|false}`, Binär-Audio (PCM16, 16 kHz) während `on`, `{"type":"text","text":"…"}` (max. 500 Zeichen), `{"type":"played","seq":n}` („fertig“).
    - Server → alle: `{"type":"turn","state":"frei|spricht|uebersetzt|wiedergabe","who":"staff|gast:n","reason":""}` bei jeder Änderung; Fehler `busy`.

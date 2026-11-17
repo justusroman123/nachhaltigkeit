@@ -1,5 +1,7 @@
 # Projektwissen KI-Dolmetscher (KI-SCHUB), Stand 15.11.2026 (abends)
 
+> **Momentaufnahme vom 15.11.2026 (abends), überholt seit 17.11.2026 durch den Stand im Repository** (`README.md`, `CLAUDE.md`, `docs/projektstand-2026-11-13.md` Abschnitte 27 bis 32 und 11a). Dieses Bündel wird **nicht fortgeschrieben**; bei Abweichungen gilt das Repository. Beispiele überholter Aussagen darin: „kein Schutz gegen automatisches Raten“ (seit 16.11. gibt es eine Sperre), 187 Tests (heute 326), Verlauf „letzte 2 Minuten/10 Nachrichten“, Notgrenze „30 Minuten“ im Gespräch (heute nur 120 s ohne hörbare Sprache), Stimmen-Lizenz der deutschen Stimme „nicht geprüft“ (16.11.: CC0 laut Modellkarte).
+
 Bündel zum Hochladen als **Wissen eines Claude-Projekts**. Quelle: Repository `github.com/justusroman123/nachhaltigkeit`, Zweig `ccr-4bf88cb4-flgtez`, Ordner `kidolmetscher/`. Enthält **keine** Token oder Schlüssel. Bei Abweichungen gilt das Repository. **Wichtig:** Es gibt genau zwei Betriebsarten (Protokoll Abschnitt 27).
 
 ---

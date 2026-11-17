@@ -3,11 +3,12 @@
 Ein deutscher Sprecher wird live in bis zu vier Zielsprachen übersetzt (Ukrainisch, Arabisch, Englisch, Türkisch;
 Persisch optional). Zuhörer sehen Untertitel und hören die Übersetzung über Kopfhörer, je Gerät eine Sprache.
 
-**Stand: Etappe 0 und 1.** Der Server läuft mit **Attrappen** (Mocks). Alle drei echten Stufen sind umgesetzt
-(`asr_real.py` faster-whisper, `mt_real.py` Transformers, `tts_real.py` Piper; Einrichtung: `docs/betrieb.md`, Abschnitt 5 und 6).
-Ablauf eines Servertests: `docs/server-test-ablauf.md`. **Mit großen Modellen und auf dem GPU-Server wurden sie noch nicht gelaufen**; die Übersetzung ist mit TranslateGemma nicht geprüft
-(Modell gesperrt). Getestet wurde nur mit kleinen Ersatzmodellen auf der CPU. Nichts hier sagt etwas über Übersetzungsqualität
-oder echte Verzögerung aus.
+**Stand: 17.11.2026 (Prototyp, Termin-Betrieb auf gemieteter GPU-VM).** Ohne GPU läuft der Server mit **Attrappen** (Mocks).
+Alle drei echten Stufen (`asr_real.py` faster-whisper mit Pausenerkennung, `mt_real.py` TranslateGemma über Transformers,
+`tts_real.py` Piper) **liefen auf einer gemieteten GPU-VM** (Test 13. bis 15.11.2026: RTX 6000 Ada mit 12B, RTX A4000 mit 4B; Handy-Test am 15.11.).
+Es gibt **zwei Betriebsarten**: **Vortrag** (einer spricht, keine Sperre) und **Gespräch** (abwechselnd mit Gästen, Sperre, Wortmeldung, Vorrang des Mitarbeiters).
+Einrichtung: `docs/betrieb.md` (Abschnitt 5 und 6) und `docs/vm-neu-einrichten.md`; Ablauf eines Servertests: `docs/server-test-ablauf.md`.
+**Nicht gemessen** sind Übersetzungsqualität je Sprache und die Verzögerung (Nutzerschätzung ca. 1 s); die Tests mit Tablets (iOS/Safari) und die Wirkung im Behördeneinsatz stehen aus. Protokoll mit Stand und offenen Punkten: `docs/projektstand-2026-11-13.md` (Abschnitte 27 bis 32 und 11a).
 
 ## So wird es bedient (Kurzfassung)
 
@@ -15,6 +16,9 @@ oder echte Verzögerung aus.
 2. **QR-Code** zeigen. Zuhörer scannen ihn und **tippen auf ihre Sprache** (Ukrainisch, Arabisch, Englisch, Türkisch; Persisch optional).
 3. Mikrofon wählen, **„Senden starten“**, sprechen. Zuhörer sehen Untertitel und können den Ton (Kopfhörer) einschalten.
 4. **„Sitzung beenden“** löscht alles.
+
+Im **Gespräch** (Auswahl beim Sitzungsstart) tippt der Mitarbeiter „Sprechen“ und „Fertig“; Gäste sprechen am Tablet in ihrer Sprache, der Mitarbeiter liest die deutsche Übersetzung und hört sie vorgelesen, sofern die deutsche Stimme eingerichtet ist (`scripts/stimme_de_einrichten.sh`).
+Eine Aussage endet durch „Fertig“, den Stopp des Mitarbeiters oder nach 120 s ohne hörbare Sprache; es gibt keine Redezeit-Grenze.
 
 **Schnell ausprobieren auf dem eigenen Rechner (Demo mit Attrappen, ohne Bedienschlüssel):**
 Windows: `start.bat` doppelklicken (Python 3 muss installiert sein, https://www.python.org/downloads/, „Add python.exe to PATH“ ankreuzen).
@@ -77,10 +81,12 @@ Die Messskripte schreiben bei Mock-Backend **nicht** ins Messprotokoll. Backend 
 ## Aufbau
 
 ```
-server/app/   main.py config.py rooms.py messages.py orchestrator.py security.py  pipeline/ (base, *_mock, *_real)
-server/tests/ pytest (+ e2e/browser_smoke.js)
+server/app/   __main__.py main.py config.py rooms.py messages.py orchestrator.py security.py turns.py conversation.py benchmarks.py
+              pipeline/ (base, *_mock, *_real, segmenter, text_clean, mt_prompt)
+server/tests/ pytest (+ e2e/*.js, Browser-Szenarien mit Playwright)
 web/          operator.html listener.html mic-test.html  js/ css/
-docker/       Dockerfile.gpu docker-compose.yml (nicht gebaut/getestet)
+docker/       Dockerfile.gpu docker-compose.yml Caddyfile (nicht gebaut/getestet)
+windows/      vm-einrichten.ps1/.bat start-tunnel.bat hole-bewertungsbogen.bat
 scripts/      Messskripte, fake_speaker, Rauchtest
 docs/         architektur.md entscheidungen.md messprotokoll.md betrieb.md plan-abgleich.md lizenzen-recherche.md
               kosten.md bewertungsbogen.md vorfuehrung.md firewall-vorschlag.md testberichte/
@@ -88,11 +94,15 @@ docs/         architektur.md entscheidungen.md messprotokoll.md betrieb.md plan-
 
 ## Datenschutz in Kürze
 
-Kein Speichern von Audio oder Text (nur Arbeitsspeicher, Puffer weg bei Sitzungsende), keine Inhalts-Logs, keine Cookies,
-keine externen Ressourcen, strenge CSP, Zuhörer-Links mit Zufalls-Token und Ablaufzeit. Details und Grenzen:
-`docs/architektur.md`.
+Kein Speichern von Audio oder Text (nur Arbeitsspeicher, Puffer weg bei Sitzungsende; der Verlauf für spät verbundene Zuhörer
+wird nach `HISTORY_S`, Standard 120 s, aktiv gelöscht), keine Inhalts-Logs und keine Adressen im Log, keine Cookies,
+keine externen Ressourcen, strenge CSP, Zuhörer-Links mit Zufalls-Token und Ablaufzeit, Sperre nach falschen Bedienschlüsseln.
+Im **Gespräch** wird auch die **Stimme der Gäste** zum Server übertragen (erkannt, ins Deutsche übersetzt, nicht gespeichert); das Merkblatt `web/datenschutz.html`
+beschreibt das, ist aber ein **Entwurf mit Platzhaltern** (Verantwortlicher, Rechtsgrundlage); rechtliche Prüfung steht aus. Details und Grenzen:
+`docs/architektur.md`, `docs/datenschutz-nachweis.md`.
 
 ## Offen
 
-TLS für den Bedienplatz auf entferntem Server, echte Modelle und Lizenzen, Messungen mit GPU, Test auf Zuhörer-Tablets
-(Safari/iPad), Docker-Build. Siehe `docs/plan-abgleich.md` (Stand je Planpunkt), `docs/entscheidungen.md` und `docs/messprotokoll.md`.
+HTTPS über Caddy lief im Test am 15.11.2026 (nicht als Dauerbetrieb); offen sind Messungen mit GPU (Verzögerung, Qualität je Sprache),
+Tests auf Gast-Tablets (Safari/iPad) und Chromebook, Muttersprachler-Prüfung der Oberflächentexte, Datenschutz und Verträge für den Behördeneinsatz, Docker-Build
+(`docker/Dockerfile.gpu` nicht gebaut). Siehe `docs/plan-abgleich.md` (Stand je Planpunkt), `docs/entscheidungen.md` und `docs/messprotokoll.md`.

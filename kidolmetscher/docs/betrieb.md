@@ -1,4 +1,6 @@
-# Betrieb: Aufrufen, Sprachen, Hosting (Stand 09.11.2026)
+# Betrieb: Aufrufen, Sprachen, Hosting (Stand 09.11.2026, mit dem Code abgeglichen am 17.11.2026)
+
+Überholte Aussagen sind mit „Überholt seit TT.MM.JJJJ“ gekennzeichnet und bleiben als Geschichte stehen. Standardwerte stehen in `server/app/config.py` und `.env.example` (ein Test prüft, dass beide übereinstimmen); sie werden hier nur genannt, wo sie die Aussage tragen.
 
 Google Drive enthält nur Dokumente, **nicht** die Anwendung. Die Anwendung ist ein Server, der irgendwo laufen muss;
 Bedienplatz und Zuhörer rufen ihn im Browser auf.
@@ -7,7 +9,7 @@ Bedienplatz und Zuhörer rufen ihn im Browser auf.
 
 **Bedienplatz (Chromebook):** Adresse des Servers öffnen (z. B. `https://dolmetscher.example.org/`).
 
-1. Bedienschlüssel eingeben. Sprachen anhaken (Ukrainisch, Arabisch, Englisch, Türkisch sind vorab angehakt, Persisch optional).
+1. Bedienschlüssel eingeben. Betriebsart wählen (Vortrag oder Gespräch). Sprachen anhaken. Standard im Code: Ukrainisch, Arabisch, Englisch, Türkisch sind vorab angehakt, Persisch ist optional (`DEFAULT_LANGS`). Auf der Test-VM setzt `scripts/server_setup.sh` `TARGET_LANGS=uk,ar,en,tr` und `DEFAULT_LANGS=uk,en`; der Mini-Starter `scripts/cloud-init-launcher.sh` überschreibt `DEFAULT_LANGS` (Beispiel dort: `uk`). Nach zehn falschen Schlüsseln innerhalb von 10 Minuten sperrt der Server den Absender für 15 Minuten (auch für den richtigen Schlüssel).
 2. **„Sitzung starten“.** Es erscheint ein QR-Code mit Link: auf Beamer/Bildschirm zeigen oder Link kopieren und verschicken.
 3. Mikrofon prüfen (ein DJI-Mikrofon wird automatisch gewählt), **„Senden starten“**, sprechen.
 4. Unter „Live“ sieht man, wie viele Zuhörer in welcher Sprache verbunden sind, und die Verzögerung.
@@ -24,7 +26,7 @@ Ob jede Sprache mit den echten Modellen gut funktioniert, ist **unbekannt** (Moc
 
 ## 2. Heute testen (ohne GPU, ohne Cloud)
 
-Auf einem Rechner mit Python 3: `./start.sh` im Projektordner. Der Bedienschlüssel wird beim Start angezeigt.
+Auf einem Rechner mit Python 3: `./start.sh` im Projektordner (startet über `python -m app`; das ist seit 17.11.2026 der einzige Startweg, weil nur er Zugriffslog und Adressen im Log abschaltet). Der Bedienschlüssel wird beim Start angezeigt.
 Dann `http://localhost:8000/` im Browser. Mikrofon geht auf `localhost`.
 
 Zuhörer-Handys im selben WLAN: `HOST=0.0.0.0 ./start.sh` (öffnet den Server im lokalen Netz, nur in vertrauenswürdigem Netz),
@@ -48,7 +50,7 @@ Chromebook braucht daher eine Adresse mit gültigem Zertifikat. Zuhörer brauche
 
 1. Eine **Domain** oder Subdomain, die auf die Adresse des GPU-Servers zeigt. Kosten: **unbekannt**, abhängig vom Anbieter.
 2. Einen **Reverse Proxy** mit automatischem Zertifikat, z. B. Caddy (freie Software). Beispiel `Caddyfile`
-   (von mir **nicht getestet**; Zugriffsprotokoll nicht aktivieren, bitte Standardverhalten der installierten Version prüfen):
+   (Beispiel; Zugriffsprotokoll nicht aktivieren, bitte Standardverhalten der installierten Version prüfen). **Stand 17.11.2026:** Auf der Test-VM läuft Caddy seit 15.11.2026 mit einem solchen Caddyfile (erzeugt von `scripts/cloud-init-gpu.sh` bzw. `scripts/oeffentlich_freigeben.sh`, nicht aus `docker/Caddyfile`). Dass kein `log`-Block im Caddyfile steht, belegt **nicht**, dass Caddy und das Systemjournal keine Adressen schreiben: unbekannt, Messbefehl in `docs/datenschutz-nachweis.md` (Abschnitt 1, Zeile zu den Protokollen).
 
    ```
    dolmetscher.example.org {
@@ -56,7 +58,7 @@ Chromebook braucht daher eine Adresse mit gültigem Zertifikat. Zuhörer brauche
    }
    ```
 
-3. Auf dem Server: Anwendung starten (`docker compose ... --profile gpu up` oder `./start.sh`), `PUBLIC_URL=https://dolmetscher.example.org`
+3. Auf dem Server: Anwendung starten (`python -m app` im Ordner `server/`, auf der VM als Dienst über `scripts/server_ctl.sh`; der Docker-Weg `docker compose ... --profile gpu up` ist ungebaut), `PUBLIC_URL=https://dolmetscher.example.org`
    und einen langen `OPERATOR_KEY` setzen (nicht ins Repository).
 4. Firewall: nur Ports 80 und 443 (und SSH) öffnen. Der Anwendungs-Port 8000 bleibt nur lokal.
 
@@ -72,7 +74,7 @@ ob die Muttergesellschaft des Anbieters außerhalb der EU sitzt. Antworten dazu:
 
 ## Nachtrag 11.11.2026: Angaben aus dem Plan-Dokument
 
-- **Anbieter laut Plan: centron** (RTX 6000 Ada 48 GB, Standort Hallstadt, 1,19 € pro Stunde netto, stündliche Abrechnung); Alternative STACKIT L40S (1,74 € pro Stunde).
+- **Anbieter laut Plan: centron** (RTX 6000 Ada 48 GB, Standort Hallstadt, laut Plan 1,19 € pro Stunde netto, nur GPU-Anteil; *Überholt seit 14.11.2026: im Einsatz ist die RTX A4000 16 GB, Gesamtpreis laut Checkout 0,2652 € pro Stunde netto; die Ada kostet gesamt 1,2641 €, siehe `docs/kosten.md`*; stündliche Abrechnung; in der Console heißt die Region „Bamberg · BBG1“ und wird bei der Anlage der VM von Hand gewählt, die Console bietet auch „Glattbrugg“ in der Schweiz an; die Anwendung und die Skripte prüfen die Region nicht; Region und AVV je Einsatz bestätigen lassen); Alternative STACKIT L40S (1,74 € pro Stunde).
   Von mir **nicht** geprüft (Seiten aus der Sitzung nicht erreichbar). Offene Punkte beim Anbieter: AVV, Kosten pausierter Server, Gesamtpreis, Zertifizierungen. Fragenliste: `docs/kosten.md`.
 - **Docker mit HTTPS:** `docker compose -f docker/docker-compose.yml --profile gpu up --build` startet die Anwendung (Dienst `gpu`, Modelle als Nur-lese-Volume `/models`) und davor Caddy (`docker/Caddyfile`).
   Nötig: `.env` mit `OPERATOR_KEY`, Umgebungsvariablen `BASE_IMAGE`, `DOMAIN`, `MODELS_DIR`. **Nicht gebaut und nicht getestet.**
@@ -80,7 +82,7 @@ ob die Muttergesellschaft des Anbieters außerhalb der EU sitzt. Antworten dazu:
 - **Achtung Kosten:** Laut centron-Seite (gelesen 11.11.2026) laufen Kosten auch bei gestoppter Instanz weiter, bis sie gelöscht wird. „Server pausieren“ spart nach dieser Aussage **kein** Geld; verbindlich beim Anbieter klären.
 - **Kosten und Budget:** `docs/kosten.md`; Anzeige am Bedienplatz über `SERVER_HOURLY_EUR` und `BUDGET_EUR`.
 - **Vorführung:** Skript und Checkliste in `docs/vorfuehrung.md`.
-- Die Frage nach dem Anbieter ist damit beantwortet. Offen bleiben: Domain (Subdomain von kischub.de?) und Budgetgrenze (Vorschlag des Plans: 50 €).
+- Die Frage nach dem Anbieter ist damit beantwortet. Offen bleiben: Domain (Subdomain von kischub.de?) und Budgetgrenze (Vorschlag des Plans: 50,00 €). **Überholt seit 15.11.2026 (Domain):** `dolmetscher.kischub.de` ist angelegt (A-Eintrag beim DNS-Anbieter der Domain) und liefert HTTPS über Caddy; Budgetgrenze weiter offen.
 
 ## 5. Echte Sprachausgabe (Piper) einrichten (Stand 12.11.2026)
 
@@ -102,12 +104,12 @@ Hinweise:
 
 ## 6. Echte Spracherkennung und Übersetzung einrichten (Stand 12.11.2026)
 
-Umgesetzt und mit **kleinen Ersatzmodellen auf der CPU** getestet (Whisper tiny, Qwen2.5-0.5B-Instruct als Übersetzer). **Nicht** getestet: Whisper large-v3, TranslateGemma, GPU.
+Umgesetzt und mit **kleinen Ersatzmodellen auf der CPU** getestet (Whisper tiny, Qwen2.5-0.5B-Instruct als Übersetzer). ~~**Nicht** getestet: Whisper large-v3, TranslateGemma, GPU.~~ **Überholt seit 15.11.2026:** Auf der Test-VM (RTX A4000, Modell TranslateGemma 4B) lief der Dienst mit den echten Stufen; laut Nutzerbericht funktionierte die Übersetzung auf dem Smartphone. Verzögerung, Speicher und Qualität je Sprache sind **unbekannt** und nicht gemessen (Protokoll Abschnitte 18 und 19).
 
-**Spracherkennung** (`ASR_BACKEND=real`): faster-whisper (MIT). Weg „pausenbasiert“: Die Anwendung erkennt Sprechpausen an der Lautstärke, sammelt den Abschnitt im Arbeitsspeicher und lässt Whisper ihn erkennen. Die Verzögerung ist Abschnittslänge plus Erkennungszeit; das ist höher als bei echtem Streaming (SimulStreaming/WhisperLiveKit, Entscheidung E9 offen). Schwellen sind Annahmen und an echten Aufnahmen zu messen: `ASR_SILENCE_MS` (700), `ASR_MAX_UTTERANCE_S` (12), `ASR_VAD_RMS` (400), `ASR_MIN_SPEECH_MS` (300).
+**Spracherkennung** (`ASR_BACKEND=real`): faster-whisper (Bibliothek, MIT laut Lizenzdatei des Projekts; die Lizenz der Modellgewichte ist in den Quellen widersprüchlich, MIT oder Apache-2.0, siehe `docs/lizenzen-recherche.md`). Weg „pausenbasiert“: Die Anwendung erkennt Sprechpausen an der Lautstärke, sammelt den Abschnitt im Arbeitsspeicher und lässt Whisper ihn erkennen. Die Verzögerung ist Abschnittslänge plus Erkennungszeit; das ist höher als bei echtem Streaming (SimulStreaming/WhisperLiveKit, Entscheidung E9 offen). Schwellen sind Annahmen und an echten Aufnahmen zu messen: `ASR_SILENCE_MS` (Standard 800), `ASR_MAX_UTTERANCE_S` (8.0), `ASR_VAD_RMS` (400), `ASR_MIN_SPEECH_MS` (300). ~~Frühere Werte 700 ms und 12 s.~~ **Überholt seit 15.11.2026** (zwischenzeitlich 1200 ms und 20 s, Protokoll Abschnitt 24; Standardwerte in `config.py`).
 1. `pip install -r server/requirements-asr.txt`
 2. Modell vor dem Termin laden: `python3 scripts/fetch_models.py Systran/faster-whisper-large-v3 models/whisper-large-v3` (Repo-ID vor Einsatz prüfen)
-3. `ASR_MODEL=models/whisper-large-v3`, auf dem GPU-Server `ASR_DEVICE=cuda`, `ASR_COMPUTE_TYPE=float16`
+3. `ASR_MODEL=models/whisper-large-v3`, auf dem GPU-Server `ASR_DEVICE=cuda`, `ASR_COMPUTE_TYPE=float16`. Der Code-Standard `ASR_MODEL=large-v3` (ohne lokalen Ordner) würde beim ersten Start einen Download von Hugging Face auslösen; im Betrieb darum immer den lokalen Ordner setzen. Zeigen `ASR_MODEL` und `MT_MODEL_ID` auf lokale Ordner, stellt die Anwendung `HF_HUB_OFFLINE` und `TRANSFORMERS_OFFLINE` selbst auf 1 und schaltet Telemetrie der Bibliotheken ab (seit 17.11.2026; wer zum ersten Mal lädt, setzt `HF_HUB_OFFLINE=0`).
 
 **Übersetzung** (`MT_BACKEND=real`): Transformers. `pip install -r server/requirements-mt.txt` (PyTorch-Version muss zum CUDA-Treiber des Servers passen: unbekannt). `MT_MODEL_ID` ist der Ordner oder die ID des Modells. Modell-ID: `google/translategemma-12b-it` (freigabepflichtig; Freigabe ist erteilt). Das Format folgt der Modellkarte (siehe `docs/translategemma-modellkarte.md`): Sprachcodes als Felder, geladen mit `AutoProcessor`/`AutoModelForImageTextToText`; Qualität je Sprache ist **unbekannt**. Mit dem Ersatzmodell habe ich nur den Modus `plain` getestet, den `structured`-Ablauf nur mit Attrappen. Mit `HF_TOKEN` nach Freigabe laden: `python3 scripts/fetch_models.py <repo-id> models/translategemma`.
 

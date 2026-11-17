@@ -55,6 +55,6 @@ Nur erfundene Texte und Namen. Keine echten Daten.
 - [ ] Backup bei Netzausfall: laut Plan eine aufgenommene Beispielübersetzung auf dem Tablet. **Nicht gebaut** (Speicherung widerspricht der Datenschutzregel); Alternative: Folien mit Text vorab.
 
 **Information und Datenschutz**
-- [ ] Teilnehmende vorab über die KI-Übersetzung informiert (Art. 50 KI-VO; Übergangsfrist laut Plan bis 02.12.2026, rechtlich prüfen lassen).
+- [ ] Teilnehmende vorab über die KI-Übersetzung informiert (mündlich oder Aushang; Textvorschlag im Bedienplatz, Schritt „Zuhörer einladen“). Ob und in welcher Form Art. 50 KI-VO dafür gilt, steht im Dokument „Behördentauglichkeit“ (Drive, Ordner „03 Entscheidungen und Lizenzen“); rechtlich prüfen lassen.
 - [ ] Datenschutz-Merkblatt (`web/datenschutz.html`) ergänzt und rechtlich geprüft; AVV mit dem Anbieter abgeschlossen.
 - [ ] Muttersprachler haben die Oberflächentexte geprüft (`docs/bewertungsbogen.md`, Teil C).

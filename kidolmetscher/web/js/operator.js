@@ -338,7 +338,7 @@
     clearInterval(statTimer);
     if (room) { try { await api('DELETE', '/api/rooms/' + room.room_id); } catch (_) {} }
     resetSessionUi();
-    say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt beenden oder pausieren (Kosten laufen sonst weiter) und auf den Tablets den Browserverlauf löschen.', 'ok');
+    say(e.roomMsg, 'Sitzung beendet. Alle Puffer und Links sind gelöscht. Erinnerung: GPU-Server jetzt in der Console ZERSTÖREN (Stoppen oder Pausieren spart keine Kosten) und auf den Tablets den Browserverlauf löschen.', 'ok');
   }
   function sessionGone() {                                         // der Server kennt die Sitzung nicht mehr (Neustart oder abgelaufen)
     stopSending(); clearInterval(statTimer);
@@ -549,7 +549,7 @@
         String(s.server_hourly_eur).replace('.', ',') + ' €).';
       if (s.budget_eur) {
         text += ' Budget ' + s.budget_eur + ' €.';
-        if (eur >= s.budget_eur) { cls = 'bad'; text += ' BUDGET ERREICHT: Server beenden oder pausieren!'; }
+        if (eur >= s.budget_eur) { cls = 'bad'; text += ' BUDGET ERREICHT: Server in der Console zerstören (Stoppen spart keine Kosten)!'; }
         else if (eur >= 0.8 * s.budget_eur) { cls = 'warn'; text += ' Über 80 % des Budgets.'; }
       }
     } else text += 'Kosten: unbekannt (SERVER_HOURLY_EUR nicht gesetzt).';

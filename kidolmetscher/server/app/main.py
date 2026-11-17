@@ -157,7 +157,7 @@ def create_app(settings: Optional[Settings] = None, pipeline: Optional[Pipeline]
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
-        await pipeline.load()          # echte Stufen: bricht mit klarer Meldung ab (TODO-Geruest)
+        await pipeline.load()          # echte Stufen laden (Modelle); bricht mit klarer Meldung ab, wenn etwas fehlt
 
         async def reaper():
             while True:

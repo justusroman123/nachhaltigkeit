@@ -1,4 +1,4 @@
-# Abgleich mit dem „Plan Prototyp KI-Dolmetscher“ (Stand 11.11.2026)
+# Abgleich mit dem „Plan Prototyp KI-Dolmetscher“ (Stand 11.11.2026, einzelne Zeilen am 17.11.2026 gegen den Code berichtigt)
 
 Quelle: Google-Dokument „Plan Prototyp KI-Dolmetscher: Aufgaben, Prüfungen und Prompts (Stand 09.11.2026)“.
 Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** teilweise · **○** offen, braucht Sie, Hardware, ein Konto, Geld oder Netzzugang · **≠** bewusst anders gelöst.
@@ -40,11 +40,11 @@ Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** t
 | Aufgabe | Status | Stand |
 | --- | --- | --- |
 | WebSocket für Audio (16 kHz, mono, 16 Bit), Operator-Schlüssel | ✔ | pytest + Browser. |
-| Segmentierung (Satzende oder höchstens N Wörter, Standard 12) | ✔ | `pipeline/segmenter.py`, Konfiguration `SEGMENT_MAX_WORDS` (23 Tests). Verhalten mit echtem Whisper-Ausgabestrom: unbekannt. |
+| Segmentierung (Satzende oder höchstens N Wörter) | ✔ | `pipeline/segmenter.py`, Konfiguration `SEGMENT_MAX_WORDS` (23 Tests). *Überholt seit 15.11.2026: „Standard 12“, ersetzt durch **Standard 40** (`server/app/config.py`, `.env.example`); nur der Klassen-Standard des Segmentierers ist noch 12. Zusätzlich wartet ein Satzrest ohne Satzzeichen bis `SEGMENT_TAIL_HOLD_MS=2200` auf die Fortsetzung.* Verhalten mit echtem Whisper-Ausgabestrom: unbekannt. |
 | Zuhörer per Link mit Zufalls-Token und Ablaufzeit | ✔ | |
 | `/api/session` (Sitzung + Links je Sprache) | ✔ | zusätzlich zu den bisherigen Endpunkten. |
 | Zeitstempel je Stufe, keine Inhalts-Logs | ✔ | pytest (u. a. Log-Test). |
-| Rückstau je Sprache (Ton entfällt, Untertitel bleiben; älteste Segmente werden verworfen) | ✔ | pytest: langsame Sprache bremst andere nicht. Schwellen sind Platzhalter, nicht gemessen. |
+| Rückstau je Sprache (Ton entfällt, Untertitel bleiben; älteste Segmente werden verworfen) | ◐ | Je Zielsprache eine eigene Warteschlange und ein eigener Arbeiter; pytest mit Attrappen: eine langsame Sprache bremst die anderen nicht. **Mit dem echten Modell nicht belegt:** Übersetzung und Spracherkennung rechnen je mit einer globalen Sperre (ein Satz zur Zeit für alle Sprachen und Gäste, `mt_real.py:104`, `asr_real.py:216`); ob eine langsame Sprache andere verzögert, ist nicht gemessen (Messung: `journalctl -u kidolmetscher \| grep stau`, `scripts/bench_load.py` mit drei Sprachen). *Überholt seit 15.11.2026: „Ton entfällt, älteste Segmente werden verworfen“: die Schwellen stehen jetzt bei `LANG_QUEUE_MAX=500` und `TTS_SKIP_BACKLOG=100000`, der Rückstau-Schutz ist praktisch aus (Vollständigkeit vor Latenz, E33).* |
 | Mocks, Sitzungsende löscht Puffer | ✔ | |
 | `/ws/listener/{token}?lang=uk` | ≠ | Token und Sprache kommen in der ersten WebSocket-Nachricht, nicht in der Adresse. Grund: Adressen landen in Protokollen von Proxy/Server. |
 | `scripts/fake_speaker.py` | ✔ | Rundlauf gegen laufenden Server, siehe Testbericht. |
@@ -66,7 +66,7 @@ Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** t
 | Gesamttest mit Hardware, Bewertungsbogen, Hotspot-Test, Routerentscheidung | ○ | Bewertungsbogen: ✔ vorbereitet. |
 | Messpunkt t1 „Audio im Browser bis Server“ | ◐ | Ping-Messung und Schätzung am Bedienplatz (Annahme, keine Messung der echten Strecke); Zielwert < 0,3 s. |
 | AVV, Behörden-Einsätze | ○ | Bei Ihnen / Fachleute. |
-| Hinweis auf KI-Übersetzung (Art. 50 KI-VO) | ◐ | Auf der Zuhörerseite in 6 Sprachen. **Texte in uk, ar, tr, fa nicht von Muttersprachlern geprüft.** Rechtliche Wirkung: nicht geprüft. |
+| Hinweis auf KI-Übersetzung (Art. 50 KI-VO) | ◐ | Auf der Zuhörerseite in 6 Sprachen. **Texte in uk, ar, tr, fa nicht von Muttersprachlern geprüft.** Rechtliche Einordnung und Fristen: siehe Dokument „Behördentauglichkeit“ (Drive, Ordner „03 Entscheidungen und Lizenzen“, Abschnitt KI-Verordnung); juristisch nicht geprüft. |
 | Datenschutz-Merkblatt (eine Seite) | ◐ | `web/datenschutz.html`, **Entwurf**; Angaben zu Verantwortlichem und Anbieter fehlen (Platzhalter), rechtliche Prüfung steht aus. |
 | Vorführungs-Skript, Ablauf, Packliste | ✔ | `docs/vorfuehrung.md` (erfundene Texte). |
 | Backup-Aufnahme für Netzausfall | ○ | Nicht gebaut: eine Aufnahme zu speichern widerspricht „keine Speicherung“. Entscheidung nötig. |
@@ -82,3 +82,5 @@ Legende: **✔** umgesetzt und getestet (Art des Tests steht dabei) · **◐** t
 ## Entscheidungen aus Abschnitt 9 des Plans (bei Ihnen)
 
 1. Wo läuft Claude Code? · 2. Sprachen im ersten Test (Empfehlung des Plans: Ukrainisch und Englisch zuerst) · 3. Piper-Stimmen mit Einschränkung nutzen oder anderes TTS? · 4. Domain (Subdomain von kischub.de?) · 5. Budgetgrenze (Vorschlag 50 €).
+
+**Stand 17.11.2026 zu diesen Punkten:** Zu 3: Ton für Ukrainisch, Englisch und (am Bedienplatz) Deutsch mit Piper; Arabisch und Türkisch nur Untertitel (E24, E40). Zu 4: entschieden, `dolmetscher.kischub.de` (E30), läuft seit 15.11.2026 mit HTTPS (E11). Zu 5: keine Entscheidung dokumentiert; `scripts/server_setup.sh` setzt `BUDGET_EUR=20` und `SERVER_HOURLY_EUR=1.24` (weder die 50 € des Plans noch einer der centron-Preise, siehe `docs/kosten.md`); der Windows-Einrichtungsweg (`windows/vm-einrichten.ps1`) trägt für die A4000 `0.2652` ein.

@@ -1,14 +1,18 @@
-# KI-Dolmetscher (KI-SCHUB): Projektstand und Protokoll (Stand 13.11.2026)
+# KI-Dolmetscher (KI-SCHUB): Projektstand und Protokoll (begonnen 13.11.2026, fortgeschrieben bis 17.11.2026)
 
 Dieses Dokument fasst alles zusammen, was bis jetzt besprochen, gebaut, getestet und entschieden wurde. Es enthält **keine Geheimnisse** (kein Token, kein Bedienschlüssel, keine Passwörter, keinen privaten SSH-Schlüssel).
+
+**Hinweis zum Stand (17.11.2026):** Der Dateiname nennt noch den Beginn (13.11.2026); der Inhalt reicht bis 17.11.2026. Das Protokoll ist **chronologisch**: Spätere Abschnitte ersetzen frühere, überholte Stellen sind mit „Überholt seit TT.MM.JJJJ: ersetzt durch …“ gekennzeichnet und bleiben als Geschichte stehen. **Maßgeblich für den heutigen Stand sind die Abschnitte 27 bis 32 und 11a (Nächste Schritte)**, bei Zahlenwerten der Code (`server/app/config.py`).
 
 ## 0. So machen Sie in einem neuen Chat weiter
 
 Den folgenden Text zu Beginn eines neuen Chats einfügen:
 
-> Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository `justusroman123/nachhaltigkeit` (Zweig `ccr-4bf88cb4-flgtez`) die Dateien `kidolmetscher/CLAUDE.md` und `kidolmetscher/docs/projektstand-2026-11-13.md`. Mach dann beim Abschnitt „Nächste Schritte“ weiter. Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.
+> Es geht um das Projekt „KI-Dolmetscher“ (KI-SCHUB). Lies bitte im Repository `justusroman123/nachhaltigkeit` (Zweig `ccr-4bf88cb4-flgtez`) die Dateien `kidolmetscher/CLAUDE.md` und `kidolmetscher/docs/projektstand-2026-11-13.md`. Mach dann beim Abschnitt „11a. Nächste Schritte (Stand 17.11.2026)“ weiter (Abschnitt 11 ist überholt). Regeln: Antworten auf Deutsch, kurz und sachlich, Kernaussagen fett, nichts raten (stattdessen „unbekannt“ schreiben und eine Messung vorschlagen), vor Kosten, Konten oder Systemänderungen fragen. Dokumente in Google Drive (Ordner „KI Dolmetscher“) nie überschreiben oder löschen.
 
 ## 0a. Wiederaufnahme nach einer Pause: ein Knopf, zwei Werte
+
+**Überholt seit 14.11.2026: ersetzt durch `docs/vm-neu-einrichten.md` und `windows/vm-einrichten.ps1` (Abschnitt 21), Lehren in Abschnitt 17.** Der Cloud-Init-Weg („ein Knopf“) ist nicht bestätigt (Abschnitt 16); das Cloud-Init-Feld der Console wird nicht verwendet (`CLAUDE.md`). Der folgende Text bleibt als Geschichte stehen.
 
 Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu angelegten VM.
 
@@ -31,7 +35,7 @@ Der Rechner, von dem aus Sie starten, ist egal: Alles Schwere läuft auf der neu
 5. **Hugging-Face-Token widerrufen** (Einstellungen, Tokens).
 6. Ergebnisse dieses Durchlaufs in einem neuen Chat nennen, damit Skripte und Protokoll angepasst werden.
 
-Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft möglicherweise noch und kostet etwa 1,26 € pro Stunde, bis sie in der Console **zerstört** wird (siehe Abschnitt 9).
+Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft möglicherweise noch und kostet etwa 1,26 € pro Stunde, bis sie in der Console **zerstört** wird (siehe Abschnitt 9). *Überholt seit 14.11.2026: Die VM aus Abschnitt 9 wurde zerstört (Abschnitt 14). Ob heute eine VM läuft, ist **unbekannt**; Messpunkt: centron-Console, Dashboard „Kerne“ und „GPUs“. Nur Zerstören beendet die Kosten.*
 
 ## 1. Ziel und Rahmen
 
@@ -42,6 +46,7 @@ Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft mög
 - **Wichtigstes Ziel: gute Qualität** (Übersetzung und Stimme), dazu Datenschutz: kein Speichern von Audio und Text, nichts über US-Dienste im Datenpfad der Übersetzung.
 - Server: GPU-VM bei centron (Deutschland, Hallstadt/Bamberg), RTX 6000 Ada 48 GB.
 - Pipeline: Spracherkennung (Whisper large-v3) → Übersetzung (TranslateGemma 12B) → Sprachausgabe (Piper).
+- *Überholt seit 15.11.2026 (Abschnitte 15, 18 und 27):* Getestet wurde zuletzt auf einer **RTX A4000 (16 GB) mit TranslateGemma 4B** (die RTX 6000 Ada mit 12B nur am 13.11.). Die Spracherkennung ist faster-whisper mit Pausenerkennung (kein SimulStreaming, kein WhisperLiveKit). Es gibt **zwei Betriebsarten**, Vortrag und Gespräch (Abschnitt 27); das Gespräch braucht zusätzlich Spracherkennung der Gäste und eine deutsche Stimme.
 
 ## 2. Verbindliche Arbeitsregeln
 
@@ -58,20 +63,20 @@ Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft mög
 ## 3. Wo was liegt
 
 - **Repository:** `github.com/justusroman123/nachhaltigkeit`, Zweig `ccr-4bf88cb4-flgtez`, Projektordner `kidolmetscher/` (das Repository ist öffentlich; dort dürfen nie Geheimnisse liegen).
-- `server/app/`: FastAPI-Server (`main.py`, `config.py`, `rooms.py`, `orchestrator.py`, `messages.py`, `security.py`), `pipeline/` mit `*_mock.py` und `*_real.py`.
-- `web/`: Bedienplatz (`operator.html`), Zuhörer (`listener.html`), `mic-test.html`, `datenschutz.html` (Entwurf).
+- `server/app/`: FastAPI-Server (`main.py`, `config.py`, `rooms.py`, `orchestrator.py`, `messages.py`, `security.py`), `pipeline/` mit `*_mock.py` und `*_real.py`. *Ergänzt am 17.11.2026 (Code-Stand):* `__main__.py` (Start nur über `python -m app`), `turns.py` (Sperre und Wortmeldung im Gespräch), `conversation.py` (Gast-Pfad: Erkennung, Übersetzung ins Deutsche, Vorlesen), `benchmarks.py`; in `pipeline/` zusätzlich `segmenter.py`, `text_clean.py`, `mt_prompt.py`.
+- `web/`: Bedienplatz (`operator.html`), Zuhörer (`listener.html`), `mic-test.html`, `datenschutz.html` (Entwurf; seit 17.11.2026 mit Gespräch, siehe Abschnitt 6).
 - `scripts/`: Messskripte (`bench_*.py`, `smoke_test.py`), `quality_run.py` (Bewertungsbogen), `fetch_voices.py`, `fetch_models.py`, `gpu_check.py`, `server_setup.sh`, `server_ctl.sh`, `cloud-init-gpu.sh`, `tts_candidate_try.py`.
 - `windows/`: `start-tunnel.bat`, `hole-bewertungsbogen.bat` (ungetestet).
 - `docker/`: Compose mit Profilen `mock` und `gpu`, Caddy, `Dockerfile.gpu` (nicht gebaut).
 - `docs/`: Architektur, Entscheidungen, Messprotokoll, Betrieb, Lizenzen-Recherche, Kosten, Datenschutz-Nachweis, Server-Test-Ablauf, centron-Console-Befund, TranslateGemma-Modellkarte, TTS-Kandidaten, dieses Protokoll.
-- **Tests:** `cd kidolmetscher/server && pytest` (187 bestanden, 3 übersprungen, weil sie echte Modelle brauchen).
+- **Tests:** `cd kidolmetscher/server && pytest` (**326 bestanden, 3 übersprungen** laut Abschnitt 32, Stand 17.11.2026; die übersprungenen brauchen echte Modelle). *Überholt seit 17.11.2026: früher 187 bestanden, 3 übersprungen.* Browser-Szenarien liegen unter `server/tests/e2e/` (nicht Teil von pytest).
 - **Google Drive** (Ordner „KI Dolmetscher“): u. a. die Dokumente „Kosten und Sparhebel“, „Server-Test einer Stunde bei centron – Anleitung“, „centron-Console Befund“, „Sprachausgabe Piper – Einrichtung und CPU-Messung“, „Spracherkennung und Übersetzung – Einrichtung und erster Gesamtlauf“, „Server-Test Ablauf …“ (mehrere Fassungen, die neueste mit „centron-Antwort“), „Datenschutz-Nachweis“, „Sprachausgabe Arabisch und Türkisch – Kandidaten“, „TranslateGemma 12B – Angaben aus der Modellkarte“ (alle Stand 12.11.2026) sowie frühere Etappen-Dokumente. Das Plan-Dokument heißt „Plan Prototyp KI-Dolmetscher: Aufgaben, Prüfungen und Prompts (Stand 09.11.2026)“.
 
 ## 4. Stand der Umsetzung
 
 | Baustein | Stand | Wie geprüft |
 | --- | --- | --- |
-| Server (FastAPI, WebSockets, Räume, Zuhörer-Links mit Token und Ablauf, QR, Sprachwahl, Rückstau-Schutz, Satz-Segmentierer) | fertig, mit Attrappen | 187 automatische Tests, Browser-Tests (Playwright) |
+| Server (FastAPI, WebSockets, Räume, Zuhörer-Links mit Token und Ablauf, QR, Sprachwahl, Rückstau-Schutz, Satz-Segmentierer) | fertig, mit Attrappen | 187 automatische Tests (*überholt seit 17.11.2026: 326, Abschnitt 32*), Browser-Tests (Playwright) |
 | Bedienplatz und Zuhörer-Seiten (einfache Bedienung, 6 Sprachen der Oberfläche, nicht von Muttersprachlern geprüft) | fertig | Browser-Tests |
 | Datenschutz-Prüfungen (keine Speicherung, keine Inhalte in Protokollen, keine Fremdressourcen, keine ausgehenden Verbindungen im Anwendungscode) | durch Tests belegt, nur für den Anwendungscode | siehe `docs/datenschutz-nachweis.md` |
 | **Sprachausgabe (Piper)** `tts_real.py`, Stimmen je Sprache über `TTS_VOICES` | umgesetzt | mit Attrappen-Modul und echten Stimmen (uk, en) auf der CPU |
@@ -83,6 +88,8 @@ Wichtig zum Stand der Server-Miete: Die gemietete GPU-VM bei centron läuft mög
 | `cloud-init-gpu.sh` (alles automatisch beim Anlegen, Caddy/HTTPS, Dienst, Qualitätslauf) | geschrieben | **nicht getestet** |
 | HTTPS für Chromebook und Tablets (Caddy, eigene Adresse) | im Cloud-Init-Skript vorbereitet | **nicht getestet** |
 | Windows-Startdateien für den SSH-Tunnel | geschrieben | **nicht getestet** |
+
+*Überholt seit 13.11. bis 15.11.2026 (Abschnitte 9, 16, 18):* Die Zeilen „großes Modell und GPU ungeprüft“, „TranslateGemma ungeprüft“ und „auf echter VM erst teilweise erprobt“ gelten nicht mehr: Alle drei echten Stufen liefen auf einer gemieteten GPU-VM (13.11. RTX 6000 Ada mit 12B; 15.11. RTX A4000 mit 4B, Handy-Test „sehr gut“ laut Nutzer). Die HTTPS-Adresse lief am 15.11. (Abschnitt 18). Der Cloud-Init-Weg ist **nicht** bestätigt (Abschnitt 16). **Nicht gemessen** bleiben Übersetzungsqualität je Sprache und die Verzögerung (nur Schätzung des Nutzers, ca. 1 s).
 
 Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Satz 71 bis 168 ms (uk, en); Laden der Stimmen 3,6 s. Gesamtlauf mit Ersatzmodellen: ASR 530 bis 1065 ms, Übersetzung 1262 bis 1424 ms, Sprachausgabe 86 bis 134 ms (das Audio wurde schneller als in Echtzeit eingespeist, daher nicht aussagekräftig).
 
@@ -102,7 +109,15 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 - Aussage gegenüber Kunden nur so: „Verarbeitung auf einem Server in Deutschland, im Datenpfad kein Drittanbieter-Dienst vorgesehen.“ **Nicht** sagen: „super sicher“, „DSGVO-zertifiziert“, „läuft nicht über amerikanische Server“ ohne Zusatz.
 - Offen (bewusst zurückgestellt): Auftragsverarbeitungsvertrag mit centron (in der Console nicht gefunden; Abschluss über die Datenschutz-Adresse von centron), Unterauftragnehmer, rechtliche Prüfung, KI-Hinweis (Art. 50 KI-VO, Frist laut Plan 02.12.2026), Gemma-Pflichten, Sperren ausgehender Verbindungen auf dem Server, Geräteleitfaden für Chromebook und Tablets. Das Plugin und Modell-Downloads laufen über Hugging Face (Sitz nicht geprüft), keine Gesprächsdaten.
 - Für Tests nur **erfundene** Texte sprechen.
-- Das öffentliche HTTPS für Chromebook/Tablets macht den Bedienplatz im Internet erreichbar: Schutz nur durch den Bedienschlüssel (kein Schutz gegen automatisches Raten), deshalb langer Schlüssel und VM nur für die Dauer des Termins.
+- Das öffentliche HTTPS für Chromebook/Tablets macht den Bedienplatz im Internet erreichbar: Schutz nur durch den Bedienschlüssel (~~kein Schutz gegen automatisches Raten~~), deshalb langer Schlüssel und VM nur für die Dauer des Termins. **Überholt seit 16.11.2026: ersetzt durch Abschnitt 31 und 32** (Sperre je Absender nach 10 falschen Schlüsseln in 10 Minuten für 15 Minuten, `AUTH_MAX_FAILS`, `AUTH_WINDOW_S`, `AUTH_BLOCK_S`). Es bleibt **ein gemeinsamer Schlüssel** für alle Mitarbeitenden, ohne Rollen, Audit-Log und Mehrfaktor-Anmeldung.
+
+**Stand 17.11.2026 (Code, siehe `server/app/config.py`; ergänzt, die Aussagen oben bleiben als Geschichte):**
+- **Verlauf wird aktiv gelöscht:** Der Server hält für später verbundene Zuhörer je Sprache bis zu 40 Untertitel (nur Text, kein Ton) und löscht jeden, der älter als `HISTORY_S` (Standard 120 s) ist, etwa alle 5 s von selbst. Der Browser des Zuhörers zeigt bis zu 60 Zeilen, solange die Seite offen ist (nur im Browser).
+- **Raum ohne Bedienplatz schließt:** Ist kein Bedienplatz verbunden, wird der Raum nach `ROOM_IDLE_S` (Standard 3600 s) geschlossen; Obergrenzen `MAX_ROOMS=20` und `MAX_TOKENS_PER_ROOM=200`. Beim Sitzungsende werden Zuhörer-Links, Verlauf und die Warteschlange zum Bedienplatz geleert.
+- **HSTS-Header** wird immer gesendet (wirkt nur über HTTPS). **Modell-Bibliotheken** werden bei lokalen Modellordnern auf Offline gestellt (`HF_HUB_OFFLINE`, `TRANSFORMERS_OFFLINE`); ob sie dennoch Verbindungen aufbauen, ist laut `docs/datenschutz-nachweis.md` **unbekannt** (Messung dort).
+- **Betriebsrisiko Link-Ablauf im Gespräch:** Ein Zuhörer-Link gilt nur für die eingestellte Zeit (`LISTENER_TTL_S`, Standard 3600 s, zulässig 60 bis 28800 s; der Bedienplatz bietet 30 Minuten bis 8 Stunden). Danach trennt der Server die Verbindung mit „token_expired“ **auch mitten im laufenden Gespräch** (`server/app/main.py`). Die Link-Gültigkeit deshalb **länger als den Termin** wählen. Die Frist für das Ende einer Aussage (`TURN_IDLE_S`, Standard 120 s, zulässig 10 bis 3600 s) ist einstellbar; der Hinweistext am Bedienplatz nennt seit 17.11.2026 „120 Sekunden … einstellbar“ (fest in `web/operator.html`, folgt einer geänderten Einstellung nicht).
+- **Stimme des Gastes im Gespräch:** Im Gespräch wird die Stimme des Gastes zum Server übertragen, erkannt, ins Deutsche übersetzt, dem Mitarbeiter als Text gezeigt und mit einer deutschen Stimme vorgelesen; nichts wird dauerhaft gespeichert (nur Arbeitsspeicher bis zum Sitzungsende). Das Merkblatt `web/datenschutz.html` (Entwurf, Stand 17.11.2026) beschreibt jetzt Vortrag **und** Gespräch. Der kurze Stimmen-Hinweis vor dem Sprechen (`privacyShort`, `talk.consent` in `web/js/strings.js`) liegt nur in **Deutsch, Englisch und Ukrainisch** vor; Arabisch, Türkisch und Persisch zeigen den **englischen** Text (Rückfall, von Muttersprachlern nicht geprüft). Das Merkblatt selbst gibt es nur auf Deutsch.
+- **Offen (Merkblatt):** Verantwortliche Stelle, Datenschutzbeauftragte/r, Auftragsverarbeiter, Rechtsgrundlage, Aufsichtsbehörde und Speicherdauer sind **Platzhalter in eckigen Klammern**; das Merkblatt nennt sich selbst „Entwurf“. Rechtsgrundlage und Pflichtangaben nach Art. 13 DSGVO sind mit der/dem Datenschutzbeauftragten festzulegen; **rechtliche Prüfung steht aus**.
 
 ## 7. centron: Fakten
 
@@ -121,6 +136,8 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 - Hebel: kleineres Modell (4B) auf der A4000 (ca. 0,21 € pro Stunde statt 1,26 €), Cloud-Init zur Einrichtung (**Abbild/Snapshot entfällt: bei GPU-VMs nicht möglich**, Stand 14.11., siehe `centron-console-befund.md`), automatisches Löschen über die centron-API (**kein eingeschränkter Schlüssel gefunden**, nur voller Member-Zugriff; daher von Hand zerstören, beim Bestätigen den VM-Namen `kidolmetscher-test` eingeben), Termine mit Vorlauf (VM ca. 1 Stunde vorher anlegen), Kalender-Erinnerung zum Zerstören.
 
 ## 9. Aktueller Betriebsstand (13.11.2026)
+
+*Überholt seit 14.11.2026: Die VM aus diesem Abschnitt ist zerstört (Abschnitt 14); der Stand „läuft und kostet“ gilt nicht mehr. `DEBUG_FEHLER=1` für die Testphase (unten) ist seit 17.11.2026 im Einrichtungsskript wieder aus (Abschnitt 32). Der Befund „Whisper findet `libcublas.so.12` nicht“ wurde am 13.11. behoben (unten).*
 
 - VM `xv20213` bei centron: RTX 6000 Ada (48 GB), Ubuntu 26.04 LTS, angelegt am 12.11. um 20:54. **Läuft und kostet**, solange sie nicht zerstört wird. Zerstören: VM-Seite, „Zerstören“, Server-ID bestätigen (das klickt der Nutzer selbst).
 - **GPU-Treiber installiert und geprüft:** `nvidia-smi` zeigt RTX 6000 Ada, 49.140 MiB, Treiber 595.99.02, CUDA 13.2. (Der Treiber 595-open wurde per `apt` installiert, danach Neustart.)
@@ -158,6 +175,8 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 
 ## 11. Nächste Schritte (Reihenfolge)
 
+**Überholt seit 17.11.2026: ersetzt durch Abschnitt 11a (Stand 17.11.2026).** Dieser Abschnitt gibt den Stand vom 13.11.2026 wieder (Punkt 0, der Whisper-GPU-Fix, ist erledigt: Abschnitt 9, Ergebnis nach dem Fix; Punkt 6, die A4000 mit 4B, lief am 15.11.: Abschnitt 18 und 19).
+
 0. **Whisper-GPU-Fix prüfen** (Ursache: fehlende CUDA-12-Bibliothek, Abschnitt 9): auf der VM `git pull`, `SKIP_APT=1 SKIP_MODELS=1 bash scripts/server_setup.sh`, Server neu starten, sprechen, Log prüfen (`asr_abschnitt`, `pipeline_fehler lang=…`). Danach erst Übersetzung/Ton bewerten.
 1. **Entscheiden:** Wenn heute nicht weitergetestet werden kann, VM **sofort zerstören** (Prompt C), sonst Einrichtung abschließen.
 2. Einrichtung auf der VM abschließen: `git pull`, `server_setup.sh` (mit Hugging-Face-Token, unsichtbar eingegeben), Zeit (`real`) notieren, GPU-Prüfung lesen.
@@ -170,6 +189,20 @@ Gemessene CPU-Werte (Entwicklungsumgebung, **keine Servermessung**): Piper je Sa
 9. Chromebook/Tablets: HTTPS-Adresse (Domain, Caddy, reservierte IP prüfen), Cloud-Init-Skript testen.
 10. Abbild/Objektspeicher und automatisches Löschen prüfen (Plugin-Prompts im Dokument „Server-Test Ablauf …“).
 11. Später: Datenschutz und Verträge (Auftragsverarbeitung, rechtliche Prüfung, KI-Hinweis), 2FA vor dem 14.12.2026, Entscheidungen E9 und E10 abschließen, Geräteleitfaden.
+
+## 11a. Nächste Schritte (Stand 17.11.2026; ersetzt Abschnitt 11)
+
+Abgeleitet aus den Abschnitten 18 bis 32; **nichts davon ist hier neu gemessen oder ausgeführt**. Reihenfolge ist ein Vorschlag.
+
+1. **Zustand klären:** Ob eine VM läuft, ist **unbekannt** (Console prüfen, nur Zerstören beendet die Kosten). Neue VM nach `docs/vm-neu-einrichten.md` (Cloud-Init-Feld nicht verwenden); vorhandene VM mit `scripts/vm_aktualisieren.sh` auf den Code-Stand 17.11.2026 bringen (**auf einer echten VM ungetestet**, Abschnitt 32).
+2. **Deutsche Stimme** einrichten (`scripts/stimme_de_einrichten.sh`, Abschnitt 30; auf der echten VM ungetestet), sonst werden Gast-Antworten nur gelesen, nicht vorgelesen.
+3. **Gespräch mit echten Tablets und Chromebook prüfen** (Abschnitte 30 und 32, „nicht prüfbar in dieser Umgebung“): Mikrofon, Hintergrund und Sperrbildschirm auf iOS/Safari, Wortmeldung und automatische Übergabe, Stopp des Mitarbeiters, Rückkopplung zwischen Lautsprecher und Mikrofon, Verhalten bei Verbindungsabbruch, bewusste Denkpause von mehr als 120 s (`TURN_IDLE_S`).
+4. **Messen statt schätzen:** Verzögerung (`t_audio_in` bis `t_out`), Stau (`stau`-Zeilen im Log über mindestens 5 Minuten Vortrag), Speicher der A4000 (`nvidia-smi` beim Sprechen, 16 GB insgesamt). Bisher nur die Schätzung „ca. 1 s“ des Nutzers.
+5. **Qualität bewerten lassen:** Übersetzung 4B (gegen 12B nur auf der Ada vergleichbar), Ukrainisch in beiden Richtungen (Erkennung der Gäste, Übersetzung ins Deutsche), Arabisch und Türkisch; Muttersprachler (Bewertungsbogen `docs/bewertungsbogen.md`). Oberflächentexte uk/ar/tr/fa sind nicht von Muttersprachlern geprüft; der Stimmen-Hinweis fehlt in ar/tr/fa (Rückfall Englisch).
+6. **Ton für Arabisch und Türkisch:** Hörvergleich der Kandidaten (Abschnitt 5), Stand seit 13.11. nicht neu geprüft.
+7. **Datenschutz und Recht für den Behördeneinsatz:** Platzhalter im Merkblatt füllen (Verantwortliche Stelle, Rechtsgrundlage, Aufsichtsbehörde), Auftragsverarbeitung mit centron, Folgenabschätzung, KI-Hinweis nach Art. 50 KI-VO (Frist laut Plan 02.12.2026), Gemma-Pflichten; 2FA im centron-Konto vor dem 14.12.2026.
+8. **Hürden aus Abschnitt 32:** „Gast entfernen“ und „Link widerrufen“ (S10), zufällige Sitzungskennung gegen Aussperren (S6), Rollen und Audit-Log, gepinnte Abhängigkeiten, Pentest, VM-Härtung, Barrierefreiheit nach BITV/EN 301 549.
+9. **Nach jedem Test:** VM zerstören (Name `kidolmetscher-test` eingeben), Billing prüfen, Hugging-Face-Token widerrufen.
 
 ## 12. Wichtige Befehle
 
@@ -277,7 +310,7 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 **Neustart:** `docs/vm-neu-einrichten.md` (Ablaufplan), `windows/vm-einrichten.ps1/.bat` (Ein-Klick, versteckte Abfrage von Token/Schlüssel, ungetestet), Stichwort in `CLAUDE.md`.
 
-**Betriebsarten (Entwurf, noch nicht gebaut):**
+**Betriebsarten (Entwurf, noch nicht gebaut):** *Überholt seit 15.11.2026: Vortrag und Gespräch sind gebaut (Abschnitte 23 und 27); Punkt 3 „Dolmetscher-Modus (Schalter)“ entfällt, es gibt genau zwei Betriebsarten (Abschnitt 27).*
 1. **Vortrag (einseitig, vorhanden):** Ein Sprecher spricht Deutsch, Zuhörer wählen ihre Sprache am eigenen Gerät. Die Anwendung übersetzt nur Sprachen, für die gerade ein Zuhörer verbunden ist.
 2. **Gespräch (zweiseitig, z. B. Behörde):** Mitarbeiter spricht Deutsch am Bedienplatz; der Gast wählt am Tablet zuerst seine Sprache (Auswahlseite gibt es schon, Bedienplatz zeigt „Ukrainisch: 1“) und spricht danach in seiner Sprache in das Tablet; die Übersetzung ins Deutsche erscheint (Text, optional Ton) beim Mitarbeiter. Es antwortet immer wechselseitig (Halbduplex: wer spricht, sperrt das andere Mikrofon, Anzeige „Sie sind dran“/„Bitte warten“).
 3. **Dolmetscher-Modus (Schalter):** „Sprechen möglich“ erst, wenn die Übersetzung auf allen Geräten fertig gesprochen ist (Zuhörer melden „fertig“, nur Zähler, Zeitgrenze gegen hängende Geräte).
@@ -301,6 +334,12 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 ## 23. Umgesetzt am 15.11.2026: Gesprächsmodus, 2-Minuten-Verlauf (Stand der Prüfung: Attrappen, noch nicht auf der GPU)
 
+**Überholt seit 15.11./16.11.2026 (Teile; der Rest gilt weiter):**
+- **„2-Minuten-Verlauf“ / „letzte 2 Minuten sichtbar“: ersetzt durch Abschnitt 28.** Die Zuhörer-Seite zeigt keine Zeitgrenze mehr, sondern bis zu 60 Nachrichten (nur im Browser). Der **Server** hält je Sprache bis zu 40 Untertitel und löscht ältere als `HISTORY_S` (Standard 120 s) aktiv (Abschnitt 6, Stand 17.11.2026).
+- **„Ende nach ca. 2 s Pause“ und „Zeitgrenzen 60/20/15 s“: ersetzt durch Abschnitt 30 und 32.** Eine Aussage endet nur durch „Fertig“, den Stopp des Mitarbeiters oder nach 120 s ohne hörbare Sprache (`TURN_IDLE_S`); die Grenzen sind `TURN_PROCESS_MAX_S` 90 s, `TURN_PLAY_MAX_S` 15 s (plus Tonlänge), `TURN_PICKUP_S` 30 s.
+- **„Statusband mit Balken der Satzlänge im Gespräch“: ersetzt durch Abschnitt 30** (dort Pegelanzeige); im Vortrag gilt Abschnitt 27 (ruhige Anzeige).
+- **Tests:** „209 Tests“ ist überholt (326, Abschnitt 32).
+
 **Entscheidungen des Nutzers (15.11., Nachmittag):** Gäste hören sich **nicht** untereinander; **letzte 2 Minuten** der Texte sichtbar (wegen Lärm), danach gelöscht; Sprechdauer muss **eindeutig** angezeigt werden; „macht alles gut“ = Standardannahmen aus dem Entwurf (Antippen zum Sprechen, Ende nach ca. 2 s Pause, Mitarbeiter liest die Gast-Antwort).
 
 **Gebaut (Code im Repository, 209 Tests grün, zusätzlich Ablauf im echten Chromium mit Attrappen und Fake-Mikrofon durchgespielt):**
@@ -315,6 +354,8 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 ## 24. Korrektur nach Nutzer-Rückmeldung (15.11.2026, später): längere Sätze, aktueller Verlauf
 
+**Überholt seit 15.11.2026 (später): Teile ersetzt durch Abschnitt 28.** „Letzte 10 Nachrichten“ und „nichts älter als 2 Minuten“ gelten nicht mehr: Zuhörer-Seite **60 Nachrichten ohne Zeitgrenze** (Browser), Bedienplatz-Kontrolle **30 Sätze** (`CHECK_MAX`), Bedienplatz-Protokoll **20 Zeilen**. Die Werte `ASR_SILENCE_MS` 1200 ms und `ASR_MAX_UTTERANCE_S` 20 s sind **zurückgenommen** (heute 800 ms und 8 s); `SEGMENT_MAX_WORDS` 40 gilt weiter. „Ende einer Aussage im Gespräch bei Pause + 0,8 s“: ersetzt durch Abschnitt 30 (120 s Stille). Der behobene Fehler „Sätze doppelt nach Neuverbinden“ bleibt gültig.
+
 - **Rückmeldung:** Man soll **längere Sätze** sprechen können und das Fenster ganz ausnutzen; eine kurze Atempause darf nicht sofort eine Übersetzung auslösen. Der Verlauf muss **immer aktuell** sein: die neueste Übersetzung immer sichtbar, dazu nur die letzten Nachrichten (Nutzer: „vielleicht die letzten 10“).
 - **Geändert (im Repository; Browser-Test mit Attrappen; auf der GPU ungetestet):**
   - Pause bis zum Abschluss eines Abschnitts **`ASR_SILENCE_MS` 700 → 1200 ms**, längster Abschnitt **`ASR_MAX_UTTERANCE_S` 12 → 20 s**, **`SEGMENT_MAX_WORDS` 12 → 40** (Sätze werden am Satzende getrennt, nicht mitten im Satz). Der Balken der Satzlänge und die Anzeigegrenzen folgen diesen Werten automatisch. Das Ende einer Aussage im Gespräch liegt jetzt bei Pause + 0,8 s (mindestens 2 s). Alle Werte sind **Annahmen und zu messen**; längere Abschnitte erhöhen die Wartezeit bis zur Übersetzung.
@@ -323,6 +364,8 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Offen:** Ob die Übersetzung bei längeren Abschnitten (bis 20 s) mit TranslateGemma 4B noch gut ist und wie lang die Wartezeit wird: **unbekannt, messen**.
 
 ## 25. Vollständigkeit der Übersetzung (Rückmeldung vom 15.11.2026, abends) – Ursachenanalyse und Maßnahmen
+
+**Überholt seit 15.11./16.11.2026 (Teile):** Kontroll-Ansicht „letzte 2 Minuten, höchstens 10 Sätze“: ersetzt durch Abschnitt 28 (**30 Sätze, keine Zeitgrenze**). Vortrag „STOPP bleibt … Höchstdauer 180 s“: ersetzt durch Abschnitt 27 (**im Vortrag keine Sperre**, ruhige Anzeige „Läuft – einfach sprechen“). „Nichts wird stillschweigend verworfen“ und „jedes Wort“ gelten **nicht ausnahmslos**: genaue Aussage in Abschnitt 25a.
 
 **Rückmeldung des Nutzers:** Übersetzung nicht komplett: Texte fangen an und hören mittendrin auf; im Untertitel steht etwas, wurde aber nicht (ganz) gesprochen; bei Behörden muss **jedes Wort** übersetzt, angezeigt und gesagt werden; **STOPP muss bleiben, bis auf allen anderen Geräten alles fertig ist**; zusätzlich eine **Kontrolle** (eigener erkannter Text, wie es ausgespielt wird, dass es bei den anderen ankommt).
 
@@ -345,7 +388,21 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 - **Warnungen** am Bedienplatz (rot): Spracherkennung fehlgeschlagen, nicht verstanden, Übersetzung fehlgeschlagen, Audio verworfen, Gerät hat nicht bestätigt; der Gast bekommt „Nicht verstanden. Bitte wiederholen.“
 - **Grenzen:** „fertig gesprochen“ meldet das Gerät (Browser: Ton zu Ende); ob ein Mensch es **verstanden** hat oder die **Übersetzung inhaltlich stimmt**, prüft das System nicht. Hundertprozentige Sicherheit ist nicht belegt; Qualität (Ukrainisch, lange Sätze mit 4B) bleibt zu messen; denkbar als Zusatz: Rückübersetzung ins Deutsche zur Kontrolle (nicht gebaut).
 
+## 25a. Was „nichts geht verloren“ genau heißt (Stand 17.11.2026, aus dem Code abgelesen, nicht auf der GPU gemessen)
+
+**Fehler und Verluste werden gezählt und größtenteils am Bedienplatz gemeldet. Es gibt aber Fälle, in denen Inhalt ohne Hinweis an den Sprecher wegfällt oder verändert wird:**
+- **Sehr kurze Sprachabschnitte** mit weniger als `ASR_MIN_SPEECH_MS` (300 ms) Sprache werden **ohne Meldung** verworfen (`asr_real.py`). Ein längerer Abschnitt, aus dem **gar kein Text** herauskommt, wird dagegen als „nicht erkannt“ gemeldet (Bedienplatz und Gast).
+- **Whisper-Segmente**, die sehr wahrscheinlich keine Sprache sind (`no_speech_prob` über 0,85 **und** `avg_logprob` unter -1,5), werden verworfen. Bleibt vom ganzen Abschnitt kein Text übrig, kommt „nicht erkannt“; fällt nur **ein Teil** weg, gibt es keine Meldung.
+- **Entdoppelung** (`text_clean.py`): Sätze erst ab 4 gleichen in Folge, Wortfolgen ab 4, Einzelwörter ab 6 gleichen werden gekürzt. Eine **bewusst** so gesprochene Wiederholung geht damit verloren; im Log steht nur der Hinweis „bereinigt“, am Bedienplatz nichts.
+- **Abspann-Filter:** Text wie „Untertitel … ZDF/BR/…“ wird entfernt, **auch wenn er wirklich gesprochen wurde** (Schutz gegen erfundene Abspann-Zeilen, Abschnitt 20). Keine Meldung.
+- **Rückstau:** Bei mehr als `LANG_QUEUE_MAX` (500) wartenden Segmenten einer Sprache wird das **älteste verworfen**; es erscheint nur der Zähler in der Zeile „Rückstau“ der Bedienplatz-Statusansicht, **keine Warnmeldung**.
+- **Zeitüberschreitung** einer Stufe (`STAGE_TIMEOUT_S`, 60 s): Bei der Übersetzung fehlt der Satz, bei der Sprachausgabe der Ton; beides wird **gemeldet** (Abschnitt 28).
+
+**Nicht geprüft** wird, ob der Inhalt **vollständig und richtig** übersetzt wurde und ob ein Mensch ihn verstanden hat (Abschnitt 25, „Grenzen“). Es gibt keinen Ende-zu-Ende-Nachweis. **Nicht zusagen:** „jedes Wort wird übersetzt“; sagen: „Fehler und Verluste werden gezählt und, mit den genannten Ausnahmen, gemeldet; die Richtigkeit der Übersetzung prüft das System nicht.“ Offen (Vorschlag, nicht gebaut): Hinweis „kurzer Abschnitt verworfen“ und eine Warnung bei Verwurf durch Rückstau.
+
 ## 26. Betriebsart „Dolmetschen“ mit echter Sperre (Nutzerwunsch 15.11.2026, abends)
+
+**Überholt seit 15.11.2026: ersetzt durch Abschnitt 27** (genau zwei Betriebsarten; die dritte Betriebsart „Dolmetschen“ gibt es nicht mehr). Der Text bleibt als Geschichte stehen.
 
 - **Rückmeldung:** Während die Übersetzung noch ausgegeben wird, konnte der Bedienplatz schon wieder sprechen (im **Vortrag** war STOPP nur eine Anzeige). Praxisbeispiel: Anweisung („Seite 52, Formular …“), kurze Verständigung („ist das okay?“): man muss warten, bis die Übersetzung **komplett angekommen und angezeigt/gehört** ist; dazwischen eine Pause. Es muss „in die Praxis passen“.
 - **Gebaut (Browser-Test mit Attrappen, 212 Tests grün; GPU/Tablets ungetestet):** drei Betriebsarten beim Sitzungsstart:
@@ -368,7 +425,7 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 | Gäste | hören/lesen nur | bis zu 3, sprechen in ihrer Sprache, der Mitarbeiter liest den deutschen Text; sie hören sich nicht untereinander |
 | Kontrolle | aufklappbar: erkannter Text, Übersetzung je Sprache, „angezeigt x/y · gesprochen x/y“ | dito, zusätzlich Gast-Antworten (letzte 2 Minuten) |
 
-**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (Abschnitt 25); Verlauf: seit Abschnitt 28 **ohne Zeitgrenze** (Zuhörer: letzte 60 Nachrichten, nur im Browser), neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
+**Regeln, die für beide gelten:** nichts wird stillschweigend verworfen (**mit den Ausnahmen in Abschnitt 25a**; die Richtigkeit der Übersetzung prüft das System nicht); Verlauf: seit Abschnitt 28 **ohne Zeitgrenze** (Zuhörer: letzte 60 Nachrichten, nur im Browser), neueste immer sichtbar; Sprachen zunächst Ukrainisch und Englisch; keine Lizenzkosten (außer Server-Miete); kein Speichern von Inhalten.
 
 **Ausdrücklich NICHT mehr vorhanden:** eine dritte Betriebsart „Dolmetschen“ (aus Abschnitt 26 entfernt; ihre Wirkung, „erst weiter, wenn alles angekommen ist“, gehört jetzt zum **Gespräch**), Dolmetscher-Schalter, getrennte Vorträge mit Sperre. Auswahl beim Sitzungsstart: zwei Optionen, Vorauswahl **Vortrag**.
 
@@ -398,8 +455,10 @@ Hugging-Face-Token, Bedienschlüssel, privater SSH-Schlüssel, Passwörter, Zuga
 
 Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Abschnitt 27 bleibt gültig).
 
+**Überholt seit 16.11.2026: Punkt 1 (Notgrenze und Pause) und der Absatz „Deutsche Stimme – NOCH NICHT eingerichtet“ sind ersetzt durch Abschnitt 30.** Im Code gibt es **kein** `speak_max_s` und keine 30-Minuten-Notgrenze (Befehl: `grep -rn speak_max_s server/app`, kein Treffer). Heute gilt: Eine Aussage endet nur durch „Fertig“, durch den Stopp des Mitarbeiters oder nach 120 s ohne hörbare Sprache (`TURN_IDLE_S`, einstellbar 10 bis 3600 s); es gibt keine Redezeit-Grenze. Die Lizenz der Stimme `de_DE-thorsten-medium` wurde am 16.11.2026 gelesen (CC0 laut Modellkarte).
+
 **Umgesetzt:**
-1. **Kein Redezeit-Limit:** Die Zeitgrenze von 120 s ist entfernt; es bleibt nur eine Notgrenze von 30 Minuten gegen hängende Geräte (`TurnLimits.speak_max_s=1800`). Unverändert: Eine Aussage endet nach längerer Pause (ca. 2 s) oder mit „Fertig“; bei längerem Sprechen wird fortlaufend übersetzt. **Offen/unbekannt:** ob 2 s Pause für Redner mit Denkpausen zu kurz ist (Messpunkt: im Test bewusst 3–4 s Pausen machen).
+1. **Kein Redezeit-Limit:** Die Zeitgrenze von 120 s ist entfernt; es bleibt nur eine Notgrenze von 30 Minuten gegen hängende Geräte (`TurnLimits.speak_max_s=1800`). Unverändert: Eine Aussage endet nach längerer Pause (ca. 2 s) oder mit „Fertig“; bei längerem Sprechen wird fortlaufend übersetzt. *(Überholt, siehe oben.)* **Offen/unbekannt:** ob 2 s Pause für Redner mit Denkpausen zu kurz ist (Messpunkt: im Test bewusst 3–4 s Pausen machen).
 2. **Wortmeldung:** Ist gesperrt, zeigt der Knopf „✋ Ich möchte auch sprechen“ (Bedienplatz und Gast-Tablet; erneutes Tippen nimmt zurück). Der Sprechende sieht „⏳ Ein Gast möchte sprechen – bitte zum Ende kommen“ (Gast: Text in seiner Sprache, de/en/uk; ar/tr/fa fallen auf Englisch zurück). Nichts wird unterbrochen. Reihenfolge der Wortmeldungen = Reihenfolge des Eingangs (`TurnManager.request/cancel_request`, `waiting`). Wird frei, bekommt der Erste sofort das Wort; sein Mikrofon startet automatisch (Gast: Mikrofon-Freigabe wird schon beim Antippen der Wortmeldung erteilt). Meldet sich das Gerät nicht innerhalb von 30 s (`pickup_s`), geht es weiter. Gäste sehen nicht, wer sich meldet (nur „jemand möchte sprechen“).
 3. **Deutsche Vorlesung für den Mitarbeiter:** Die Gast-Antwort (deutscher Text) wird mit TTS-Stimme „de“ vertont und am Bedienplatz vorgelesen (Häkchen „Antworten der Gäste auf Deutsch vorlesen“, Voreinstellung an); der Bedienplatz meldet „fertig gesprochen“ (Sperre wartet darauf, wie bei den Gästen). **Ohne eingerichtete deutsche Stimme bleibt es beim Lesen (kein Fehler).**
 4. **Sprachwechsel des Gastes:** Ist schon vorhanden: Knopf 🌐 oben rechts (nur beim Sammel-Link, nicht bei Sprach-Links). Beim Wechsel wird die Anzeige geleert, die Spracherkennung des Gastes folgt der neuen Sprache. Browsertest mit Attrappen: Wechsel auf Türkisch funktioniert, Gespräch bleibt bedienbar. Das Gast-Tablet sollte den Sammel-Link verwenden.
@@ -429,9 +488,9 @@ Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Absc
 
 **Ausgangslage (belegt aus `docs/architektur.md` und `docs/datenschutz-nachweis.md`):** Der Bedienschlüssel (≥ 16 Zeichen, zeitkonstanter Vergleich) schützte den Bedienplatz, aber **nichts bremste wiederholtes Raten**. Bei einem aus dem Internet erreichbaren Server ist das für Behörden eine typische Beanstandung (Zugriffsschutz, Art. 32 DSGVO).
 
-**Umgesetzt:** `FailureLimiter` (`server/app/security.py`): **10 falsche Schlüssel innerhalb von 10 Minuten → 15 Minuten Sperre** je Absender (`AUTH_MAX_FAILS`, `AUTH_WINDOW_S`, `AUTH_BLOCK_S`; Zahlen sind Annahmen). Während der Sperre wird auch der **richtige** Schlüssel abgewiesen (HTTP 429 mit `Retry-After`, WebSocket-Code 4430), damit Raten nichts bringt; ein richtiger Schlüssel zählt nie als Fehler. **Datenschutz:** Absender werden nur als HMAC-Hash mit zufälligem, beim Start neu gewürfeltem Salz im Arbeitsspeicher geführt (keine IP-Adresse im Klartext, nichts gespeichert, nichts geloggt außer „Sperre nach n Fehlversuchen“). Hinter Caddy gilt `X-Forwarded-For` nur, wenn die Verbindung vom eigenen Rechner kommt (kein Fälschen von außen). Der Bedienplatz versucht bei falschem/gesperrtem Schlüssel nicht mehr endlos neu (das hätte sich sonst selbst gesperrt) und zeigt eine Meldung.
+**Umgesetzt:** `FailureLimiter` (`server/app/security.py`): **10 falsche Schlüssel innerhalb von 10 Minuten → 15 Minuten Sperre** je Absender (`AUTH_MAX_FAILS`, `AUTH_WINDOW_S`, `AUTH_BLOCK_S`; Zahlen sind Annahmen). Während der Sperre wird auch der **richtige** Schlüssel abgewiesen (HTTP 429 mit `Retry-After`, WebSocket-Code 4430), damit Raten nichts bringt; ein richtiger Schlüssel zählt nie als Fehler. *Überholt seit 17.11.2026 (Abschnitt 32): ein richtiger Schlüssel setzt den Fehlerzähler nicht mehr zurück (sonst würde jede erfolgreiche Anmeldung des Bedienplatzes den Zähler eines Angreifers hinter derselben Absender-Kennung, z. B. in einem gemeinsamen Netz, zurücksetzen; Begründung aus dem Code-Kommentar in `server/app/security.py`); IPv6-Adressen werden als /64-Netz gezählt, bei `X-Forwarded-For` gilt der rechteste Eintrag, es werden höchstens 20 000 Absender gleichzeitig geführt.* **Datenschutz:** Absender werden nur als HMAC-Hash mit zufälligem, beim Start neu gewürfeltem Salz im Arbeitsspeicher geführt (keine IP-Adresse im Klartext, nichts gespeichert, nichts geloggt außer „Sperre nach n Fehlversuchen“). Hinter Caddy gilt `X-Forwarded-For` nur, wenn die Verbindung vom eigenen Rechner kommt (kein Fälschen von außen). Der Bedienplatz versucht bei falschem/gesperrtem Schlüssel nicht mehr endlos neu (das hätte sich sonst selbst gesperrt) und zeigt eine Meldung.
 
-**Tests (8 neu):** Sperre und Ablauf, Verfall alter Fehlversuche, Zurücksetzen durch Erfolg, keine Klartext-Adressen im Speicher, Vertrauen in `X-Forwarded-For` nur von loopback, HTTP 429 auch mit richtigem Schlüssel, richtiger Schlüssel nie gesperrt, WebSocket-Sperre, öffentliche Konfiguration bleibt erreichbar. Gesamt 236 bestanden/3 übersprungen.
+**Tests (8 neu):** Sperre und Ablauf, Verfall alter Fehlversuche, Zurücksetzen durch Erfolg (*überholt seit 17.11.2026, Test entsprechend geändert, Abschnitt 32*), keine Klartext-Adressen im Speicher, Vertrauen in `X-Forwarded-For` nur von loopback, HTTP 429 auch mit richtigem Schlüssel, richtiger Schlüssel nie gesperrt, WebSocket-Sperre, öffentliche Konfiguration bleibt erreichbar. Gesamt 236 bestanden/3 übersprungen.
 
 **Weiter offen (Hürden, nicht umgesetzt):** ein gemeinsamer Schlüssel für alle Mitarbeitenden (kein Rollen-/Benutzermodell, kein Audit-Log, keine Mehrfaktor-Anmeldung); Abhängigkeiten nicht gepinnt; Pentest; VM-Härtung. Einzelheiten: Dokument „Behördentauglichkeit“ (Drive, 03 Entscheidungen und Lizenzen).
 
