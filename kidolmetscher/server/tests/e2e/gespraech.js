@@ -3,6 +3,7 @@
 // Prueft die Browser-Seiten von B2 (Gast kann nicht stoppen), B3 (Mikrofon aus, Ton aus), B4 (Wortmeldung, automatische Uebergabe),
 // B5/B6 ("played"-Rueckmeldung). Nutzt Chromiums Fake-Mikrofon; schreibt alle gesendeten Nachrichten per Init-Skript mit.
 const { chromium } = require('playwright');
+const { profil } = require('./_geraet');                   // GERAET = Gast-Tablet, OP_GERAET = Bedienplatz (leer: Standard-Fenster)
 const BASE = process.env.BASE || 'http://127.0.0.1:8123', KEY = process.env.OPERATOR_KEY;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fails = 0;
@@ -27,8 +28,8 @@ const text = async (p, sel) => ((await p.textContent(sel)) || '').trim();
 
 (async () => {
   const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
-  const mk = async () => { const c = await b.newContext({ permissions: ['microphone'] }); await c.addInitScript(INIT); return c.newPage(); };
-  const errs = [], op = await mk(), g = await mk();
+  const mk = async (g) => { const c = await b.newContext(profil(g, { permissions: ['microphone'] })); await c.addInitScript(INIT); return c.newPage(); };
+  const errs = [], op = await mk(process.env.OP_GERAET), g = await mk(process.env.GERAET);
   for (const [n, p] of [['operator', op], ['gast', g]]) p.on('pageerror', (e) => errs.push(n + ': ' + e.message));
   await op.goto(BASE + '/operator.html'); await op.fill('#key', KEY);
   await op.check('input[name=mode][value=gespraech]'); await op.click('#btnCreate');

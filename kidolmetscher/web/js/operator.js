@@ -17,7 +17,7 @@
     talk: document.querySelector('.talk'), talkBar: $('talkBar'), talkMsg: $('talkMsg'),
     vortragBox: $('vortragBox'), convBox: $('convBox'), btnTalk: $('btnTalk'), btnRelease: $('btnRelease'),
     stepGuest: $('stepGuest'), guestLog: $('guestLog'), stepCheck: $('stepCheck'), checkList: $('checkList'), problemBar: $('problemBar'),
-    devLine: $('devLine'), devCount: $('devCount'), joinNote: $('joinNote'), doorShut: $('btnDoorShut') };
+    devLine: $('devLine'), devCount: $('devCount'), devUnit: $('devUnit'), joinNote: $('joinNote'), doorShut: $('btnDoorShut') };
 
   let key = '', room = null, cfg = null, ws = null, stream = null, ctx = null, node = null, statTimer = 0;
   let wantSending = false, wsRetry = 0, pingTimer = 0, rtts = [], demoMode = false, demoTimer = 0;
@@ -342,6 +342,7 @@
   const DOOR_LABEL = 'Alle trennen, neuen Link erzeugen';
   function devRender() {
     e.devCount.textContent = String(devCount);
+    e.devUnit.textContent = devCount === 1 ? 'Gerät' : 'Geräte';
     e.devLine.classList.toggle('alert', devCount > 1 && !!room && room.mode === 'gespraech');      // im Gespraech ist meist ein Gast erwartet
   }
   function joinNote(text) {

@@ -2,6 +2,7 @@
 // kommt vom laufenden Server, der WebSocket wird per page.routeWebSocket nachgestellt. Prueft die Browser-Seiten von B2, B3, B5, B6.
 //   BASE=http://127.0.0.1:8123 OPERATOR_KEY=... node operator_ohne_server.js     (Exit-Code 1 bei Fehler)
 const { chromium } = require('playwright');
+const { profil } = require('./_geraet');                   // Umgebung OP_GERAET = Geraeteprofil des Bedienplatzes (leer: Standard-Fenster)
 const BASE = process.env.BASE || 'http://127.0.0.1:8123', KEY = process.env.OPERATOR_KEY;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fails = 0;
@@ -21,7 +22,7 @@ function wav(seconds, rate = 8000) {                          // gueltige WAV-Da
 const guestMsg = (seq, o = {}) => msg('guest_message', { seq, from_lang: 'uk', text: 'Guten Tag, ich habe eine Frage zu meinem Antrag.', text_src: 'x', audio: null, t: {}, ...o });
 
 async function seite(b) {                                    // frische Seite mit nachgestelltem WebSocket; Sitzung ist noch nicht gestartet
-  const ctx = await b.newContext({ permissions: ['microphone'] });
+  const ctx = await b.newContext(profil(process.env.OP_GERAET, { permissions: ['microphone'] }));
   await ctx.addInitScript(() => {
     window.__starts = 0; window.__stops = 0; window.__wl = { req: 0, rel: 0, type: '' };
     try {                                                           // Bildschirm-Sperre (Wake Lock) nachgestellt: zaehlt Anforderungen und Freigaben

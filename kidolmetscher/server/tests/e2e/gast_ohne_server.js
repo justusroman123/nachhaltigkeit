@@ -2,6 +2,7 @@
 // page.routeWebSocket nachgestellt). Schnell, deterministisch, ohne Zeitdruck. Statische Dateien kommen vom laufenden Server (BASE).
 //   BASE=http://127.0.0.1:8123 node gast_ohne_server.js     (Exit-Code 1 bei Fehler)
 const { chromium } = require('playwright');
+const { profil } = require('./_geraet');                   // Umgebung GERAET = Geraeteprofil des Gast-Tablets (leer: Standard-Fenster)
 const BASE = process.env.BASE || 'http://127.0.0.1:8123';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fails = 0;
@@ -21,7 +22,7 @@ const turn = (state, who, o = {}) => msg('turn', { state, who, reason: '', waiti
 
 async function szenario(b, name, fn, opts) {                      // frische Seite je Szenario; server = nachgestellter Server
   console.log('--- ' + name);
-  const ctx = await b.newContext({ permissions: ['microphone'] });
+  const ctx = await b.newContext(profil(process.env.GERAET, { permissions: ['microphone'] }));
   await ctx.addInitScript(() => {                             // Mikrofon-Streams merken, um "Mikrofon aus" pruefen zu koennen
     window.__streams = [];
     const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);

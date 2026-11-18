@@ -5,6 +5,7 @@
 // Nutzt Chromiums Fake-Mikrofon (Testton). Es prueft NICHT das echte DJI Mic Mini.
 const { chromium } = require('playwright');
 const { execFileSync } = require('child_process');
+const { profil } = require('./_geraet');                   // GERAET = Gast, OP_GERAET = Bedienplatz (leer: feste Standardfenster)
 const path = require('path');
 const BASE = process.env.BASE || 'http://127.0.0.1:8123';
 const KEY = process.env.OPERATOR_KEY;
@@ -19,7 +20,7 @@ const shot = async (page, name, opts = {}) => { if (SHOTS) await page.screenshot
     p.on('pageerror', (e) => errors.push(n + ': ' + e));
     p.on('console', (m) => { if (m.type() === 'error') errors.push(n + ': ' + m.text()); });
   };
-  const opCtx = await b.newContext({ permissions: ['microphone'], viewport: { width: 1100, height: 900 } });
+  const opCtx = await b.newContext(profil(process.env.OP_GERAET, { permissions: ['microphone'], ...(process.env.OP_GERAET ? {} : { viewport: { width: 1100, height: 900 } }) }));
   const op = await opCtx.newPage(); watch(op, 'operator');
   await op.goto(BASE + '/');
   ok(op.url().endsWith('/operator.html'), 'Wurzel leitet auf Bedienplatz');
@@ -48,7 +49,7 @@ const shot = async (page, name, opts = {}) => { if (SHOTS) await page.screenshot
 
   const listeners = [];
   for (const wanted of ['uk', 'ar', 'ar']) {
-    const c = await b.newContext({ permissions: [], viewport: { width: 390, height: 780 } });
+    const c = await b.newContext(profil(process.env.GERAET, { permissions: [], ...(process.env.GERAET ? {} : { viewport: { width: 390, height: 780 } }) }));
     const p = await c.newPage(); watch(p, 'zuhoerer'); await p.goto(link);
     await p.waitForSelector('#picker:not([hidden]) button');
     if (wanted === 'uk' && listeners.length === 0) {

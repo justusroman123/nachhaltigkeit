@@ -63,6 +63,9 @@
   let lastUserScroll = 0;
   subs.addEventListener('scroll', () => { if (!nearBottom()) lastUserScroll = Date.now(); }, { passive: true });
   function nearBottom() { return subs.scrollHeight - subs.scrollTop - subs.clientHeight < 80; }
+  // Drehen, Sprechleiste erscheint, Browserleisten wechseln: die neueste Zeile bleibt sichtbar, ausser jemand liest gerade bewusst weiter oben
+  const stickBottom = () => { if (Date.now() - lastUserScroll > 4000) subs.scrollTop = subs.scrollHeight; };
+  if (window.ResizeObserver) new ResizeObserver(stickBottom).observe(subs); else window.addEventListener('resize', stickBottom);
   function addLine(text, rtl, ageS, seq) {
     if (Number.isInteger(seq)) {
       if (seen.has(seq)) return false;                            // Wiederholung (Neuverbinden): nicht noch einmal anzeigen
