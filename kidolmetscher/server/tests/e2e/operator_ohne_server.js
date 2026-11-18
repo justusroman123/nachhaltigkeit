@@ -256,6 +256,44 @@ async function szenario(b, name, fn) {
     await schliessen(page, ctx);
   }
 
+  console.log('--- B-16b: "Alle trennen" bei langsamer Antwort: der alte (ungueltige) Link und sein QR-Code verschwinden sofort und werden nie als gueltig gezeigt');
+  {
+    const { ctx, page, got } = await seite(b);
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    const alt = (await page.textContent('#linkText')).trim();
+    ok(await until(async () => !!(await page.getAttribute('#qr', 'src'))), 'vorher: Link und QR-Code stehen da');
+    await page.route(/\/listener-links$/, async (r) => { await sleep(1500); try { await r.continue(); } catch (_) {} });     // der Server antwortet langsam
+    await page.click('#btnDoorShut'); await page.click('#btnDoorShut');
+    ok(await until(async () => (await page.textContent('#linkText')).trim() === '', 1000), 'der alte Link ist sofort weg (nicht erst, wenn der neue da ist)');
+    ok((await page.getAttribute('#qr', 'src')) === null, 'der alte QR-Code ist ebenfalls weg');
+    ok(/wird erzeugt/.test(await page.textContent('#linkInfo')), 'Hinweis "ein neuer Link wird erzeugt" statt eines toten Links');
+    await page.click('#btnCopy');
+    ok(/Noch kein Link/.test(await page.textContent('#btnCopy')), '"Link kopieren" meldet "Noch kein Link" und kopiert nichts');
+    ok(await until(async () => { const t = (await page.textContent('#linkText')).trim(); return /listener\.html#t=/.test(t) && t !== alt; }, 8000), 'danach steht der neue Link da');
+    ok(await until(async () => !!(await page.getAttribute('#qr', 'src'))), 'und sein neuer QR-Code');
+    await schliessen(page, ctx);
+  }
+
+  console.log('--- B-16c: "Alle trennen", aber der neue Link kann nicht erzeugt werden (Serverfehler, Netz weg): kein alter Link, klarer Hinweis, Neuversuch moeglich');
+  for (const art of ['500', 'netz']) {
+    const { ctx, page, got } = await seite(b);
+    await page.goto(BASE + '/operator.html'); await sitzungStarten(page, got);
+    const alt = (await page.textContent('#linkText')).trim();
+    const sperre = art === '500' ? (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"Fehler"}' }) : (r) => r.abort();
+    await page.route(/\/listener-links$/, sperre);
+    await page.click('#btnDoorShut'); await page.click('#btnDoorShut');
+    ok(await until(async () => /noch keinen neuen Link/.test(await page.textContent('#joinNote'))), `[${art}] Meldung: Gaeste getrennt, aber noch kein neuer Link (nicht "oben steht ein neuer Link")`);
+    ok(!/oben steht ein neuer Link/.test(await page.textContent('#joinNote')), `[${art}] die Meldung behauptet keinen neuen Link`);
+    ok((await page.textContent('#linkText')).trim() === '' && (await page.getAttribute('#qr', 'src')) === null, `[${art}] weder alter Link noch alter QR-Code werden gezeigt`);
+    const info = await page.textContent('#linkInfo');
+    ok(/Der alte Link ist ungültig/.test(info) && (art === '500' ? /Fehler 500/.test(info) : /nicht erreichbar/.test(info)), `[${art}] Hinweis nennt den Grund und dass der alte Link ungueltig ist ("${info.slice(0, 90)}")`);
+    ok((await page.getAttribute('#linkInfo', 'class')) === 'bad', `[${art}] Hinweis ist als Fehler markiert`);
+    await page.unroute(/\/listener-links$/, sperre);
+    await page.click('#btnNewLink');
+    ok(await until(async () => { const t = (await page.textContent('#linkText')).trim(); return /listener\.html#t=/.test(t) && t !== alt; }, 6000), `[${art}] "Neuen Link erzeugen" liefert danach einen neuen Link`);
+    await schliessen(page, ctx);
+  }
+
   await b.close();
   console.log(fails ? fails + ' FEHLER' : 'alles ok');
   process.exit(fails ? 1 : 0);

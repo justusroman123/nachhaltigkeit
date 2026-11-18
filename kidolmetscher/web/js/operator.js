@@ -371,8 +371,13 @@
       const r = await api('POST', '/api/rooms/' + room.room_id + '/disconnect-all');
       if (!r.ok) return joinNote('Trennen fehlgeschlagen (Fehler ' + r.status + ').');
       const d = await r.json();
-      await createInvite();                                        // sofort ein neuer Link und QR-Code
-      joinNote(d.disconnected + ' Gerät(e) getrennt. Der alte Link ist ungültig; oben steht ein neuer Link.');
+      e.linkText.textContent = ''; e.qr.removeAttribute('src');   // der alte Link und sein QR-Code sind ab jetzt ungueltig: nie weiter zeigen (auch nicht bei langsamer Antwort)
+      say(e.linkInfo, 'Der alte Link ist ungültig. Ein neuer Link wird erzeugt …', 'warn');
+      let neu = false;
+      try { neu = await createInvite(); }                          // sofort ein neuer Link und QR-Code
+      catch (_) { say(e.linkInfo, 'Der neue Link konnte nicht erzeugt werden (Server nicht erreichbar).', 'bad'); }
+      if (!neu) say(e.linkInfo, e.linkInfo.textContent + ' Der alte Link ist ungültig: „Neuen Link erzeugen“ tippen.', 'bad');
+      joinNote(d.disconnected + ' Gerät(e) getrennt. Der alte Link ist ungültig; ' + (neu ? 'oben steht ein neuer Link.' : 'es gibt noch keinen neuen Link: „Neuen Link erzeugen“ tippen.'));
     } catch (_) { joinNote('Server nicht erreichbar.'); }
   });
   function placeholder(id, text) { const p = document.createElement('p'); p.className = 'muted'; p.id = id; p.textContent = text; return p; }
@@ -404,10 +409,10 @@
   }
 
   /* ---------- Einladung: Link + QR ---------- */
-  async function createInvite() {
-    if (!/^https?:\/\//.test(e.base.value.trim())) return say(e.linkInfo, 'Adresse muss mit "http" oder "https" beginnen.', 'bad');
+  async function createInvite() {                                  // liefert true, wenn ein neuer Link angezeigt wird, sonst false
+    if (!/^https?:\/\//.test(e.base.value.trim())) { say(e.linkInfo, 'Adresse muss mit "http" oder "https" beginnen.', 'bad'); return false; }
     const r = await api('POST', '/api/rooms/' + room.room_id + '/listener-links', { ttl_s: Number(e.ttl.value) });
-    if (!r.ok) return say(e.linkInfo, 'Link konnte nicht erzeugt werden (Fehler ' + r.status + ').', 'bad');
+    if (!r.ok) { say(e.linkInfo, 'Link konnte nicht erzeugt werden (Fehler ' + r.status + ').', 'bad'); return false; }
     const d = await r.json();
     const url = e.base.value.trim().replace(/\/+$/, '') + d.path;
     e.linkText.textContent = url;
@@ -419,8 +424,9 @@
       const q = await api('POST', '/api/qr', { url });
       if (q.ok) e.qr.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(await q.text());
     } catch (_) { /* Link bleibt nutzbar */ }
+    return true;
   }
-  e.newLink.addEventListener('click', createInvite);
+  e.newLink.addEventListener('click', () => { createInvite(); });
 
   // Einzel-Link je Sprache (Plan, Phase 4: QR-Code und Link je Sprache)
   function renderSingleLinks() {
@@ -452,7 +458,9 @@
     });
   }
   e.copy.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(e.linkText.textContent); e.copy.textContent = 'Kopiert ✓'; }
+    const link = e.linkText.textContent.trim();
+    if (!/^https?:\/\//.test(link)) { e.copy.textContent = 'Noch kein Link'; setTimeout(() => { e.copy.textContent = 'Link kopieren'; }, 2500); return; }   // nach "Alle trennen" gibt es kurz keinen gueltigen Link
+    try { await navigator.clipboard.writeText(link); e.copy.textContent = 'Kopiert ✓'; }
     catch (_) { e.copy.textContent = 'Bitte Link von Hand markieren'; }
     setTimeout(() => { e.copy.textContent = 'Link kopieren'; }, 2500);
   });
