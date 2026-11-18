@@ -69,7 +69,7 @@ def test_link_fehler(client):
 
 
 def test_sicherheitsheader_auf_allen_antworten(client):
-    for url in ("/healthz", "/operator.html", "/listener.html", "/mic-test.html", "/js/listener.js", "/css/common.css"):
+    for url in ("/healthz", "/operator.html", "/listener.html", "/mic-test.html", "/js/listener.js", "/js/capture.js", "/js/pcm-worklet.js", "/css/common.css"):
         r = client.get(url)
         assert r.status_code == 200, url
         csp = r.headers["content-security-policy"]

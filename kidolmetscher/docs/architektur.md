@@ -12,7 +12,8 @@ Zwei Betriebsarten (Vorgabe des Nutzers): **Vortrag** (einseitig, durchgehend sp
 ```
 Bedienplatz (Chromebook, Browser)             Server (FastAPI, GPU-VM)             Zuhörer (Browser)
  DJI Mic Mini -> getUserMedia
- AudioWorklet: PCM16, 16 kHz, mono, 50 ms
+ AudioWorklet: PCM16, 16 kHz, mono, 50 ms   (js/capture.js: Kontext mit 16 kHz; hält der Browser die Rate nicht ein,
+                                              rechnet js/pcm-worklet.js auf 16 kHz herunter; nur in Chromium getestet)
         |  WebSocket /ws/operator (binär)
         +----------------------------------> Orchestrator (je Raum)
                                               ASR  -> Endsegment (Deutsch)

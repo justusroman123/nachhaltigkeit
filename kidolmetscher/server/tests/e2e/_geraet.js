@@ -1,5 +1,5 @@
 // Geraeteprofile fuer die Browser-Tests (nur Chromium-Emulation: Fenstergroesse, Touch, Pixeldichte, Kennung des Geraets).
-// Ein Profil ersetzt NICHT das echte Geraet und NICHT die Browser-Engine (Safari/WebKit, Firefox): siehe docs/testbericht-geraete.md.
+// Ein Profil ersetzt NICHT das echte Geraet und NICHT die Browser-Engine (Safari/WebKit, Firefox): siehe docs/testberichte/testbericht-geraete-2026-11-18.md.
 // Nutzung in den Skripten: b.newContext(profil(process.env.GERAET, { permissions: ['microphone'] }))
 const { devices } = require('playwright');
 

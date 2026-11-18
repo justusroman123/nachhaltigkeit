@@ -559,21 +559,17 @@
       stream = await navigator.mediaDevices.getUserMedia({ audio: {
         deviceId: e.dev.value ? { exact: e.dev.value } : undefined,
         channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-      ctx = new AudioContext({ sampleRate: rate });
-      await ctx.audioWorklet.addModule('js/pcm-worklet.js');
-      node = new AudioWorkletNode(ctx, 'pcm-capture');
-      node.port.onmessage = (ev) => {
-        const buf = ev.data;
+      const cap = await openCapture(stream, rate, (buf) => {          // js/capture.js: Kontext mit Zielrate, sonst Geraeterate mit Umrechnung im Worklet
         const inConv = room && room.mode !== 'vortrag';
         if (ws && ws.readyState === 1 && (!inConv || conv.talking)) ws.send(buf);     // Gespraech: nur senden, solange man das Wort hat
         const s = new Int16Array(buf); let sum = 0;
         for (let i = 0; i < s.length; i++) sum += s[i] * s[i];
         const db = 20 * Math.log10(Math.sqrt(sum / s.length) / 32768 + 1e-6);
         e.level.style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
-        const rmsNow = Math.sqrt(sum / s.length), blockMs = s.length / (ctx ? ctx.sampleRate : 16000) * 1000;
+        const rmsNow = Math.sqrt(sum / s.length), blockMs = s.length / rate * 1000;       // Bloecke haben immer die Zielrate
         if (inConv) convBlock(rmsNow, blockMs); else talkBlock(rmsNow, blockMs);
-      };
-      ctx.createMediaStreamSource(stream).connect(node);
+      });
+      ctx = cap.ctx; node = cap.node;
       e.start.disabled = true; e.stop.disabled = false;
       if (room && room.mode !== 'vortrag') convRender(); else vortragStatus();
       say(e.micMsg, room && room.mode !== 'vortrag' ? '● Mikrofon bereit. Zum Sprechen „Sprechen“ tippen.' : '● Sendet.', 'ok');

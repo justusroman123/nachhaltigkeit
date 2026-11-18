@@ -322,11 +322,8 @@
       let stream = null, ctx = null;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-        ctx = new AudioContext({ sampleRate: rate || 16000 });
-        await ctx.audioWorklet.addModule('js/pcm-worklet.js');
-        const node = new AudioWorkletNode(ctx, 'pcm-capture');
-        node.port.onmessage = (ev) => onMicBlock(ev.data);
-        ctx.createMediaStreamSource(stream).connect(node);
+        const cap = await openCapture(stream, rate || 16000, onMicBlock);     // js/capture.js: Kontext mit Zielrate, sonst Geraeterate mit Umrechnung im Worklet
+        ctx = cap.ctx; const node = cap.node;
         if (ctx.state === 'suspended') await ctx.resume();    // Tablets (iOS): Kontext startet gesperrt
         micStream = stream; micCtx = ctx; micNode = node;
         return true;

@@ -1,7 +1,7 @@
 // Geraete-Matrix: faehrt die Browser-Tests nacheinander mit vielen Geraeteprofilen (Telefone, Tablets, Chromebook, Desktop).
-// Nur Chromium-Emulation, KEINE echte Safari-/Firefox-Engine, KEIN echtes Geraet, KEIN echter Ton (siehe docs/testbericht-geraete.md).
+// Nur Chromium-Emulation, KEINE echte Safari-/Firefox-Engine, KEIN echtes Geraet, KEIN echter Ton (siehe docs/testberichte/testbericht-geraete-2026-11-18.md).
 //   BASE=http://127.0.0.1:8123 OPERATOR_KEY=... [OUT=/pfad/ergebnis] [NUR="iPhone SE,Pixel 7"] node geraete_matrix.js
-// Der Testserver (Attrappen) muss laufen: siehe README. Dauer: etwa 30 Minuten fuer alle Profile. Exit-Code 1, wenn ein Lauf fehlschlaegt.
+// Der Testserver (Attrappen) muss laufen: siehe README. Dauer: etwa 20 bis 30 Minuten fuer alle Profile. Exit-Code 1, wenn ein Lauf fehlschlaegt.
 const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -46,6 +46,8 @@ console.log('=== Teil 2: Gast-Zustandsautomat und Gespraech mit Geraeteprofil');
 for (const g of GAST_SKRIPT_PROFILE) if (!NUR || NUR.includes(g)) for (const s of GAST_SKRIPTE) merke(lauf(s, { GERAET: g, OP_GERAET: 'Chromebook 125%' }));
 console.log('=== Teil 3: Bedienplatz mit Geraeteprofil');
 for (const o of OPS) if (!NUR) for (const s of OP_SKRIPTE) merke(lauf(s, { OP_GERAET: o, GERAET: 'iPhone 13' }));
+console.log('=== Teil 4: Mikrofon-Abtastrate (unabhaengig vom Profil; Chromium mit nachgestelltem Verhalten anderer Browser)');
+if (!NUR) merke(lauf('audio_abtastrate.js', {}));
 
 const bad = ergebnisse.filter((e) => e.exit !== 0);
 const md = ['| Skript | Gast-Geraet | Bedienplatz | ok | Fehler | Sekunden |', '| --- | --- | --- | --- | --- | --- |']

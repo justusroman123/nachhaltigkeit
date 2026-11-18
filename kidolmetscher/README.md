@@ -65,6 +65,9 @@ cd server && pytest                 # 326 Tests (Stand 17.11.2026): Räume, Toke
                                     # (Größengrenzen, Fluten, Adressen im Log mit echtem Server-Prozess), Header, Datenschutzprüfung der Web-Dateien
 node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest Vortrag (siehe Kopfkommentar der Datei)
 node tests/e2e/gast_ohne_server.js  # optional (Playwright): Gast-Tablet im Gespräch mit nachgestelltem Server; ebenso operator_ohne_server.js, gespraech.js
+node tests/e2e/geraete_layout.js    # optional: Geräte-Test in Chromium-Emulation (GERAET=Gast-Profil, OP_GERAET=Bedienplatz-Profil, z. B. "iPhone SE" / "Chromebook 125%");
+                                    # alle Profile nacheinander: geraete_matrix.js (etwa 20 bis 30 Minuten); Mikrofon-Abtastrate: audio_abtastrate.js.
+                                    # Kein echtes Gerät, keine Safari-/Firefox-Engine: Grenzen und Handprüfung in docs/testberichte/testbericht-geraete-2026-11-18.md
 ```
 
 ## Skripte (Messen und Testen ohne Mikrofon)
