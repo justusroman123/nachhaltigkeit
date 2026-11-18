@@ -575,3 +575,23 @@ Das sind Funktionen **innerhalb** des Gesprächs (keine dritte Betriebsart, Absc
 **Weiter offen (nicht umgesetzt):** einzelne Geräte entfernen (die Kennungen müssten angezeigt werden); Link an ein Gerät binden (ohne Cookies kein Merkmal, Wiederverbinden nach Netzwechsel schwierig); eine akustische Erkennung durch Wartende (Hörer oder Kopfhörer am Gast-Gerät, siehe Hardware-Dokumente in Drive); gemeinsamer Bedienschlüssel; Aussperren hinter gemeinsamer Adresse (S6, Teil).
 
 **Wichtig:** Die laufende VM zeigt das alte Verhalten, bis `scripts/vm_aktualisieren.sh` ausgeführt wurde.
+
+
+## 36. Gespräch bestätigt, Modelle, Hardware, Sicherheit, Gegenprüfung der Behörden-Aussagen und neue Drive-Struktur (17./18.11.2026)
+
+**Anlass:** Nutzerauftrag (diktiert, 17.11.2026): (1) Im Gespräch spricht der Mitarbeiter so lange er will, ebenso der Gast; der Mitarbeiter kann den Gast unterbrechen, der Gast den Mitarbeiter nicht (Behördengang). (2) Erklären, welche Modelle laufen; prüfen, ob es europäische oder offene Modelle gibt, die Behörden bevorzugen würden, und ob man sie anpassen kann. (3) Alle bisherigen Behörden-Aussagen noch einmal hinterfragen. (4) Im gemeinsamen Drive-Ordner den Stand und die Pläne ablegen, dazu Ordner für Behörden, Modelle, technischen Stand und das „Warum“; einen Ordner „Hardware“ (tiefe Recherche mit Produktlinks, museumstauglich, am Schalter, nicht „zwei Tablets auf einen Tisch gestellt“); einen Ordner „Sicherheit“ (wie sicher, niemand darf heimlich mithören, einfach zu bedienen, wenig Zeit bei Ankunft, „Wie sollte das aussehen?“).
+
+**Gespräch (Punkt 1):** Das gewünschte Verhalten gilt seit Abschnitt 30 und 34 (keine Redezeit-Grenze, `TURN_IDLE_S=0`, Stopp des Mitarbeiters, Gäste nur mit Wortmeldung) und wurde erneut gegen Code und Tests geprüft. **Keine neue Änderung an der Gesprächs-Logik.** Was noch von selbst endet, steht in Abschnitt 34.
+
+**Zwei Fehler beim Gegenlesen gefunden und behoben (Commit cec3eed, je ein Test, der ohne die Änderung rot ist):**
+- „Alle trennen, neuen Link erzeugen“ ließ die letzten Untertitel stehen (Verlauf für spät verbundene Zuhörer, bis `HISTORY_S` = 120 s): ein neuer Gast derselben Sprache hätte sie beim Beitritt gesehen. Jetzt wird der Verlauf mitgelöscht (Regel 1: Puffer löschen).
+- `POST /api/session` (alter Endpunkt) lieferte bei erreichter Raum-Obergrenze HTTP 500; jetzt 400 mit Meldung, wie `/api/rooms`.
+
+**Tests (Stand cec3eed, Entwicklungsumgebung ohne GPU):** **347 bestanden, 4 übersprungen**; Browser-Szenarien und Ende-zu-Ende-Prüfung mit echtem Server: bestanden.
+
+**Weiter offen (Entscheidung des Nutzers):** Ein Gast, der denselben Link benutzt, ohne dass „Alle trennen“ gedrückt wurde, sieht beim Beitritt weiter die letzten höchstens 40 Untertitel-Zeilen der letzten 120 s seiner Sprache. Soll der Verlauf im Gespräch ganz aus sein, geht das mit `RING_BUFFER_SIZE=0` (Test vorhanden); Nachteil: ein Gast, dessen Verbindung kurz abreißt, sieht nach dem Wiederverbinden nichts Nachgeliefertes.
+
+**Neue Dokumente in Google Drive (nur dort, nicht im öffentlichen Repository, weil sie Schwachstellen, Betriebsdetails und Preise benennen).** Neue Ordner „05 Behörden, Modelle und Technik“, „06 Hardware“, „07 Sicherheit“; in jedem Ordner und im Hauptordner liegt ein Inhaltsverzeichnis („00 Übersicht …“, „Was liegt wo“). Ältere Fassungen bleiben liegen (nie überschreiben).
+- **05:** „Technische Dokumentation für Behörden und Unternehmen (Stand 17.11.2026, 2. Fassung)“ (Programmstand 515352b, mit Entscheidungstabelle „warum so gebaut“); Behördentauglichkeit (2. Fassung nach Gegenprüfung), Gegenprüfung der Behörden-Aussagen und Modelle: **noch in Arbeit**, werden nach Abschluss der Prüfläufe hier ergänzt.
+- **06:** „Hardware am Schalter: Empfehlung und Aufbau“, „Hardware: Produktliste mit Links“ (alle Angaben aus Suchtreffern, Herstellerseiten **nicht** geöffnet; vor dem Kauf prüfen), „Betrieb: Server-Optionen für den Tagesbetrieb“.
+- **07:** „Sicherheit: Wie sicher ist der KI-Dolmetscher?“ und „Bedienkonzept: Wie sollte es am Schalter aussehen und ablaufen?“ (Vorschläge V01 bis V10, **nicht umgesetzt**, Reihenfolge entscheidet der Nutzer).
