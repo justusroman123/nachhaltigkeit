@@ -108,7 +108,7 @@ Weitere vorhandene Browser-Tests laufen zusätzlich mit Geräteprofil: `gast_ohn
 
 ## Gefundene und behobene Mängel
 
-Gefunden vom Test auf den Profilen und behoben (jeweils mit Gegenprobe: der Test ist mit dem alten Code rot, mit dem neuen grün):
+Gefunden vom Test auf den Profilen und behoben. Nr. 1 und 2 meldete der Test als Fehler (Messwerte in der Tabelle) und ist nach der Korrektur grün. Für Nr. 3, 5 und 6 gibt es zusätzlich eine **Gegenprobe**: Der Test ist mit dem alten Code rot und mit dem neuen grün. Nr. 4 (Kosmetik) hat keine eigene Prüfung.
 
 | Nr. | Befund | Betroffen | Behebung |
 | --- | --- | --- | --- |
@@ -116,10 +116,10 @@ Gefunden vom Test auf den Profilen und behoben (jeweils mit Gegenprobe: der Test
 | 2 | Gespräch im Querformat: Untertitelfläche nur 32 Pixel hoch | kleine Telefone quer | Kopf, Fuß und Sprechleiste kompakter ab 520 Pixel Höhe |
 | 3 | Nach Drehen oder Größenänderung blieb die neueste Zeile nicht sichtbar (159 Pixel nach unten zu scrollen) | alle Geräte, beim Zurückdrehen | `ResizeObserver` hält die neueste Zeile sichtbar (`web/js/listener.js`) |
 | 4 | „1 Geräte“; führender Punkt in der Fußzeile | Bedienplatz, Gast | Singular, Punkt entfernt |
-| 5 | Nach „Alle trennen“ blieb bei langsamem Gerät oder Netz der **ungültige alte Link samt QR-Code** sichtbar (406 ms bei 20-facher CPU-Drosselung, 800 und 3000 ms bei verzögerter Antwort); schlug das Erzeugen des neuen Links fehl, behauptete die Meldung trotzdem einen neuen Link | Bedienplatz | Link und QR-Code sofort entfernen, Fehler benennen, „Link kopieren“ nur bei echtem Link (`web/js/operator.js`) |
+| 5 | Nach „Alle trennen“ blieb bei langsamem Gerät oder Netz der **ungültige alte Link samt QR-Code** sichtbar (im Versuch nachgestellt: 406 ms bei 20-facher CPU-Drosselung, 800 und 3000 ms bei künstlich verzögerter Serverantwort; Werte aus dem Echtbetrieb gibt es nicht); schlug das Erzeugen des neuen Links fehl, behauptete die Meldung trotzdem einen neuen Link | Bedienplatz | Link und QR-Code sofort entfernen, Fehler benennen, „Link kopieren“ nur bei echtem Link (`web/js/operator.js`) |
 | 6 | Mikrofon: Hält ein Browser die Abtastrate 16 kHz nicht ein oder kann die Quelle damit nicht anbinden, käme die Sprache auf ein Drittel der Tonhöhe gedehnt beim Server an (nachgestellt: 333 statt 1000 Hz, dreifache Blockrate) oder gar nicht | Vorsorge für Safari und Firefox, **dort nicht geprüft** | Rückfall auf die Geräterate, Umrechnung im Worklet (`web/js/capture.js`, `pcm-worklet.js`; Entscheidung E54) |
 
-Ein Fehler lag **im Test**: In der ersten Matrix war ein Lauf (iPad Pro 11) rot, weil der Test den neuen Link sofort nach dem Trennen las. Gegenversuche (gedrosselte CPU, verzögerte Serverantwort) zeigen, dass bei langsamem Bedienplatz noch der alte Link da steht; der Test wartet jetzt (10 von 10 Wiederholungen grün). Dass genau diese Ursache den ersten roten Lauf ausgelöst hat, ist die plausibelste Erklärung, aber nicht mit den Zeitwerten des damaligen Laufs belegt. Daraus folgte Befund 5.
+Ein Fehler lag **im Test**: In der ersten Matrix war ein Lauf (iPad Pro 11) rot, weil der Test den neuen Link sofort nach dem Trennen las. Dieser Lauf dauerte 53 statt 27 Sekunden. Gegenversuche (gedrosselte CPU, verzögerte Serverantwort) zeigen, dass bei langsamem Bedienplatz noch der alte Link da steht; der Test wartet jetzt auf den neuen Link (10 von 10 Wiederholungen grün). **Wahrscheinliche Ursache, nicht belegt:** Die 10 Wiederholungen wären auch mit dem alten, sofortigen Lesen grün gewesen, und die Zeitwerte des damaligen Laufs fehlen. Aus den Gegenversuchen folgte Befund 5.
 
 ## Grenzen: was dieser Test nicht zeigt
 
