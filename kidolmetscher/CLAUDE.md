@@ -15,12 +15,12 @@ Pipeline: Whisper large-v3 (faster-whisper, pausenbasiert; SimulStreaming/Whispe
 4. **Jede Nachricht** trägt `t_audio_in`, `t_asr`, `t_mt`, `t_tts`, `t_out` (ms).
 5. **Vor Installation/Kosten/Konten/Systemeinstellungen fragen.** Keine Zahlen raten: „unbekannt“ + Messpunkt.
 6. Kommentare kurz und sachlich, README auf Deutsch.
-7. **Google Drive** (Ordner „KI Dolmetscher“, ID 1EhUmj8XWyS4iUmtFThDuBZ-vQu4s0xec; Unterordner „01 Projektstand“, „02 Messprotokolle“, „03 Entscheidungen und Lizenzen“, „04 Testberichte“, „05 Behörden, Modelle und Technik“, „06 Hardware“, „07 Sicherheit“ bei Bedarf anlegen; je Ordner ein Inhaltsverzeichnis „00 Übersicht …“, im Hauptordner „Was liegt wo“, Protokoll Abschnitt 36): nach jeder Etappe Dokumente ablegen
+7. **Google Drive** (Ordner „KI Dolmetscher“, ID 1EhUmj8XWyS4iUmtFThDuBZ-vQu4s0xec; Unterordner „01 Projektstand“, „02 Messprotokolle“, „03 Entscheidungen und Lizenzen“, „04 Testberichte“, „05 Behörden, Modelle und Technik“, „06 Hardware“, „07 Sicherheit“ bei Bedarf anlegen; je Ordner ein Inhaltsverzeichnis „00 Übersicht …“, im Hauptordner „Was liegt wo“, Protokoll Abschnitte 36 und 37): nach jeder Etappe Dokumente ablegen
    (Titel „<Thema> (Stand TT.MM.JJJJ)“), nur Dokumente, nie Code/Tokens/.env/echte Testinhalte, nie überschreiben
    oder löschen, nach dem Speichern Ordner und Inhalt prüfen. Ohne Drive-Zugriff: `docs/drive-export/`.
 
 ## Arbeitsweise
-- Nichts als fertig melden, was nicht gelaufen ist. Tests: `cd server && pytest`. Start immer über `python -m app` (sichere Voreinstellungen, keine Adressen im Log), nie `uvicorn` ohne diese Optionen. Browser-Tests: `server/tests/e2e/*.js` (Playwright, Server mit Attrappen laufen lassen).
+- Nichts als fertig melden, was nicht gelaufen ist. Tests: `cd server && pytest`. Start immer über `python -m app` (sichere Voreinstellungen, keine Adressen im Log), nie `uvicorn` ohne diese Optionen. Browser-Tests: `server/tests/e2e/*.js` (Playwright, Server mit Attrappen laufen lassen); Geräte-Matrix `geraete_matrix.js` und Mikrofon-Test `audio_abtastrate.js` sind **nur Chromium-Emulation** (keine echte Safari-/Firefox-Engine, kein echtes Gerät), Grenzen und Handprüfung: `docs/testberichte/testbericht-geraete-2026-11-18.md`.
 - Start: siehe README. Web-Dateien liegen unter `web/`, Server unter `server/app/`.
 
 ## Plan-Dokument

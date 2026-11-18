@@ -60,7 +60,7 @@ der Server liest `.env` nicht selbst).
 ## Tests
 
 ```bash
-cd server && pytest                 # 326 Tests (Stand 17.11.2026): Räume, Token-Ablauf, Sprachwahl, Segmentierer, Rückstau, Nachrichtenformat, Zeitstempel,
+cd server && pytest                 # 349 bestanden, 4 übersprungen (Stand 18.11.2026): Räume, Token-Ablauf, Sprachwahl, Segmentierer, Rückstau, Nachrichtenformat, Zeitstempel,
                                     # Mock-Pipeline, WebSocket-Ende-zu-Ende, Gespräch (Sperre, Wortmeldung, Abbruch, Zufallsläufe), Sicherheit
                                     # (Größengrenzen, Fluten, Adressen im Log mit echtem Server-Prozess), Header, Datenschutzprüfung der Web-Dateien
 node tests/e2e/browser_smoke.js     # optional: Browser-Rauchtest Vortrag (siehe Kopfkommentar der Datei)
